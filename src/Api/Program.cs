@@ -12,8 +12,8 @@ builder.Services.RegisterApplicationServices();
 
 ApplicationConfigurations.ConfigureServices(services, new MessageConfiguration
 {
-    // Queues = new List<string> { "BlocksMailServiceQueue" },
-    // Topics = new List<string> { "demo_topic" }
+     Queues = new List<string> { },
+     Topics = new List<string> { }
 });
 
 ApplicationConfigurations.ConfigureApi(services);

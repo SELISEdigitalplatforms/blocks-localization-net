@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Validation\" />
-    <Folder Include="Repositories\" />
+    <Folder Include="Repositories\Language\" />
+    <Folder Include="Repositories\Key\" />
   </ItemGroup>
 
   <ItemGroup>
