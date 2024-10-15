@@ -7,11 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Repositories\Language\" />
-    <Folder Include="Repositories\Key\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="FluentValidation" Version="11.10.0" />
     <PackageReference Include="SeliseBlocks.Genesis" Version="8.0.0-preview.4" />
   </ItemGroup>

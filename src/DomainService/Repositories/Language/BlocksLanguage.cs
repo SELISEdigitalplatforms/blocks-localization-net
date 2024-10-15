@@ -1,14 +1,13 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using DomainService.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DomainService.Services
+namespace DomainService.Repositories
 {
-    [BsonIgnoreExtraElements]
-    public class Language
+    public class BlocksLanguage : BaseEntity
     {
         public string LanguageName { get; set; }
         public string LanguageCode { get; set; }

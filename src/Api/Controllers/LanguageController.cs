@@ -6,13 +6,23 @@ namespace Api.Controllers
 {
     public class LanguageController : Controller
     {
-        [HttpPost]
+        private readonly ILanguageManagementService _languageManagementService;
 
+        public LanguageController(ILanguageManagementService languageManagementService)
+        {
+            _languageManagementService = languageManagementService;
+        }
+
+        [HttpPost]
         public async Task<ApiResponse> Save(Language language)
         {
-            await Task.Delay(500);
+          return await _languageManagementService.SaveLanguageAsync(language);
+        }
 
-            return new ApiResponse();
+        [HttpGet]
+        public async Task<List<Language>> Gets()
+        {
+            return await _languageManagementService.GetLanguagesAsync();
         }
     }
 }
