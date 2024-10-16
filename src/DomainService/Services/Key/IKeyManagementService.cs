@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DomainService.Shared;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,5 +9,6 @@ namespace DomainService.Services
 {
     public interface IKeyManagementService
     {
+        Task<ApiResponse> SaveKeyAsync(Key key);
     }
 }

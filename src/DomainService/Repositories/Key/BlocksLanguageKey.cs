@@ -14,5 +14,6 @@ namespace DomainService.Repositories
         public string Value { get; set; }
         public Dictionary<string, string> Translations { get; set; }
         public List<string> Routes { get; set; }
+        public bool IsPartiallyTranslated { get; set; }
     }
 }

@@ -4,14 +4,33 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
 {
+    /// <summary>
+    /// API Controller for managing language-related operations.
+    /// </summary>
+    
+    [ApiController]
+    [Route("[controller]/[action]")]
+
     public class LanguageController : Controller
     {
         private readonly ILanguageManagementService _languageManagementService;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LanguageController"/> class.
+        /// </summary>
+        /// <param name="languageManagementService">The service used for managing languages.</param>
 
         public LanguageController(ILanguageManagementService languageManagementService)
         {
             _languageManagementService = languageManagementService;
         }
+
+        /// <summary>
+        /// Saves a new or existing language.
+        /// </summary>
+        /// <param name="language">The language object to be saved.</param>
+        /// <returns>An <see cref="ApiResponse"/> indicating the success or failure of the operation.</returns>
+        
 
         [HttpPost]
         public async Task<ApiResponse> Save(Language language)
@@ -19,6 +38,11 @@ namespace Api.Controllers
           return await _languageManagementService.SaveLanguageAsync(language);
         }
 
+        /// <summary>
+        /// Retrieves all available languages.
+        /// </summary>
+        /// <returns>A list of <see cref="Language"/> objects.</returns>
+        
         [HttpGet]
         public async Task<List<Language>> Gets()
         {
