@@ -10,5 +10,6 @@ namespace DomainService.Services
     public interface IKeyManagementService
     {
         Task<ApiResponse> SaveKeyAsync(Key key);
+        Task<List<Key>> GetKeysAsync();
     }
 }

@@ -37,5 +37,15 @@ namespace Api.Controllers
         {
             return await _keyManagementService.SaveKeyAsync(key);
         }
+
+        /// <summary>
+        /// Retrieves all available Keys.
+        /// </summary>
+        /// <returns>A list of <see cref="Key"/> objects.</returns>
+        [HttpGet]
+        public async Task<List<Key>> Gets()
+        {
+            return await _keyManagementService.GetKeysAsync();
+        }
     }
 }
