@@ -43,9 +43,9 @@ namespace Api.Controllers
         /// </summary>
         /// <returns>A list of <see cref="Key"/> objects.</returns>
         [HttpGet]
-        public async Task<List<Key>> Gets()
+        public async Task<List<Key>> Gets([FromQuery] GetKeysQuery query)
         {
-            return await _keyManagementService.GetKeysAsync();
+            return await _keyManagementService.GetKeysAsync(query);
         }
     }
 }

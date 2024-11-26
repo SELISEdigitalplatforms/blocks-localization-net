@@ -11,6 +11,6 @@ namespace DomainService.Repositories
     {
         Task SaveKeyAsync(BlocksLanguageKey key);
         Task<BlocksLanguageKey> GetKeyByNameAsync(string KeyName);
-        Task<List<Key>> GetAllKeysAsync();
+        Task<List<Key>> GetAllKeysAsync(GetKeysQuery query);
     }
 }

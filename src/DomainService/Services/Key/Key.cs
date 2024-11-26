@@ -7,6 +7,7 @@ namespace DomainService.Services
     {
         public string KeyName { get; set; }
         public string Module { get; set; }
+        public string ModuleId { get; set; }
         public string Value { get; set; }
         public Dictionary<string, string> Translations { get; set; }
         public List<string> Routes { get; set; }
