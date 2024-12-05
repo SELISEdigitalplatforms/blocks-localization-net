@@ -14,7 +14,7 @@ obj/
 *.nuget.targets
 packages/
 
-# Build results
+# Build results 
 [Dd]ebug/
 [Rr]elease/
 x64/
