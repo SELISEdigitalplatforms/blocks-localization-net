@@ -84,5 +84,5 @@ jobs:
 
       - name: Deploy To Kubernetes
         run: |
-            helm upgrade --install ${{inputs.CONTAINER_NAME}}-v${{inputs.VERSION}} ./new-templates/ecap3-${{env.SERVICE_TYPE}}/ --namespace=${{inputs.NAMESPACE}} --values ./${{ secrets.CLUSTER_NAME }}/${{inputs.SERVICE_NAME}}.values.yaml --set image.repository=${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ inputs.CONTAINER_NAME }}-v${{inputs.VERSION}} --set image.tag=${{ github.sha }} --set fullnameOverride=${{inputs.CONTAINER_NAME}}-v${{ inputs.VERSION }} --set ingress.hosts[0].paths[0].path="/api/${{inputs.SERVICE_NAME}}/v${{inputs.VERSION}}(/|$)(.*)" 
+            helm upgrade --install ${{inputs.CONTAINER_NAME}}-v${{inputs.VERSION}} ./new-templates/ecap3-${{env.SERVICE_TYPE}}/ --namespace=${{inputs.NAMESPACE}} --values ./${{ secrets.CLUSTER_NAME }}/${{inputs.SERVICE_NAME}}.values.yaml --set image.repository=${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ inputs.CONTAINER_NAME }}-v${{inputs.VERSION}} --set image.tag=${{ github.sha }} --set fullnameOverride=${{inputs.CONTAINER_NAME}}-v${{ inputs.VERSION }} --set ingress.hosts[0].paths[0].path="/${{inputs.SERVICE_NAME}}/v${{inputs.VERSION}}(/|$)(.*)" 
           
