@@ -44,10 +44,11 @@ namespace DomainService.Repositories
             {
                 matchFilters.Add(filterBuilder.Regex("KeyName", new BsonRegularExpression($".*{query.KeySearchText}.*", "i")));
             }
-            if (!string.IsNullOrWhiteSpace(query.ModuleId))
+            if (query.ModuleIds != null && query.ModuleIds.Length > 0)
             {
-                matchFilters.Add(filterBuilder.Eq(x => x.ModuleId, query.ModuleId));
+                matchFilters.Add(filterBuilder.In(x => x.ModuleId, query.ModuleIds));
             }
+            
             if (query.CreateDateRange != null)
             {
                 List<FilterDefinition<Key>> dateFilters = setDateFilter(query, filterBuilder);

@@ -54,8 +54,8 @@ namespace DomainService.Services
 
             repoKey.LastUpdateDate = DateTime.UtcNow;
             repoKey.KeyName = key.KeyName;
-            repoKey.Value = key.Value;
-            repoKey.Translations = key.Translations;
+            //repoKey.Value = key.Value;
+            repoKey.Resources = key.Resources;
             repoKey.IsPartiallyTranslated = key.IsPartiallyTranslated;
 
             return repoKey;

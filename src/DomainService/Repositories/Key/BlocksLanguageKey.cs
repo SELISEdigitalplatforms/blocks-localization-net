@@ -1,19 +1,14 @@
-﻿using DomainService.Shared;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DomainService.Services;
+using DomainService.Shared;
 
 namespace DomainService.Repositories
 {
-    public class BlocksLanguageKey: BaseEntity
+    public class BlocksLanguageKey : BaseEntity
     {
         public string KeyName { get; set; }
-        public string Module { get; set; }
         public string ModuleId { get; set; }
         public string Value { get; set; }
-        public Dictionary<string, string> Translations { get; set; }
+        public Resource[] Resources { get; set; }
         public List<string> Routes { get; set; }
         public bool IsPartiallyTranslated { get; set; }
     }

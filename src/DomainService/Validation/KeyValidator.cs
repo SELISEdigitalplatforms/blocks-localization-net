@@ -12,14 +12,14 @@ namespace DomainService.Services
                 .Length(3, 100).WithMessage("KeyName must be between 3 and 100 characters long.");
 
             // Validate Module
-            RuleFor(key => key.Module)
+            RuleFor(key => key.ModuleId)
                 .NotEmpty().WithMessage("Module is required.")
                 .Length(2, 50).WithMessage("Module must be between 2 and 50 characters long.");
 
-            // Validate Value
-            RuleFor(key => key.Value)
-                .NotEmpty().WithMessage("Value is required.")
-                .MaximumLength(500).WithMessage("Value can be up to 500 characters long.");
+            //// Validate Value
+            //RuleFor(key => key.Value)
+            //    .NotEmpty().WithMessage("Value is required.")
+            //    .MaximumLength(500).WithMessage("Value can be up to 500 characters long.");
 
             //// Validate Translations
             //RuleFor(key => key.Translations)
