@@ -28,6 +28,8 @@ namespace Api
             services.AddSingleton<IKeyManagementService, KeyManagementService>();
             services.AddSingleton<IKeyRepository, KeyRepository>();
             services.AddSingleton<IValidator<Key>, KeyValidator>();
+
+            services.AddSingleton<ChangeControllerContext>();
         }
     }
 }

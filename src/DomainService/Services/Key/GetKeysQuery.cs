@@ -1,6 +1,8 @@
-﻿namespace DomainService.Services
+﻿using DomainService.Dtos;
+
+namespace DomainService.Services
 {
-    public class GetKeysQuery
+    public class GetKeysQuery : IProjectKey
     {
         public int PageSize { get; set; }
         public int PageNumber { get; set; }
@@ -10,6 +12,7 @@
         public DateRange? CreateDateRange { get; set; }
         public string? SortProperty { get; set; }
         public bool IsDescending { get; set; }
+        public string? ProjectKey { get; set; }
     }
 
     public class DateRange

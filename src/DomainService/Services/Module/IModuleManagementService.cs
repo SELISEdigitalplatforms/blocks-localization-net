@@ -4,7 +4,7 @@ namespace DomainService.Services
 {
     public interface IModuleManagementService
     {
-        Task<ApiResponse> SaveModuleAsync(Module module);
+        Task<ApiResponse> SaveModuleAsync(SaveModuleRequest module);
         Task<List<Module>> GetModulesAsync();
     }
 }

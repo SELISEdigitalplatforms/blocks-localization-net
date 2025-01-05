@@ -23,7 +23,7 @@ namespace DomainService.Services
             _logger = logger;
         }
 
-        public async Task<ApiResponse> SaveModuleAsync(Module module)
+        public async Task<ApiResponse> SaveModuleAsync(SaveModuleRequest module)
         {
             var validationResult = await _validator.ValidateAsync(module);
 

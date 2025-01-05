@@ -1,5 +1,7 @@
-﻿using DomainService.Services;
+﻿using Blocks.Genesis;
+using DomainService.Services;
 using DomainService.Shared;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
@@ -14,6 +16,7 @@ namespace Api.Controllers
     public class ModuleController : Controller
     {
         private readonly IModuleManagementService _moduleManagementService;
+        private readonly ChangeControllerContext _changeControllerContext;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ModuleController"/> class.
@@ -21,9 +24,12 @@ namespace Api.Controllers
         /// <param name="moduleManagementService"></param>
 
 
-        public ModuleController(IModuleManagementService moduleManagementService)
+        public ModuleController(
+            IModuleManagementService moduleManagementService,
+            ChangeControllerContext changeControllerContext)
         {
             _moduleManagementService = moduleManagementService;
+            _changeControllerContext = changeControllerContext;
         }
 
 
@@ -34,8 +40,11 @@ namespace Api.Controllers
         /// <returns>An <see cref="ApiResponse"/> indicating the result of the save operation.</returns>
         
         [HttpPost]
-        public async Task<ApiResponse> Save([FromBody]Module module)
+        [Authorize]
+        public async Task<ApiResponse> Save([FromBody] SaveModuleRequest module)
         {
+            if (module == null) BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(module);
             return await _moduleManagementService.SaveModuleAsync(module);
         }
 
@@ -45,8 +54,11 @@ namespace Api.Controllers
         /// <returns>A list of <see cref="Module"/> objects.</returns>
         
         [HttpGet]
-        public async Task<List<Module>> Gets()
+        [Authorize]
+        public async Task<List<Module>> Gets([FromQuery]GetModulesQuery query)
         {
+            if (query == null) BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(query);
             return await _moduleManagementService.GetModulesAsync();
         }
     }
