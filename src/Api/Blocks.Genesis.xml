@@ -10,7 +10,7 @@
             </summary>
             
         </member>
-        <member name="M:Api.Controllers.KeyController.#ctor(DomainService.Services.IKeyManagementService)">
+        <member name="M:Api.Controllers.KeyController.#ctor(DomainService.Services.IKeyManagementService,Api.ChangeControllerContext)">
             <summary>
             Initializes a new instance of the <see cref="T:Api.Controllers.KeyController"/> class.
             </summary>
@@ -23,12 +23,18 @@
             <param name="key">The key object to be saved.</param>
             <returns>An <see cref="T:DomainService.Shared.ApiResponse"/> indicating the success or failure of the save operation.</returns>
         </member>
+        <member name="M:Api.Controllers.KeyController.Gets(DomainService.Services.GetKeysQuery)">
+            <summary>
+            Retrieves all available Keys.
+            </summary>
+            <returns>A list of <see cref="T:Microsoft.AspNetCore.DataProtection.KeyManagement.Key"/> objects.</returns>
+        </member>
         <member name="T:Api.Controllers.LanguageController">
             <summary>
             API Controller for managing language-related operations.
             </summary>
         </member>
-        <member name="M:Api.Controllers.LanguageController.#ctor(DomainService.Services.ILanguageManagementService)">
+        <member name="M:Api.Controllers.LanguageController.#ctor(DomainService.Services.ILanguageManagementService,Api.ChangeControllerContext)">
             <summary>
             Initializes a new instance of the <see cref="T:Api.Controllers.LanguageController"/> class.
             </summary>
@@ -41,7 +47,7 @@
             <param name="language">The language object to be saved.</param>
             <returns>An <see cref="T:DomainService.Shared.ApiResponse"/> indicating the success or failure of the operation.</returns>
         </member>
-        <member name="M:Api.Controllers.LanguageController.Gets">
+        <member name="M:Api.Controllers.LanguageController.Gets(DomainService.Services.GetLanguagesRequest)">
             <summary>
             Retrieves all available languages.
             </summary>
@@ -52,20 +58,20 @@
             Handles operations related to managing modules, such as saving and retrieving module data.
             </summary>
         </member>
-        <member name="M:Api.Controllers.ModuleController.#ctor(DomainService.Services.IModuleManagementService)">
+        <member name="M:Api.Controllers.ModuleController.#ctor(DomainService.Services.IModuleManagementService,Api.ChangeControllerContext)">
             <summary>
             Initializes a new instance of the <see cref="T:Api.Controllers.ModuleController"/> class.
             </summary>
             <param name="moduleManagementService"></param>
         </member>
-        <member name="M:Api.Controllers.ModuleController.Save(DomainService.Services.Module)">
+        <member name="M:Api.Controllers.ModuleController.Save(DomainService.Services.SaveModuleRequest)">
             <summary>
             Saves a new module or updates an existing one.
             </summary>
             <param name="module">The module object to be saved.</param>
             <returns>An <see cref="T:DomainService.Shared.ApiResponse"/> indicating the result of the save operation.</returns>
         </member>
-        <member name="M:Api.Controllers.ModuleController.Gets">
+        <member name="M:Api.Controllers.ModuleController.Gets(DomainService.Services.GetModulesQuery)">
             <summary>
             Retrieves a list of all available modules.
             </summary>

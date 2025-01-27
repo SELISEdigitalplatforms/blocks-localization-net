@@ -1,4 +1,4 @@
-﻿using DomainService.Dtos;
+﻿using Blocks.Genesis;
 
 namespace DomainService.Services
 {

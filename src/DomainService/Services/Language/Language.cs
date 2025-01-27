@@ -1,4 +1,4 @@
-﻿using DomainService.Dtos;
+﻿using Blocks.Genesis;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace DomainService.Services
