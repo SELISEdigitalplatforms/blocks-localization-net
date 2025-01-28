@@ -23,7 +23,7 @@
             <param name="key">The key object to be saved.</param>
             <returns>An <see cref="T:DomainService.Shared.ApiResponse"/> indicating the success or failure of the save operation.</returns>
         </member>
-        <member name="M:Api.Controllers.KeyController.Gets(DomainService.Services.GetKeysQuery)">
+        <member name="M:Api.Controllers.KeyController.Gets(DomainService.Services.GetKeysRequest)">
             <summary>
             Retrieves all available Keys.
             </summary>

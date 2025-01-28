@@ -21,22 +21,33 @@ namespace DomainService.Repositories
             _dbContextProvider = dbContextProvider;
         }
 
-        public async Task<List<Key>> GetAllKeysAsync(GetKeysQuery query)
+        public async Task<GetKeysQueryResponse> GetAllKeysAsync(GetKeysRequest request)
         {
             var collection = _dbContextProvider.GetCollection<Key>(_collectionName);
 
-            var filter = getAllKeysFilter(query);
+            var filter = getAllKeysFilter(request);
 
-            var sort = !string.IsNullOrWhiteSpace(query.SortProperty) && query.IsDescending ? Builders<Key>.Sort.Descending(query.SortProperty) : Builders<Key>.Sort.Ascending(query.SortProperty ?? "KeyName");
+            var sort = !string.IsNullOrWhiteSpace(request.SortProperty) && request.IsDescending ? Builders<Key>.Sort.Descending(request.SortProperty) : Builders<Key>.Sort.Ascending(request.SortProperty ?? "KeyName");
 
-            return await collection
-                                        .Find(filter)
-                                        .Skip(query.PageNumber*query.PageSize)
-                                        .Sort(sort)
-                                        .ToListAsync();
+            var findKeysTask = collection
+                .Find(filter)
+                .Skip(request.PageNumber * request.PageSize)
+                .Limit(request.PageSize)
+                .Sort(sort)
+                .ToListAsync();
+
+            var countDocumentsTask = collection.CountDocumentsAsync(filter);
+
+            await Task.WhenAll(findKeysTask, countDocumentsTask);
+
+            return new GetKeysQueryResponse
+            {
+                Keys = findKeysTask.Result,
+                TotalCount = countDocumentsTask.Result
+            };
         }
 
-        private static FilterDefinition<Key> getAllKeysFilter(GetKeysQuery query)
+        private static FilterDefinition<Key> getAllKeysFilter(GetKeysRequest query)
         {
             var filterBuilder = Builders<Key>.Filter;
             var matchFilters = new List<FilterDefinition<Key>>();
@@ -60,7 +71,7 @@ namespace DomainService.Repositories
             return matchFilters.Count > 0 ? filterBuilder.And(matchFilters): filterBuilder.Empty;
         }
 
-        private static List<FilterDefinition<Key>> setDateFilter(GetKeysQuery query, FilterDefinitionBuilder<Key> filterBuilder)
+        private static List<FilterDefinition<Key>> setDateFilter(GetKeysRequest query, FilterDefinitionBuilder<Key> filterBuilder)
         {
             FilterDefinition<Key> dateFilter;
             var dateFilters = new List<FilterDefinition<Key>>();
