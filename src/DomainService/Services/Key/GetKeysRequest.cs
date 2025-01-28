@@ -1,8 +1,8 @@
-﻿using DomainService.Dtos;
+﻿using Blocks.Genesis;
 
 namespace DomainService.Services
 {
-    public class GetKeysQuery : IProjectKey
+    public class GetKeysRequest : IProjectKey
     {
         public int PageSize { get; set; }
         public int PageNumber { get; set; }

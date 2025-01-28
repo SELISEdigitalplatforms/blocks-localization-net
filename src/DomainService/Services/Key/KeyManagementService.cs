@@ -61,7 +61,7 @@ namespace DomainService.Services
             return repoKey;
         }
 
-        public async Task<List<Key>> GetKeysAsync(GetKeysQuery query)
+        public async Task<GetKeysQueryResponse> GetKeysAsync(GetKeysRequest query)
         {
             return await _keyRepository.GetAllKeysAsync(query);
         }

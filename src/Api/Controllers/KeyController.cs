@@ -55,7 +55,7 @@ namespace Api.Controllers
         /// <returns>A list of <see cref="Key"/> objects.</returns>
         [HttpGet]
         [Authorize]
-        public async Task<List<Key>> Gets([FromQuery] GetKeysQuery query)
+        public async Task<GetKeysQueryResponse> Gets([FromQuery] GetKeysRequest query)
         {
             if (query == null) BadRequest(new BaseMutationResponse());
             _changeControllerContext.ChangeContext(query);
