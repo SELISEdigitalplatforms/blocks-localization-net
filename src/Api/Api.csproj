@@ -12,6 +12,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DocumentationFile>Blocks.Genesis.xml</DocumentationFile>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DomainService\DomainService.csproj" />
