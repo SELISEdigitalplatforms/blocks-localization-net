@@ -1,4 +1,5 @@
 ﻿using DomainService.Shared;
+using DomainService.Shared.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,5 +12,7 @@ namespace DomainService.Services
     {
         Task<ApiResponse> SaveKeyAsync(Key key);
         Task<GetKeysQueryResponse> GetKeysAsync(GetKeysRequest query);
+        Task<bool> GenerateAsync(GenerateUilmFilesEvent command);
+        Task<string> GetUilmFile(GetUilmFileRequest request);
     }
 }

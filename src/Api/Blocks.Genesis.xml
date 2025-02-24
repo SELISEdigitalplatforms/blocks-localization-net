@@ -10,7 +10,7 @@
             </summary>
             
         </member>
-        <member name="M:Api.Controllers.KeyController.#ctor(DomainService.Services.IKeyManagementService,Api.ChangeControllerContext)">
+        <member name="M:Api.Controllers.KeyController.#ctor(DomainService.Services.IKeyManagementService,Api.ChangeControllerContext,Blocks.Genesis.IMessageClient)">
             <summary>
             Initializes a new instance of the <see cref="T:Api.Controllers.KeyController"/> class.
             </summary>

@@ -115,5 +115,54 @@ namespace DomainService.Repositories
                 key,
                 new ReplaceOptions { IsUpsert = true });
         }
+
+        public async Task<List<Key>> GetAllKeysByModuleAsync(string moduleId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<Key>(_collectionName);
+
+            var filterBuilder = Builders<Key>.Filter;
+            var matchFilters = new List<FilterDefinition<Key>>
+            {
+                filterBuilder.Eq(x => x.ModuleId, moduleId)
+            };
+            var filter = filterBuilder.And(matchFilters);
+
+            return await collection
+                .Find(filter)
+                .ToListAsync();
+        }
+
+        public async Task<bool> SaveNewUilmFiles(List<UilmFile> uilmfiles)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            await dataBase.GetCollection<UilmFile>($"{nameof(UilmFile)}s")
+                .InsertManyAsync(uilmfiles);
+
+            return true;
+        }
+
+        public async Task<long> DeleteOldUilmFiles(List<UilmFile> uilmfiles)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var modules = uilmfiles.Select(x => x.ModuleName).Distinct();
+            var filter = Builders<UilmFile>.Filter.In(x => x.ModuleName, modules);
+            var result = await dataBase.GetCollection<UilmFile>($"{nameof(UilmFile)}s")
+                .DeleteManyAsync(filter);
+
+            return result.DeletedCount;
+        }
+
+        public async Task<UilmFile> GetUilmFile(GetUilmFileRequest request)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var project = Builders<BsonDocument>.Projection.As<UilmFile>();
+            var filter = Builders<BsonDocument>.Filter.Eq("Language", request.Language) & Builders<BsonDocument>.Filter.Eq("ModuleName", request.ModuleName);
+
+            return await dataBase.GetCollection<BsonDocument>("UilmFiles")
+                .Find(filter)
+                .Project(project)
+                .FirstOrDefaultAsync();
+        }
     }
 }

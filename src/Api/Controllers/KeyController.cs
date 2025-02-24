@@ -2,6 +2,8 @@
 using Blocks.Genesis;
 using DomainService.Services;
 using DomainService.Shared;
+using DomainService.Shared.Events;
+using DomainService.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +22,7 @@ namespace Api.Controllers
     {
         private readonly IKeyManagementService _keyManagementService;
         private readonly ChangeControllerContext _changeControllerContext;
+        private readonly IMessageClient _messageClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="KeyController"/> class.
@@ -28,10 +31,12 @@ namespace Api.Controllers
 
         public KeyController(
             IKeyManagementService keyManagementService,
-            ChangeControllerContext changeControllerContext)
+            ChangeControllerContext changeControllerContext,
+            IMessageClient messageClient)
         {
             _keyManagementService = keyManagementService;
             _changeControllerContext = changeControllerContext;
+            _messageClient = messageClient;
         }
 
         /// <summary>
@@ -61,5 +66,50 @@ namespace Api.Controllers
             _changeControllerContext.ChangeContext(query);
             return await _keyManagementService.GetKeysAsync(query);
         }
+
+        [HttpGet]
+        public async Task GetUilmFile([FromQuery] GetUilmFileRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.ProjectKey))
+            {
+                Response.StatusCode = 401;
+                await Response.WriteAsync(string.Empty);
+                return;
+            }
+            if (request == null) BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(request);
+            Response.ContentType = "application/json";
+
+            string result = await _keyManagementService.GetUilmFile(request);
+            await Response.WriteAsync(result ?? "");
+        }
+
+        [HttpPost]
+        [Authorize]
+        public Task<IActionResult> GenerateUilmFile([FromBody] GenerateUilmFilesRequest request)
+        {
+            //if (request == null) return BadRequest();
+            if(request == null) return Task.FromResult<IActionResult>(BadRequest());
+            _changeControllerContext.ChangeContext(request);
+            var result = SendEvent(request);
+            return Task.FromResult<IActionResult>(Ok(result));
+        }
+
+        private async Task SendEvent(GenerateUilmFilesRequest request)
+        {
+            await _messageClient.SendToConsumerAsync(
+                new ConsumerMessage<GenerateUilmFilesEvent>
+                {
+                    ConsumerName = Constants.UilmQueue,
+                    Payload = new GenerateUilmFilesEvent
+                    {
+                        Guid = request.Guid,
+                        ProjectKey = request.ProjectKey,
+                        ModuleId = request.ModuleId
+                    }
+                }
+            );
+        }
+
     }
 }
