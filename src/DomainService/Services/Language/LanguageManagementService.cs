@@ -60,6 +60,7 @@ namespace DomainService.Services
             repoLanguage.LanguageCode = language.LanguageCode;
             repoLanguage.LanguageName = language.LanguageName;
             repoLanguage.IsDefault = language.IsDefault;
+            repoLanguage.ItemId = language.ItemId;
 
             return repoLanguage;
         }

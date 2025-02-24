@@ -29,6 +29,8 @@ namespace Api
             services.AddSingleton<IKeyRepository, KeyRepository>();
             services.AddSingleton<IValidator<Key>, KeyValidator>();
 
+            services.AddSingleton<IAssistantService, AssistantService>();
+
             services.AddSingleton<ChangeControllerContext>();
         }
     }
