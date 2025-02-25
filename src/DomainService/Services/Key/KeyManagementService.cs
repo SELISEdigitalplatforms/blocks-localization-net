@@ -82,11 +82,11 @@ namespace DomainService.Services
 
             List<Language> languageSetting = await _languageManagementService.GetLanguagesAsync();
 
-            List<Module> applications = await _moduleManagementService.GetModulesAsync();
+            List<BlocksLanguageModule> applications = await _moduleManagementService.GetModulesAsync();
 
             _logger.LogInformation("++ JsonOutputGeneratorService: GenerateAsync()... Found {ApplicationsCount} UilmApplications.", applications.Count);
 
-            foreach (Module application in applications)
+            foreach (BlocksLanguageModule application in applications)
             {
                 List<Key> resourceKeys = await _keyRepository.GetAllKeysByModuleAsync(application.ItemId);
                 _logger.LogInformation("++ JsonOutputGeneratorService: GenerateAsync()... Found {ResourceKeysCount} UilmResourceKeys for UilmApplication={ApplicationName}.", resourceKeys.Count, application.ModuleName);
@@ -102,7 +102,7 @@ namespace DomainService.Services
             return true;
         }
 
-        public List<UilmFile> ProcessUilmFile(GenerateUilmFilesEvent command, List<Language> languages, List<Key> resourceKeys, Module application)
+        public List<UilmFile> ProcessUilmFile(GenerateUilmFilesEvent command, List<Language> languages, List<Key> resourceKeys, BlocksLanguageModule application)
         {
 
             List<UilmFile> uilmfiles = new List<UilmFile>();
