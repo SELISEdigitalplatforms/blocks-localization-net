@@ -7,11 +7,11 @@ namespace DomainService.Services
     public class Key : IProjectKey
     {
         [BsonId]
-        public string ItemId { get; set; }
+        public string? ItemId { get; set; }
         public string KeyName { get; set; }
         public string ModuleId { get; set; }
         public Resource[] Resources { get; set; }
-        public List<string> Routes { get; set; }
+        public List<string>? Routes { get; set; }
         public bool IsPartiallyTranslated { get; set; }
         public string? ProjectKey { get; set; }
     }
