@@ -8,7 +8,7 @@
 using Blocks.Genesis;
 using Worker;
 
-const string _serviceName = "blocks-localization-worker";
+const string _serviceName = "blocks-uilm-worker";
 
 await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName);
 
