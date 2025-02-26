@@ -15,6 +15,16 @@ namespace DomainService.Repositories
             _dbContextProvider = dbContextProvider;
         }
 
+
+        public async Task<Key> GetByIdAsync(string itemId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<Key>(_collectionName);
+            var filter = Builders<Key>.Filter.Eq(lk => lk.ItemId, itemId);
+
+            return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
         public async Task<GetKeysQueryResponse> GetAllKeysAsync(GetKeysRequest request)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");

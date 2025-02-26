@@ -14,5 +14,6 @@ namespace DomainService.Services
         Task<GetKeysQueryResponse> GetKeysAsync(GetKeysRequest query);
         Task<bool> GenerateAsync(GenerateUilmFilesEvent command);
         Task<string> GetUilmFile(GetUilmFileRequest request);
+        Task<Key?> GetAsync(GetKeyRequest request);
     }
 }

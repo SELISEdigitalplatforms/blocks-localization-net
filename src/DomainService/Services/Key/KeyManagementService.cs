@@ -75,6 +75,11 @@ namespace DomainService.Services
             return await _keyRepository.GetAllKeysAsync(query);
         }
 
+        public async Task<Key?> GetAsync(GetKeyRequest request)
+        {
+            var key = await _keyRepository.GetByIdAsync(request.ItemId);
+            return key;
+        }
 
         public async Task<bool> GenerateAsync(GenerateUilmFilesEvent command)
         {

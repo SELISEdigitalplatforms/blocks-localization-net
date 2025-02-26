@@ -68,6 +68,31 @@ namespace Api.Controllers
         }
 
         [HttpGet]
+        [Authorize]
+        public async Task<Key?> Get([FromQuery] GetKeyRequest request)
+        {
+            if (request == null) BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(request);
+
+            var result = await _keyManagementService.GetAsync(request);
+            if (result == null)
+            {
+                var response = new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "Key", "No key found" }
+                    }
+                };
+
+                BadRequest(response);
+            }
+
+            return result;
+        }
+
+        [HttpGet]
         public async Task GetUilmFile([FromQuery] GetUilmFileRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.ProjectKey))
