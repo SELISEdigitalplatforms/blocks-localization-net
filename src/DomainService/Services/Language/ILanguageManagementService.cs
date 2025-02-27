@@ -8,5 +8,6 @@ namespace DomainService.Services
         Task<ApiResponse> SaveLanguageAsync(Language language);
         Task<List<Language>> GetLanguagesAsync();
         Task<BaseMutationResponse> DeleteAsysnc(DeleteLanguageRequest request);
+        Task<BaseMutationResponse> SetDefaultLanguage(SetDefaultLanguageRequest request);
     }
 }

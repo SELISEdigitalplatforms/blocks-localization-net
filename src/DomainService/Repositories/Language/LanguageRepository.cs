@@ -56,5 +56,18 @@ namespace DomainService.Repositories
                 new ReplaceOptions { IsUpsert = true }
             );
         }
+        public async Task RemoveDefault(BlocksLanguage language)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<BlocksLanguage>(_collectionName);
+
+            var filter = Builders<BlocksLanguage>.Filter.And(
+                          Builders<BlocksLanguage>.Filter.Ne(mc => mc.LanguageName, language.LanguageName),
+                          Builders<BlocksLanguage>.Filter.Ne(mc => mc.LanguageCode, language.LanguageCode));
+
+            var update = Builders<BlocksLanguage>.Update.Set(x => x.IsDefault, false);
+
+            await collection.UpdateManyAsync(filter, update);
+        }
     }
 }
