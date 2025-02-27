@@ -8,5 +8,6 @@ namespace DomainService.Repositories
         Task<BlocksLanguage> GetLanguageByNameAsync(string languageName);
         Task<List<Language>> GetAllLanguagesAsync();
         Task DeleteAsync(string languageName);
+        Task RemoveDefault(BlocksLanguage language);
     }
 }

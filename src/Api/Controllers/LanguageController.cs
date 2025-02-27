@@ -83,5 +83,28 @@ namespace Api.Controllers
             var result = await _languageManagementService.DeleteAsysnc(request);
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> SetDefault(SetDefaultLanguageRequest request)
+        {
+            if (request == null) BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(request);
+
+            if (string.IsNullOrWhiteSpace(request.LanguageName))
+            {
+                return BadRequest(new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "LanguageName", "Invalid or missing LanguageName" }
+                    }
+                });
+            }
+
+            var result = await _languageManagementService.SetDefaultLanguage(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
     }
 }

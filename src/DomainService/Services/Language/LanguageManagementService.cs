@@ -52,8 +52,8 @@ namespace DomainService.Services
         {
             _logger.LogInformation("Deleting language start");
 
-            var key = await _languageRepository.GetLanguageByNameAsync(request.LanguageName);
-            if (key == null)
+            var language = await _languageRepository.GetLanguageByNameAsync(request.LanguageName);
+            if (language == null)
             {
                 _logger.LogInformation("Deleting language end -- language not found");
 
@@ -62,7 +62,7 @@ namespace DomainService.Services
                     IsSuccess = false,
                     Errors = new Dictionary<string, string>
                     {
-                        { "ItemId", "language not found" }
+                        { "languageName", "language not found" }
                     }
                 };
             }
@@ -86,5 +86,36 @@ namespace DomainService.Services
 
             return repoLanguage;
         }
+
+        public async Task<BaseMutationResponse> SetDefaultLanguage(SetDefaultLanguageRequest request)
+        {
+            _logger.LogInformation("Default language set start");
+
+            var language = await _languageRepository.GetLanguageByNameAsync(request.LanguageName);
+            if (language == null)
+            {
+                _logger.LogInformation("Default language set end -- language not found");
+
+                return new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "languageName", "language not found" }
+                    }
+                };
+            }
+
+            language.IsDefault = true;
+
+            await Task.WhenAll(
+                _languageRepository.SaveAsync(language),
+                _languageRepository.RemoveDefault(language)
+            );
+
+            _logger.LogInformation("Deleting language end -- Success");
+            return new BaseMutationResponse { IsSuccess = true };
+        }
+
     }
 }
