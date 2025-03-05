@@ -18,6 +18,7 @@ namespace DomainService.Services
         private readonly ILanguageManagementService _languageManagementService;
         private readonly IModuleManagementService _moduleManagementService;
         private readonly IMessageClient _messageClient;
+        private readonly IAssistantService _assistantService;
 
         private readonly string _tenantId = BlocksContext.GetContext()?.TenantId ?? "";
 
@@ -27,7 +28,8 @@ namespace DomainService.Services
             ILogger<KeyManagementService> logger,
             ILanguageManagementService languageManagementService,
             IModuleManagementService moduleManagementService,
-            IMessageClient messageClient)
+            IMessageClient messageClient,
+            IAssistantService assistantService)
         {
             _keyRepository = keyRepository;
             _validator = validator;
@@ -35,6 +37,7 @@ namespace DomainService.Services
             _languageManagementService = languageManagementService;
             _moduleManagementService = moduleManagementService;
             _messageClient = messageClient;
+            _assistantService = assistantService;
         }
 
         public async Task<ApiResponse> SaveKeyAsync(Key key)
@@ -108,6 +111,190 @@ namespace DomainService.Services
 
             _logger.LogInformation("Deleting Key end -- Success");
             return new BaseMutationResponse { IsSuccess = true };
+        }
+
+        public async Task<bool> ChangeAll(TranslateAllEvent request)
+        {
+            List<Language> languageSetting = await _languageManagementService.GetLanguagesAsync();
+
+            var page = 0;
+            var pageSize = 1000;
+
+            while (true)
+            {
+                
+                IQueryable<BlocksLanguageKey> dbResourceKeys = await _keyRepository.GetUilmResourceKeysWithPage(page, pageSize);
+
+                if (!dbResourceKeys.Any())
+                {
+                    break;
+                }
+
+
+                var resourceKeys = await ProcessChangeAll(request, dbResourceKeys, languageSetting);
+
+                if (resourceKeys.Any())
+                {
+                    await UpdateResourceKey(resourceKeys, request);
+                }
+
+                page++;
+            }
+
+            return true;
+        }
+
+        public async Task<List<BlocksLanguageKey>> ProcessChangeAll(TranslateAllEvent request, IQueryable<BlocksLanguageKey> dbResourceKeys, List<Language> languageSetting)
+        {
+            var uilmResourceKeyList = new List<BlocksLanguageKey>();
+            foreach (var resourceKey in dbResourceKeys)
+            {
+                await ProcessResourceKey(request, resourceKey, languageSetting, uilmResourceKeyList);
+            }
+            return uilmResourceKeyList;
+        }
+
+        public async Task ProcessResourceKey(TranslateAllEvent request, BlocksLanguageKey resourceKey, List<Language> languageSetting, List<BlocksLanguageKey> uilmResourceKeyList)
+        {
+            var keyName = resourceKey.KeyName;
+            var resources = resourceKey.Resources?.ToList();
+
+            EmptyResourcesThatHasReservedKeywords(uilmResourceKeyList, resourceKey, resources, request.DefaultLanguage);
+
+            var defaultResource = resources?.FirstOrDefault(x => x.Culture == request.DefaultLanguage);
+
+            //if (ShouldSkipResource(defaultResource, keyName, request))
+            //{
+            //    return;
+            //}
+
+            List<Resource> missingResources = GetMissingResources(keyName, resources, defaultResource, request.DefaultLanguage);
+
+            CompareAndAddResources(missingResources, resources, languageSetting);
+
+            if (missingResources.Any())
+            {
+                //var timeline = MakeBlocksLanguageManagerTimeline(command, resourceKey);
+
+                foreach (var missingResource in missingResources)
+                {
+                    await ProcessMissingResource(request, resourceKey, defaultResource, missingResource, resources, languageSetting);
+
+                }
+
+                resourceKey.Resources = resources.ToArray();
+                resourceKey.LastUpdateDate = DateTime.Now;
+                resourceKey.ItemId = string.IsNullOrWhiteSpace(resourceKey.ItemId) ? Guid.NewGuid().ToString() : resourceKey.ItemId;
+
+                uilmResourceKeyList.Add(resourceKey);
+
+                //timeline.CurrentData = new LanguageManagerDto
+                //{
+                //    UilmResourceKey = resourceKey
+                //};
+
+                //blocksLanguageManagerTimelines.Add(timeline);
+            }
+        }
+
+        public static bool ShouldSkipResource(Resource defaultResource, string keyName, TranslateAllEvent request)
+        {
+            return string.IsNullOrEmpty(defaultResource?.Value) || (defaultResource?.Value == keyName);
+        }
+
+        public static List<Resource> GetMissingResources(string keyName, List<Resource> resources, Resource defaultResource, string defaultLanguage)
+        {
+            return resources.Where(x => x.Culture != defaultLanguage && (x.Value == keyName || x.Value == null || x.Value == ""
+                                                                || x.Value == $"{defaultResource?.Value} {x.Culture.ToUpper()}"
+                                                                || x.Value == $"{defaultResource?.Value}")).ToList();
+        }
+
+        public void CompareAndAddResources(List<Resource> missingResources, IEnumerable<Resource> resources,
+            List<Language> languageSetting)
+        {
+            var languageCodes = languageSetting.Select(x => x.LanguageCode).ToList();
+            var resourceCultures = resources.Select(x => x.Culture).ToList();
+
+            var missingCultures = languageCodes.Except(resourceCultures).ToList();
+
+            if (missingCultures.Any())
+            {
+                foreach (var missingCulture in missingCultures)
+                {
+                    missingResources.Add(new Resource
+                    {
+                        Culture = missingCulture
+                    });
+                }
+            }
+        }
+
+        public async Task ProcessMissingResource(TranslateAllEvent request, BlocksLanguageKey resourceKey, Resource defaultResource, Resource missingResource, List<Resource> resources, List<Language> languageSetting)
+        {
+            var languageName = languageSetting?.FirstOrDefault(x => x.LanguageCode == missingResource.Culture)?.LanguageName;
+
+            if (string.IsNullOrEmpty(languageName))
+            {
+                _logger.LogError("ChangeAll: No language name found for languageCode {misssingResourceCulture}", missingResource.Culture);
+                return;
+            }
+
+            missingResource.Value = await _assistantService.SuggestTranslation(ConstructQuery(request, resourceKey, defaultResource, missingResource, languageName, languageSetting));
+
+            var matchedResource = resources.FirstOrDefault(x => x.Culture == missingResource.Culture);
+            if (matchedResource != null)
+            {
+                resources.Remove(matchedResource);
+            }
+            resources.Add(missingResource);
+        }
+
+        public static SuggestLanguageRequest ConstructQuery(TranslateAllEvent request, BlocksLanguageKey resourceKey,
+            Resource defaultResource, Resource missingResource, string languageName, List<Language> languageSetting)
+        {
+            return new()
+            {
+                //ElementType = resourceKey.Type,
+                //Temperature = (resourceKey.Temperature / 100),
+                Temperature = 0.1,
+                //MaxCharacterLength = missingResource.CharacterLength,
+                //ElementApplicationContext = command.ElementApplicationContext,
+                //ElementDetailContext = resourceKey.Context,
+                SourceText = defaultResource?.Value,
+                DestinationLanguage = languageName,
+                CurrentLanguage = languageSetting?.FirstOrDefault(x => x.LanguageCode == request.DefaultLanguage).LanguageName
+            };
+        }
+
+        public static void EmptyResourcesThatHasReservedKeywords(List<BlocksLanguageKey> missingResourceKeyResponseList, BlocksLanguageKey resourceKey, List<Resource> resources, string defaultLanguage)
+        {
+            if (HasKeywordValue(resources, defaultLanguage))
+            {
+                foreach (var item in resources)
+                {
+                    item.Value = "";
+                }
+
+                missingResourceKeyResponseList.Add(resourceKey);
+            }
+        }
+
+        public static bool HasKeywordValue(List<Resource> resources, string defaultLanguage)
+        {
+            var keywordResources = resources.FirstOrDefault(x => x.Culture == defaultLanguage && x.Value?.ToUpper() == "KEY_MISSING");
+
+            return keywordResources != null;
+        }
+
+        public async Task UpdateResourceKey(List<BlocksLanguageKey> resourceKeys,TranslateAllEvent request)
+        {
+            var updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(resourceKeys);
+
+            //await _languageManagementRepository.UpdateUilmResourceKeysTimelineForChangeAll(resourceKeyTimelines);
+
+            //await CallWebhook(command);
+
+            _logger.LogInformation($"ChangeAll: Uilm Resource key updated: {updateCount}");
         }
 
         public async Task<bool> GenerateAsync(GenerateUilmFilesEvent command)
@@ -220,7 +407,23 @@ namespace DomainService.Services
             return uilmFile?.Content;
         }
 
-        public async Task SendEvent(GenerateUilmFilesRequest request)
+        public async Task SendTranslateAllEvent(TranslateAllRequest request)
+        {
+            await _messageClient.SendToConsumerAsync(
+                new ConsumerMessage<TranslateAllEvent>
+                {
+                    ConsumerName = Constants.UilmQueue,
+                    Payload = new TranslateAllEvent
+                    {
+                        MessageCoRelationId = request.MessageCoRelationId,
+                        ProjectKey = request.ProjectKey,
+                        DefaultLanguage = request.DefaultLanguage
+                    }
+                }
+            );
+        }
+        
+        public async Task SendGenerateUilmFilesEvent(GenerateUilmFilesRequest request)
         {
             await _messageClient.SendToConsumerAsync(
                 new ConsumerMessage<GenerateUilmFilesEvent>

@@ -1,4 +1,5 @@
 ﻿using DomainService.Services;
+using System.Linq.Expressions;
 
 namespace DomainService.Repositories
 {
@@ -13,5 +14,7 @@ namespace DomainService.Repositories
         Task<UilmFile> GetUilmFile(GetUilmFileRequest request);
         Task<Key> GetByIdAsync(string itemId);
         Task DeleteAsync(string itemId);
+        Task<IQueryable<BlocksLanguageKey>> GetUilmResourceKeysWithPage(int page, int size);
+        Task<long?> UpdateUilmResourceKeysForChangeAll(List<BlocksLanguageKey> uilmResourceKeys);
     }
 }

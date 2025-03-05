@@ -14,6 +14,7 @@ namespace Worker
         {
 
             services.AddSingleton<IConsumer<GenerateUilmFilesEvent>, GenerateUilmFilesConsumer>();
+            services.AddSingleton<IConsumer<TranslateAllEvent>, TranslateAllEventConsumer>();
 
             services.AddSingleton<IModuleManagementService, ModuleManagementService>();
             services.AddSingleton<IModuleRepository, ModuleRepository>();
