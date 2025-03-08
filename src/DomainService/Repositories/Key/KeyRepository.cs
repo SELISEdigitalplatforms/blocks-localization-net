@@ -2,6 +2,7 @@
 using DomainService.Services;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Linq.Expressions;
 
 namespace DomainService.Repositories
 {
@@ -23,6 +24,20 @@ namespace DomainService.Repositories
             var filter = Builders<Key>.Filter.Eq(lk => lk.ItemId, itemId);
 
             return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+
+        public async Task<IQueryable<BlocksLanguageKey>> GetUilmResourceKeysWithPage(int page, int size)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<BlocksLanguageKey>(_collectionName);
+
+            var result = await collection
+                            .Find(_ => true)
+                            .Skip(page * size)
+                            .Limit(size)
+                            .ToListAsync();
+            return result.AsQueryable();
         }
 
         public async Task<GetKeysQueryResponse> GetAllKeysAsync(GetKeysRequest request)
@@ -189,6 +204,32 @@ namespace DomainService.Repositories
             var filter = Builders<BlocksLanguageKey>.Filter.Eq(lk => lk.ItemId, itemId);
 
             await collection.DeleteOneAsync(filter);
+        }
+
+        public async Task<long?> UpdateUilmResourceKeysForChangeAll(List<BlocksLanguageKey> uilmResourceKeys)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<BlocksLanguageKey>(_collectionName);
+
+            List<WriteModel<BlocksLanguageKey>> bulkOps = new List<WriteModel<BlocksLanguageKey>>();
+
+            foreach (BlocksLanguageKey uilmResourceKey in uilmResourceKeys)
+            {
+                FilterDefinition<BlocksLanguageKey> filter = Builders<BlocksLanguageKey>.Filter.Empty;
+
+                UpdateDefinition<BlocksLanguageKey> update = Builders<BlocksLanguageKey>.Update
+                    .Set(x => x.Resources, uilmResourceKey.Resources)
+                    .Set(x => x.ModuleId, uilmResourceKey.ModuleId)
+                    .Set(x => x.KeyName, uilmResourceKey.KeyName)
+                    .Set(x => x.LastUpdateDate, uilmResourceKey.LastUpdateDate)
+                    .SetOnInsert(x => x.ItemId, Guid.NewGuid().ToString());
+
+                UpdateOneModel<BlocksLanguageKey> upsertOne = new UpdateOneModel<BlocksLanguageKey>(filter, update) { IsUpsert = true };
+                bulkOps.Add(upsertOne);
+            }
+
+            var response = await collection.BulkWriteAsync(bulkOps);
+            return response?.ModifiedCount;
         }
     }
 }
