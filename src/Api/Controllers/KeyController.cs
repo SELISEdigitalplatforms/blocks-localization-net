@@ -137,11 +137,32 @@ namespace Api.Controllers
             //if (request == null) return BadRequest();
             if (request == null) return BadRequest(new BaseMutationResponse());
             _changeControllerContext.ChangeContext(request);
-            await _keyManagementService.SendEvent(request);
+            await _keyManagementService.SendGenerateUilmFilesEvent(request);
             return Ok(new BaseMutationResponse { IsSuccess = true });
         }
 
-        
+        [HttpPost]
+        //[Authorize]
+        public async Task<IActionResult> TranslateAll(TranslateAllRequest request)
+        {
+            if (request == null) BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(request);
+
+            if (string.IsNullOrWhiteSpace(request.ProjectKey))
+            {
+                return BadRequest(new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "ProjectKey", "Invalid or missing ProjectKey" }
+                    }
+                });
+            }
+
+            await _keyManagementService.SendTranslateAllEvent(request);
+            return Ok(new BaseMutationResponse { IsSuccess = true });
+        }
 
     }
 }

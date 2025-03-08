@@ -12,6 +12,8 @@ namespace DomainService.Services
         Task<string> GetUilmFile(GetUilmFileRequest request);
         Task<Key?> GetAsync(GetKeyRequest request);
         Task<BaseMutationResponse> DeleteAsysnc(DeleteKeyRequest request);
-        Task SendEvent(GenerateUilmFilesRequest request);
+        Task SendTranslateAllEvent(TranslateAllRequest request);
+        Task SendGenerateUilmFilesEvent(GenerateUilmFilesRequest request);
+        Task<bool> ChangeAll(TranslateAllEvent request);
     }
 }
