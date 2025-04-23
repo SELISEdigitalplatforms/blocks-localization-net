@@ -1,5 +1,5 @@
 # Build Stage
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-env
 WORKDIR /src
 
 RUN mkdir -p /root/.nuget/NuGet
@@ -19,7 +19,7 @@ RUN dotnet publish ./worker/ -o /publish --configuration Release
 RUN ls /publish
 
 # Publish Stage
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=build-env /publish .
 ARG git_branch
