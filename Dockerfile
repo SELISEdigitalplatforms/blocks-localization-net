@@ -1,5 +1,5 @@
 # Build Stage
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-env
 WORKDIR /src
 ARG git_branch
 
@@ -22,7 +22,7 @@ RUN dotnet publish ./Api/ -o /publish --configuration Release
 RUN ls /publish
 
 # Publish Stage
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
 ARG git_branch
 
 WORKDIR /app
