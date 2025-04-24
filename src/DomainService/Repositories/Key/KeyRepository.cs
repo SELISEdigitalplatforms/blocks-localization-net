@@ -87,16 +87,7 @@ namespace DomainService.Repositories
                 }
                 else if(query.ModuleIds.Length > 1)
                 {
-                    //matchFilters.Add(filterBuilder.In(x => x.ModuleId, query.ModuleIds));
-                    var moduleIdFilters = query.ModuleIds
-                        .Where(id => !string.IsNullOrWhiteSpace(id)) 
-                        .Select(id => filterBuilder.Eq(x => x.ModuleId, id))
-                        .ToList();
-
-                    if (moduleIdFilters.Count > 0)
-                    {
-                        matchFilters.Add(filterBuilder.Or(moduleIdFilters));
-                    }
+                    matchFilters.Add(filterBuilder.In(x => x.ModuleId, query.ModuleIds));
                 }
             }
 
