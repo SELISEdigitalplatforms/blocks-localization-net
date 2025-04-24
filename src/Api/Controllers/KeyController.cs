@@ -56,9 +56,9 @@ namespace Api.Controllers
         /// Retrieves all available Keys.
         /// </summary>
         /// <returns>A list of <see cref="Key"/> objects.</returns>
-        [HttpGet]
+        [HttpPost]
         [Authorize]
-        public async Task<GetKeysQueryResponse> Gets([FromQuery] GetKeysRequest query)
+        public async Task<GetKeysQueryResponse> Gets([FromBody] GetKeysRequest query)
         {
             if (query == null) BadRequest(new BaseMutationResponse());
             _changeControllerContext.ChangeContext(query);
