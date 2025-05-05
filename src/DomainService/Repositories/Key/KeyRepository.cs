@@ -144,7 +144,8 @@ namespace DomainService.Repositories
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
             var collection = dataBase.GetCollection<BlocksLanguageKey>(_collectionName);
 
-            var filter = Builders<BlocksLanguageKey>.Filter.Eq(mc => mc.KeyName, key.KeyName);
+            var filter = Builders<BlocksLanguageKey>.Filter.Eq(mc => mc.KeyName, key.KeyName) &
+                         Builders<BlocksLanguageKey>.Filter.Eq(mc => mc.ModuleId, key.ModuleId);
 
             await collection.ReplaceOneAsync(
                 filter,

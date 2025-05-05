@@ -13,6 +13,7 @@ namespace DomainService.Services
         public Resource[] Resources { get; set; }
         public List<string>? Routes { get; set; }
         public bool IsPartiallyTranslated { get; set; }
+        public bool IsNewKey { get; set; }
         public DateTime LastUpdateDate { get; set; }
         public string? ProjectKey { get; set; }
     }
