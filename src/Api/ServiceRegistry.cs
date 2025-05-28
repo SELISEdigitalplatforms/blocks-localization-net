@@ -31,7 +31,6 @@ namespace Api
 
             services.AddSingleton<IAssistantService, AssistantService>();
 
-            services.AddSingleton<ChangeControllerContext>();
         }
     }
 }
