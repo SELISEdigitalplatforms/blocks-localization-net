@@ -559,7 +559,7 @@ namespace DomainService.Services
                 Dictionary<string, string> languages = new Dictionary<string, string>();
 
                 List<string> systemColumns = new List<string>() { "ItemId", "ModuleId", "Module", "KeyName" };
-                List<BlocksLanguageKey> uilmResourceKeys = new List<BlocksLanguageKey>();
+                List<BlocksLanguageKey> blocksLanguageKeys = new List<BlocksLanguageKey>();
 
                 foreach (IXLColumn col in worksheet.Columns())
                 {
@@ -585,7 +585,7 @@ namespace DomainService.Services
                 _logger.LogInformation("ImportExcelFile: Detected {ColumnsCount} columns={Columns} in FileName={FileDataName}", columns.Count, string.Join(", ", columns.Select(x => x.Key).ToList()), fileData.Name);
                 _logger.LogInformation("ImportExcelFile: Detected {LanguagesCount} cultures={Cultures} in FileName={FileDataName}", languages.Count, string.Join(", ", languages.Select(x => x.Key).ToList()), fileData.Name);
 
-                await ProcessExcelCells(worksheet, columns, languages, uilmResourceKeys);
+                await ProcessExcelCells(worksheet, columns, languages, blocksLanguageKeys);
 
                 _logger.LogInformation("ImportExcelFile: Successfully imported FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
 
@@ -596,6 +596,93 @@ namespace DomainService.Services
                 _logger.LogError("ImportExcelFile: Failed to import FileId:{id}, FileName: {name}, Error: {ex}", fileData.ItemId, fileData.Name, ex);
                 return false;
             }
+        }
+
+        private async Task ProcessExcelCells(IXLWorksheet worksheet, Dictionary<string, string> columns, Dictionary<string, string> languages,
+            List<BlocksLanguageKey> uilmResourceKeys)
+        {
+            var dbApplications = await GetLanguageApplications(null);
+
+            var uilmApplicationsToBeInserted = new List<UilmApplication>();
+            var uilmApplicationsToBeUpdated = new List<UilmApplication>();
+
+            var resourceKeysWithoutId = new List<BlocksLanguageKey>();
+            var cultures = languages.Where(x => !x.Key.Contains("_CharacterLength")).ToDictionary(x => x.Key, y => y.Value);
+
+            var excelRows = worksheet.RowsUsed().Count();
+
+            _logger.LogInformation("ImportExcelFile: {Excelrows} UilmResourceKeys Found!", excelRows - 1);
+
+            var uilmAppTimeLines = new List<BlocksLanguageManagerTimeline>();
+            var uilmResourceKeyTimeLines = new List<BlocksLanguageManagerTimeline>();
+
+            for (int i = 2; i <= excelRows; i++)
+            {
+                string id = worksheet.Cell(i, columns["id"]).Value.ToString();
+                string appId = worksheet.Cell(i, columns["app id"]).Value.ToString();
+                string appName = worksheet.Cell(i, columns["app"]).Value.ToString();
+                string keyName = worksheet.Cell(i, columns["key"]).Value.ToString();
+                string moduleName = worksheet.Cell(i, columns["module"]).Value.ToString();
+                string type = worksheet.Cell(i, columns["type"]).Value.ToString();
+
+                var uilmAppTimeLine = GetBlocksLanguageManagerTimeline();
+
+                appId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, appName, moduleName,
+                            uilmAppTimeLine);
+
+                uilmAppTimeLines.Add(uilmAppTimeLine);
+
+                BlocksLanguageKey uilmResourceKey = new()
+                {
+                    Id = id,
+                    AppId = appId,
+                    KeyName = keyName,
+                    ModifiedDate = DateTime.UtcNow,
+                    Type = type,
+                };
+
+                uilmResourceKey.Resources = new Resource[cultures.Count];
+
+                int j = 0;
+                foreach (KeyValuePair<string, string> lang in cultures)
+                {
+                    string resourceValue = worksheet.Cell(i, lang.Value).Value.ToString();
+                    int characterLength = 0;
+
+                    var key = lang.Key + "_CharacterLength";
+                    if (lang.Key != defaultLanguage && languages.ContainsKey(key))
+                    {
+                        characterLength = AssignCharacterLengthValue(worksheet, languages, i, key);
+                    }
+
+                    uilmResourceKey.Resources[j++] = (new Resource() { Culture = lang.Key, Value = resourceValue, CharacterLength = characterLength });
+                }
+
+                var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
+
+                var olduilmResourceKey = await GetUilmResourceKey(uilmResourceKey.AppId, uilmResourceKey.KeyName);
+
+                uilmResourceKey.Id = string.IsNullOrWhiteSpace(uilmResourceKey.Id) ? Guid.NewGuid().ToString() : uilmResourceKey.Id;
+
+                if (olduilmResourceKey == null)
+                {
+                    resourceKeysWithoutId.Add(uilmResourceKey);
+                }
+                else
+                {
+                    uilmResourceKey.Id = string.IsNullOrWhiteSpace(olduilmResourceKey.Id) ? uilmResourceKey.Id : olduilmResourceKey.Id;
+                    uilmResourceKeys.Add(uilmResourceKey);
+                }
+
+                FormatUilmResouceKeyTimeline(uilmResourceKeyTimeLine, olduilmResourceKey, uilmResourceKey);
+                uilmResourceKeyTimeLines.Add(uilmResourceKeyTimeLine);
+            }
+
+            await SaveUilmResourceKey(uilmResourceKeys, resourceKeysWithoutId);
+            await SaveUilmApplication(uilmApplicationsToBeInserted.DistinctBy(x => x.ModuleName).ToList(), uilmApplicationsToBeUpdated.DistinctBy(x => x.ModuleName).ToList());
+
+            uilmResourceKeyTimeLines?.AddRange(uilmAppTimeLines?.DistinctBy(x => x.CurrentData?.UilmApplication?.ModuleName)?.ToList());
+            await _uilmRepository.SaveBlocksLanguageManagerTimeLines(uilmResourceKeyTimeLines);
         }
 
     }
