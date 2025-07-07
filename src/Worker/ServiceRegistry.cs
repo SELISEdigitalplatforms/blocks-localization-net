@@ -1,4 +1,5 @@
-﻿using Blocks.Genesis;
+﻿using Blocks.Extension.DependencyInjection;
+using Blocks.Genesis;
 using DomainService.Repositories;
 using DomainService.Services;
 using DomainService.Shared.Events;
@@ -29,6 +30,8 @@ namespace Worker
             services.AddSingleton<IValidator<Key>, KeyValidator>();
 
             services.AddSingleton<IAssistantService, AssistantService>();
+
+            services.RegisterBlocksStorageServices();
         }
     }
 }
