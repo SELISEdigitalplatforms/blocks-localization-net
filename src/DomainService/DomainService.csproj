@@ -10,6 +10,7 @@
     <PackageReference Include="FluentValidation" Version="11.10.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="SeliseBlocks.Genesis" Version="9.0.0-preview.72" />
+    <PackageReference Include="SeliseBlocks.StorageDriver" Version="9.0.0-preview.6" />
   </ItemGroup>
 
 </Project>

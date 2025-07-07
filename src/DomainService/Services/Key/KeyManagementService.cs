@@ -2,10 +2,11 @@
 using DomainService.Repositories;
 using DomainService.Shared;
 using DomainService.Shared.Events;
-using DomainService.Utilities;
+using DomainService.Storage;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using StorageDriver;
 
 
 namespace DomainService.Services
@@ -19,6 +20,7 @@ namespace DomainService.Services
         private readonly IModuleManagementService _moduleManagementService;
         private readonly IMessageClient _messageClient;
         private readonly IAssistantService _assistantService;
+        private readonly IStorageDriverService _storageDriverService;
 
         private readonly string _tenantId = BlocksContext.GetContext()?.TenantId ?? "";
 
@@ -29,7 +31,8 @@ namespace DomainService.Services
             ILanguageManagementService languageManagementService,
             IModuleManagementService moduleManagementService,
             IMessageClient messageClient,
-            IAssistantService assistantService)
+            IAssistantService assistantService,
+            IStorageDriverService storageDriverService)
         {
             _keyRepository = keyRepository;
             _validator = validator;
@@ -38,6 +41,7 @@ namespace DomainService.Services
             _moduleManagementService = moduleManagementService;
             _messageClient = messageClient;
             _assistantService = assistantService;
+            _storageDriverService = storageDriverService;
         }
 
         public async Task<ApiResponse> SaveKeyAsync(Key key)
@@ -123,7 +127,7 @@ namespace DomainService.Services
 
             while (true)
             {
-                
+
                 IQueryable<BlocksLanguageKey> dbResourceKeys = await _keyRepository.GetUilmResourceKeysWithPage(page, pageSize);
 
                 if (!dbResourceKeys.Any())
@@ -287,7 +291,7 @@ namespace DomainService.Services
             return keywordResources != null;
         }
 
-        public async Task UpdateResourceKey(List<BlocksLanguageKey> resourceKeys,TranslateAllEvent request)
+        public async Task UpdateResourceKey(List<BlocksLanguageKey> resourceKeys, TranslateAllEvent request)
         {
             var updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(resourceKeys);
 
@@ -317,7 +321,8 @@ namespace DomainService.Services
 
                 _logger.LogInformation("++Saving {UilmfilesCount} UilmFiles for UilmApplication={ApplicationName}", uilmfiles.Count, application.ModuleName);
                 await SaveUniqeFiles(uilmfiles);
-            };
+            }
+            ;
 
             _logger.LogInformation("++JsonOutputGeneratorService: GenerateAsync execution successful!");
 
@@ -404,7 +409,7 @@ namespace DomainService.Services
 
         public async Task<string> GetUilmFile(GetUilmFileRequest request)
         {
-            var uilmFile =  await _keyRepository.GetUilmFile(request);
+            var uilmFile = await _keyRepository.GetUilmFile(request);
             return uilmFile?.Content;
         }
 
@@ -413,7 +418,7 @@ namespace DomainService.Services
             await _messageClient.SendToConsumerAsync(
                 new ConsumerMessage<TranslateAllEvent>
                 {
-                    ConsumerName = Constants.UilmQueue,
+                    ConsumerName = Utilities.Constants.UilmQueue,
                     Payload = new TranslateAllEvent
                     {
                         MessageCoRelationId = request.MessageCoRelationId,
@@ -423,13 +428,13 @@ namespace DomainService.Services
                 }
             );
         }
-        
+
         public async Task SendUilmImportEvent(UilmImportRequest request)
         {
             await _messageClient.SendToConsumerAsync(
                 new ConsumerMessage<UilmImportEvent>
                 {
-                    ConsumerName = Constants.UilmImportExportQueue,
+                    ConsumerName = Utilities.Constants.UilmImportExportQueue,
                     Payload = new UilmImportEvent
                     {
                         FileId = request.FileId,
@@ -439,13 +444,13 @@ namespace DomainService.Services
                 }
             );
         }
-        
+
         public async Task SendGenerateUilmFilesEvent(GenerateUilmFilesRequest request)
         {
             await _messageClient.SendToConsumerAsync(
                 new ConsumerMessage<GenerateUilmFilesEvent>
                 {
-                    ConsumerName = Constants.UilmQueue,
+                    ConsumerName = Utilities.Constants.UilmQueue,
                     Payload = new GenerateUilmFilesEvent
                     {
                         Guid = request.Guid,
@@ -459,7 +464,7 @@ namespace DomainService.Services
         public async Task<bool> ImportUilmFile(UilmImportEvent request)
         {
             _logger.LogInformation("Importing Uilm file with ID: {FileId}", request.FileId);
-            // var uilmFile = await _keyRepository.GetUilmFileById(request.FileId);
+            var file = await GetFileStream(request.FileId, request.ProjectKey);
             // if (uilmFile == null)
             // {
             //    _logger.LogError("Uilm file with ID {FileId} not found", request.FileId);
@@ -468,6 +473,56 @@ namespace DomainService.Services
 
             _logger.LogInformation("Successfully imported Uilm file with ID: {FileId}", request.FileId);
             return true;
+        }
+        private async Task<(FileResponse, Stream)> GetFileStream(string fileId, string projectKey)
+        {
+
+            var fileData = await _storageDriverService.GetUrlForDownloadFileAsync(new GetFileRequest
+            {
+                FileId = fileId,
+                ProjectKey = projectKey
+            });
+            if (fileData is null)
+            {
+                _logger.LogError("ImportUilmFile: File data is null with the file Id: {id}", fileId);
+                return (null, null);
+            }
+
+            var stream = await GetFileStream(fileData);
+            if (stream is null)
+            {
+                _logger.LogError("ImportUilmFile: File stream is null with the file Id: {id}", fileId);
+                return (null, null);
+            }
+
+            _logger.LogInformation("ImportUilmFile: Fetched FileContent for FileId={FileId} FileName={FileDataName}.", fileId, fileData.Name);
+
+            return (fileData, stream);
+        }
+
+        private async Task<Stream> GetFileStream(FileResponse fileData)
+        {
+
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("X-Blocks-Key", BlocksContext.GetContext()?.TenantId);
+
+
+            var fileUrl = fileData.Url;
+
+            var response = await httpClient.GetAsync(fileUrl);
+
+
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return Stream.Null;
+            }
+
+            var memoryStream = new MemoryStream();
+
+            await response.Content.CopyToAsync(memoryStream);
+
+            return memoryStream;
         }
 
     }

@@ -15,7 +15,7 @@ namespace Worker.Consumers
         }
         public async Task Consume(UilmImportEvent @event)
         {
-            await _keyManagementService.ImportUilmFile(@event);
+            var isSuccess = await _keyManagementService.ImportUilmFile(@event);
         }
     }
 }
