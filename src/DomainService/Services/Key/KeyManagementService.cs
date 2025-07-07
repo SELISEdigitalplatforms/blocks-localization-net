@@ -5,9 +5,10 @@ using DomainService.Shared.Events;
 using DomainService.Storage;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
+using MongoDB.Driver;
 using Newtonsoft.Json;
 using StorageDriver;
-
+using ClosedXML.Excel;
 
 namespace DomainService.Services
 {
@@ -23,6 +24,7 @@ namespace DomainService.Services
         private readonly IStorageDriverService _storageDriverService;
 
         private readonly string _tenantId = BlocksContext.GetContext()?.TenantId ?? "";
+        private string _format;
 
         public KeyManagementService(
             IKeyRepository keyRepository,
@@ -464,15 +466,34 @@ namespace DomainService.Services
         public async Task<bool> ImportUilmFile(UilmImportEvent request)
         {
             _logger.LogInformation("Importing Uilm file with ID: {FileId}", request.FileId);
-            var file = await GetFileStream(request.FileId, request.ProjectKey);
-            // if (uilmFile == null)
-            // {
-            //    _logger.LogError("Uilm file with ID {FileId} not found", request.FileId);
-            //    return false;
-            // }
+            var (fileData, stream) = await GetFileStream(request.FileId, request.ProjectKey);
+             if (fileData == null)
+            {
+                _logger.LogError("Uilm file with ID {FileId} not found", request.FileId);
+                return false;
+            }
+            if (fileData.Name.EndsWith(".xlsx"))
+            {
+                _format = "XLSX";
+                return await ImportExcelFile(stream, fileData);
+            }
+            else if (fileData.Name.EndsWith(".json"))
+            {
+                _format = "JSON";
+                return await ImportJsonFile(stream, fileData);
+            }
+            else if (fileData.Name.EndsWith(".csv"))
+            {
+                _format = "CSV";
+                return await ImportCsvFile(stream, fileData);
+            }
+            else if (fileData.Name.EndsWith(".xlf"))
+            {
+                _format = "XLF";
+                return await ImportXlfFile(stream, fileData);
+            }
 
-            _logger.LogInformation("Successfully imported Uilm file with ID: {FileId}", request.FileId);
-            return true;
+            return false;
         }
         private async Task<(FileResponse, Stream)> GetFileStream(string fileId, string projectKey)
         {
@@ -523,6 +544,58 @@ namespace DomainService.Services
             await response.Content.CopyToAsync(memoryStream);
 
             return memoryStream;
+        }
+
+        private async Task<bool> ImportExcelFile(Stream stream, FileResponse fileData)
+        {
+            try
+            {
+                using XLWorkbook workbook = new XLWorkbook(stream);
+                IXLWorksheet worksheet = workbook.Worksheets.First();
+                worksheet.Columns().Unhide();
+
+                // header value, column letter
+                Dictionary<string, string> columns = new Dictionary<string, string>();
+                Dictionary<string, string> languages = new Dictionary<string, string>();
+
+                List<string> systemColumns = new List<string>() { "ItemId", "ModuleId", "Module", "KeyName" };
+                List<BlocksLanguageKey> uilmResourceKeys = new List<BlocksLanguageKey>();
+
+                foreach (IXLColumn col in worksheet.Columns())
+                {
+                    string columnLetter = col.ColumnLetter();
+                    string header = worksheet.Cell(1, columnLetter).Value.ToString();
+                    if (!string.IsNullOrEmpty(header) && !columns.ContainsKey(header))
+                    {
+                        columns.Add(header.Trim(), columnLetter);
+                    }
+
+                    if (!string.IsNullOrEmpty(header) && !systemColumns.Contains(header) && !languages.ContainsKey(header))
+                    {
+                        languages.Add(header.Trim(), columnLetter);
+                    }
+                }
+
+                if (columns.Count == 0)
+                {
+                    _logger.LogError("ImportExcelFile: No column found in the excel FileId: {id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                    return false;
+                }
+
+                _logger.LogInformation("ImportExcelFile: Detected {ColumnsCount} columns={Columns} in FileName={FileDataName}", columns.Count, string.Join(", ", columns.Select(x => x.Key).ToList()), fileData.Name);
+                _logger.LogInformation("ImportExcelFile: Detected {LanguagesCount} cultures={Cultures} in FileName={FileDataName}", languages.Count, string.Join(", ", languages.Select(x => x.Key).ToList()), fileData.Name);
+
+                await ProcessExcelCells(worksheet, columns, languages, uilmResourceKeys);
+
+                _logger.LogInformation("ImportExcelFile: Successfully imported FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("ImportExcelFile: Failed to import FileId:{id}, FileName: {name}, Error: {ex}", fileData.ItemId, fileData.Name, ex);
+                return false;
+            }
         }
 
     }
