@@ -1,0 +1,56 @@
+﻿using DomainService.Repositories;
+using DomainService.Shared.Entities;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+
+namespace DomainService.Services
+{
+    public class JsonOutputGeneratorService : OutputGenerator
+    {
+        private readonly ILogger<XlsxOutputGeneratorService> _logger;
+
+        public JsonOutputGeneratorService()
+        {
+
+        }
+        public JsonOutputGeneratorService(ILogger<XlsxOutputGeneratorService> logger)
+        {
+            _logger = logger;
+        }
+        public override Task<T> GenerateAsync<T>(BlocksLanguage languageSetting, List<BlocksLanguageModule> applications,
+            List<BlocksLanguageResourceKey> resourceKeys, string defaultLanguage)
+        {
+            try
+            {
+                var identifiers = new string[] { languageSetting.LanguageCode };
+
+                var jsonOutputModels = new List<LanguageJsonModel>();
+
+                foreach (BlocksLanguageResourceKey resourceKey in resourceKeys)
+                {
+                    BlocksLanguageModule app = applications.FirstOrDefault(x => x.ItemId == resourceKey.ModuleId);
+
+                    var model = new LanguageJsonModel
+                    {
+                        Id = resourceKey.ItemId,
+                        AppId = resourceKey.ModuleId,
+                        Type = resourceKey.Value,
+                        App = app?.Name,
+                        Module = app?.ModuleName,
+                        Key = resourceKey.KeyName,
+                        Resources = resourceKey.Resources.Where(x => identifiers.Contains(x.Culture)).ToArray()
+                    };
+
+                    jsonOutputModels.Add(model);
+                }
+                string jsonString = JsonConvert.SerializeObject(jsonOutputModels, Formatting.Indented);
+                return Task.FromResult((T)(object)jsonString);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("JsonOutputGeneratorService: GenerateAsync: Error: {ExMessage}", ex.Message);
+                return Task.FromResult((T)(object)null);
+            }
+        }
+    }
+}

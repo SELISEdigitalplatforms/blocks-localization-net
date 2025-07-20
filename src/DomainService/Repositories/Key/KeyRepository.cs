@@ -1,5 +1,6 @@
 ﻿using Blocks.Genesis;
 using DomainService.Services;
+using DomainService.Shared.Entities;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Linq.Expressions;
@@ -85,7 +86,7 @@ namespace DomainService.Repositories
                 {
                     matchFilters.Add(filterBuilder.Eq(x => x.ModuleId, query.ModuleIds[0]));
                 }
-                else if(query.ModuleIds.Length > 1)
+                else if (query.ModuleIds.Length > 1)
                 {
                     matchFilters.Add(filterBuilder.In(x => x.ModuleId, query.ModuleIds));
                 }
@@ -211,8 +212,12 @@ namespace DomainService.Repositories
             await collection.DeleteOneAsync(filter);
         }
 
-        public async Task<long?> UpdateUilmResourceKeysForChangeAll(List<BlocksLanguageKey> uilmResourceKeys)
+        public async Task<long?> UpdateUilmResourceKeysForChangeAll(List<BlocksLanguageKey> uilmResourceKeys, string organizationId, bool isExternal, string tenantId)
         {
+            if (!isExternal)
+            {
+                await UpdateUilmResourceKeys(uilmResourceKeys, tenantId);
+            }
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
             var collection = dataBase.GetCollection<BlocksLanguageKey>(_collectionName);
 
@@ -235,6 +240,177 @@ namespace DomainService.Repositories
 
             var response = await collection.BulkWriteAsync(bulkOps);
             return response?.ModifiedCount;
+        }
+
+        public async Task<long?> UpdateUilmResourceKeys(List<BlocksLanguageKey> uilmResourceKeys, string tenantId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+
+            IMongoCollection<BlocksLanguageKey> collection = dataBase.GetCollection<BlocksLanguageKey>("BlocksLanguageKeys");
+            List<WriteModel<BlocksLanguageKey>> bulkOps = new List<WriteModel<BlocksLanguageKey>>();
+
+            foreach (BlocksLanguageKey uilmResourceKey in uilmResourceKeys)
+            {
+                FilterDefinition<BlocksLanguageKey> filter = Builders<BlocksLanguageKey>.Filter.Eq(x => x.ItemId, uilmResourceKey.ItemId);
+                UpdateDefinition<BlocksLanguageKey> update = Builders<BlocksLanguageKey>.Update
+                    .Set(x => x.Resources, uilmResourceKey.Resources)
+                    .Set(x => x.ModuleId, uilmResourceKey.ModuleId)
+                    .Set(x => x.KeyName, uilmResourceKey.KeyName)
+                    .Set(x => x.LastUpdateDate, uilmResourceKey.LastUpdateDate);
+
+                UpdateOneModel<BlocksLanguageKey> upsertOne = new UpdateOneModel<BlocksLanguageKey>(filter, update) { IsUpsert = true };
+                bulkOps.Add(upsertOne);
+            }
+
+            var response = await collection.BulkWriteAsync(bulkOps);
+            return response?.ModifiedCount;
+        }
+
+        public async Task<T> GetUilmResourceKey<T>(Expression<Func<BlocksLanguageResourceKey, bool>> expression)
+        {
+            var project = Builders<BlocksLanguageResourceKey>.Projection.As<T>();
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            return await dataBase.GetCollection<BlocksLanguageResourceKey>($"{nameof(BlocksLanguageKey)}s")
+                .Find(expression).Project(project).FirstOrDefaultAsync();
+        }
+
+        public async Task<BlocksLanguageKey> GetUilmResourceKey(Expression<Func<BlocksLanguageResourceKey, bool>> expression, string tenantId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            return await dataBase.GetCollection<BlocksLanguageResourceKey>($"{nameof(BlocksLanguageKey)}s")
+                .Find(expression).FirstOrDefaultAsync();
+        }
+
+        public async Task<List<BlocksLanguageResourceKey>> GetUilmResourceKeys(Expression<Func<BlocksLanguageResourceKey, bool>> expression, string tenantId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            return await dataBase.GetCollection<BlocksLanguageResourceKey>("BlocksLanguageResourceKeys").Find(expression).ToListAsync();
+        }
+
+        public async Task<List<T>> GetUilmResourceKeys<T>(Expression<Func<BlocksLanguageResourceKey, bool>> expression)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var project = Builders<BlocksLanguageResourceKey>.Projection.As<T>();
+            return await dataBase.GetCollection<BlocksLanguageResourceKey>($"{nameof(BlocksLanguageResourceKey)}s")
+                .Find(expression).Project(project).ToListAsync();
+        }
+
+        public async Task InsertUilmResourceKeys(IEnumerable<BlocksLanguageKey> entities, string tenantId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            await dataBase.GetCollection<BlocksLanguageKey>("BlocksLanguageKeys").InsertManyAsync(entities);
+        }
+
+        public async Task InsertUilmResourceKeys(IEnumerable<BlocksLanguageResourceKey> entities)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            await dataBase.GetCollection<BlocksLanguageResourceKey>("BlocksLanguageResourceKeys").InsertManyAsync(entities);
+        }
+
+        public async Task UpdateBulkUilmApplications(List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string organizationId, bool isExternal, string clientTenantId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+
+            List<WriteModel<BsonDocument>> bulkOpsInt = new List<WriteModel<BsonDocument>>();
+            List<WriteModel<BsonDocument>> bulkOpsExt = new List<WriteModel<BsonDocument>>();
+            List<WriteModel<BlocksLanguageModule>> bulkOpsExtUpserts = new List<WriteModel<BlocksLanguageModule>>();
+
+            foreach (BlocksLanguageModule uilmApplication in uilmApplicationsToBeUpdated)
+            {
+                var filter = Builders<BsonDocument>.Filter.Eq("_id", uilmApplication.ItemId);
+                var update = Builders<BsonDocument>.Update.Set("Name", uilmApplication.Name);
+                if (!isExternal)
+                {
+                    bulkOpsInt.Add(new UpdateOneModel<BsonDocument>(filter, update));
+
+                    var upsert = Builders<BlocksLanguageModule>.Update.Set(x => x.Name, uilmApplication.Name)
+                        .SetOnInsert(x => x.ItemId, Guid.NewGuid().ToString());
+                    var filterForUpsert = Builders<BlocksLanguageModule>.Filter.Eq(x => x.ItemId, uilmApplication.ItemId);
+                    bulkOpsExtUpserts.Add(new UpdateOneModel<BlocksLanguageModule>(filterForUpsert, upsert) { IsUpsert = true });
+                }
+                else
+                {
+                    bulkOpsExt.Add(new UpdateOneModel<BsonDocument>(filter, update));
+                }
+            }
+
+            if (!isExternal)
+            {
+                await dataBase.GetCollection<BsonDocument>("UilmApplications")
+                    .BulkWriteAsync(bulkOpsInt);
+            }
+
+            if (bulkOpsExt.Count > 0)
+            {
+                await dataBase.GetCollection<BsonDocument>("BlocksLanguageModules")
+                    .BulkWriteAsync(bulkOpsExt);
+            }
+
+            if (bulkOpsExtUpserts.Count > 0)
+            {
+                await dataBase.GetCollection<BlocksLanguageModule>("BlocksLanguageModules")
+                    .BulkWriteAsync(bulkOpsExtUpserts);
+            }
+
+            return;
+        }
+
+        public async Task<bool> UpdateKeysCountOfAppAsync(string appId, bool isExternal, string tenantId, string organizationId)
+        {
+            long resourceKeyCount = 0;
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", appId);
+            var countFilter = Builders<BsonDocument>.Filter.Eq("AppId", appId);
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+
+            if (!isExternal)
+            {
+                resourceKeyCount = await dataBase.GetCollection<BsonDocument>("UilmResourceKeys").CountDocumentsAsync(countFilter);
+                await dataBase.GetCollection<BsonDocument>("UilmApplications")
+                .UpdateOneAsync(filter, Builders<BsonDocument>.Update.Set("NumberOfKeys", resourceKeyCount));
+
+                var bfilter = Builders<BsonDocument>.Filter.Eq("OrganizationId", organizationId)
+                        & Builders<BsonDocument>.Filter.Eq("ActualId", appId);
+                await dataBase.GetCollection<BsonDocument>("BlocksLanguageApplications")
+                    .UpdateOneAsync(bfilter, Builders<BsonDocument>.Update.Set("NumberOfKeys", resourceKeyCount));
+            }
+            else
+            {
+                countFilter &= Builders<BsonDocument>.Filter.Eq("OrganizationId", organizationId);
+                resourceKeyCount = await dataBase.GetCollection<BsonDocument>("BlocksLanguageResourceKeys").CountDocumentsAsync(countFilter);
+                await dataBase.GetCollection<BsonDocument>("BlocksLanguageApplications")
+                .UpdateOneAsync(filter, Builders<BsonDocument>.Update.Set("NumberOfKeys", resourceKeyCount));
+            }
+
+            return true;
+        }
+
+        public async Task InsertUilmApplications(List<BlocksLanguageModule> uilmApplicationsToBeInserted, string clientTenantId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            await dataBase.GetCollection<BlocksLanguageModule>("BlocksLanguageModules").InsertManyAsync(uilmApplicationsToBeInserted);
+        }
+
+        public async Task InsertUilmApplications(IEnumerable<BlocksLanguageModule> entities)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            await dataBase.GetCollection<BlocksLanguageModule>("BlocksLanguageModules").InsertManyAsync(entities);
+        }
+
+        public async Task<List<T>> GetUilmApplications<T>(Expression<Func<BlocksLanguageModule, bool>> expression, string clientTenantId)
+        {
+            var project = Builders<BlocksLanguageModule>.Projection.As<T>();
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            if(!string.IsNullOrEmpty(clientTenantId))
+                dataBase = _dbContextProvider.GetDatabase(clientTenantId ?? "");
+
+            return await dataBase.GetCollection<BlocksLanguageModule>($"{nameof(BlocksLanguageModule)}s")
+                .Find(expression).Project(project).ToListAsync();
+        }
+
+        public async Task<BlocksLanguage> GetLanguageSettingAsync(string clientTenantId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            return await dataBase.GetCollection<BlocksLanguage>("BlocksLanguages").Find(x => x.IsDefault).FirstOrDefaultAsync();
         }
     }
 }
