@@ -592,12 +592,13 @@ namespace DomainService.Services
                     {
                         var languageJsonModel = new LanguageJsonModel
                         {
-                            Id = csv.GetField<string>("Id"),
-                            AppId = csv.GetField<string>("AppId"),
-                            Type = csv.GetField<string>("Type"),
-                            App = csv.GetField<string>("App"),
-                            Module = csv.GetField<string>("Module"),
-                            Key = csv.GetField<string>("Key")
+                            _id = csv.GetField<string>("_id"),
+                            Value = csv.GetField<string>("Value"),
+                            KeyName = csv.GetField<string>("KeyName"),
+                            //Resources = csv.GetField<string>("Resources"),
+                            ModuleId = csv.GetField<string>("ModuleId"),
+                            //IsPartiallyTranslated = csv.GetField<string>("IsPartiallyTranslated"),
+                            //Routes = csv.GetField<string>("Routes")
                         };
 
                         var resources = new List<Resource>();
@@ -654,19 +655,31 @@ namespace DomainService.Services
 
             foreach (var languageJsonModel in languageJsonModels)
             {
-                var id = languageJsonModel.Id;
-                var appId = languageJsonModel.AppId;
-                var appName = languageJsonModel.App;
-                var moduleName = languageJsonModel.Module;
-                var keyName = languageJsonModel.Key;
-                var type = languageJsonModel.Type;
+                var id = languageJsonModel._id;
+                var appId = languageJsonModel.ModuleId;
+                var appName = languageJsonModel.Value;
+                var moduleName = languageJsonModel.Value;
+                var keyName = languageJsonModel.KeyName;
+                //var type = languageJsonModel.Type;
 
-                var uilmAppTimeLine = GetBlocksLanguageManagerTimeline();
+
+    //            var model = new LanguageJsonModel
+    //            {
+    //                _id = resourceKey.ItemId,
+    //                ModuleId = resourceKey.ModuleId,
+    //                Value = resourceKey.Value,
+    //                KeyName = resourceKey.KeyName,
+    //                Resources = resourceKey.Resources.Where(x => identifiers.Contains(x.Culture)).ToArray()
+    //TenantId = resourceKey.TenantId,
+    //                IsPartiallyTranslated = resourceKey.IsPartiallyTranslated,
+    //                Routes = resourceKey.Routes
+    //            };
+                //var uilmAppTimeLine = GetBlocksLanguageManagerTimeline();
 
                 appId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, appName,
-                    moduleName, uilmAppTimeLine);
+                    moduleName);
 
-                uilmAppTimeLines.Add(uilmAppTimeLine);
+                //uilmAppTimeLines.Add(uilmAppTimeLine);
 
                 BlocksLanguageKey uilmResourceKey = new()
                 {
@@ -676,7 +689,7 @@ namespace DomainService.Services
                     ModuleId = appId
                 };
 
-                var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
+                //var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
                 var olduilmResourceKey = await GetUilmResourceKey(uilmResourceKey.ModuleId, uilmResourceKey.KeyName);
 
                 uilmResourceKey.ItemId = string.IsNullOrWhiteSpace(uilmResourceKey.ItemId) ? Guid.NewGuid().ToString() : uilmResourceKey.ItemId;
@@ -690,7 +703,7 @@ namespace DomainService.Services
                     uilmResourceKeys.Add(uilmResourceKey);
                 }
                 //FormatUilmResouceKeyTimeline(uilmResourceKeyTimeLine, olduilmResourceKey, uilmResourceKey);
-                uilmResourceKeyTimeLines.Add(uilmResourceKeyTimeLine);
+                //uilmResourceKeyTimeLines.Add(uilmResourceKeyTimeLine);
             }
 
             await SaveUilmResourceKey(uilmResourceKeys, resourceKeysWithoutId);
@@ -707,30 +720,30 @@ namespace DomainService.Services
         {
             List<BlocksLanguageModule> applications = null;
 
-            if (_blocksBaseCommand.IsExternal)
-            {
+            //if (_blocksBaseCommand.IsExternal)
+            //{
+            //    if (appIds != null && appIds.Count > 0)
+            //    {
+            //        var blocksApplication = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId), null);
+            //        applications = blocksApplication?.Select(x => (BlocksLanguageModule)x).ToList();
+            //    }
+            //    else
+            //    {
+            //        var blocksApplication = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true, null);
+            //        applications = blocksApplication?.Select(x => (BlocksLanguageModule)x).ToList();
+            //    }
+            //}
+            //else
+            //{
                 if (appIds != null && appIds.Count > 0)
                 {
-                    var blocksApplication = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId), null);
-                    applications = blocksApplication?.Select(x => (BlocksLanguageModule)x).ToList();
+                    applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId), _blocksBaseCommand?.ClientTenantId);
                 }
                 else
                 {
-                    var blocksApplication = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true, null);
-                    applications = blocksApplication?.Select(x => (BlocksLanguageModule)x).ToList();
+                    applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true, _blocksBaseCommand?.ClientTenantId);
                 }
-            }
-            else
-            {
-                if (appIds != null && appIds.Count > 0)
-                {
-                    applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId), _blocksBaseCommand.ClientTenantId);
-                }
-                else
-                {
-                    applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true, _blocksBaseCommand.ClientTenantId);
-                }
-            }
+            //}
 
             return applications;
         }
@@ -887,10 +900,9 @@ namespace DomainService.Services
                 //string moduleName = worksheet.Cell(i, columns["module"]).Value.ToString();
                 //string type = worksheet.Cell(i, columns["type"]).Value.ToString();
 
-                var uilmAppTimeLine = GetBlocksLanguageManagerTimeline();
+                //var uilmAppTimeLine = GetBlocksLanguageManagerTimeline();
 
-                moduleId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, moduleId, moduleName, moduleName,
-                            uilmAppTimeLine);
+                moduleId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, moduleId, moduleName, moduleName);
 
                 //uilmAppTimeLines.Add(uilmAppTimeLine);
 
@@ -919,7 +931,7 @@ namespace DomainService.Services
                     uilmResourceKey.Resources[j++] = (new Resource() { Culture = lang.Key, Value = resourceValue, CharacterLength = characterLength });
                 }
 
-                var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
+                //var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
 
                 var olduilmResourceKey = await GetUilmResourceKey(uilmResourceKey.ModuleId, uilmResourceKey.KeyName);
 
@@ -947,15 +959,15 @@ namespace DomainService.Services
         }
 
         private string HandleUilmApplication(List<BlocksLanguageModule> dbApplications, List<BlocksLanguageModule> uilmApplicationsToBeInserted,
-            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string appId, string appName, string moduleName, BlocksLanguageManagerTimeline uilmAppTimeLine)
+            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string appId, string appName, string moduleName)
         {
             if (string.IsNullOrWhiteSpace(appId))
             {
-                appId = HandleApplicationWithoutAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appName, moduleName, uilmAppTimeLine);
+                appId = HandleApplicationWithoutAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appName, moduleName);
             }
             else
             {
-                HandleApplicationWithAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, appName, moduleName, uilmAppTimeLine);
+                HandleApplicationWithAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, appName, moduleName);
             }
 
             return appId;
@@ -965,7 +977,7 @@ namespace DomainService.Services
         {
             return new BlocksLanguageManagerTimeline
             {
-                ClientTenantId = _blocksBaseCommand.ClientTenantId,
+                ClientTenantId = _blocksBaseCommand?.ClientTenantId,
                 ClientSiteId = _blocksBaseCommand.ClientSiteId,
                 OrganizationId = _blocksBaseCommand.OrganizationId,
                 UserId = BlocksContext.GetContext()?.UserId ?? ""
@@ -973,17 +985,17 @@ namespace DomainService.Services
         }
 
         private string HandleApplicationWithoutAppId(List<BlocksLanguageModule> dbApplications, List<BlocksLanguageModule> uilmApplicationsToBeInserted,
-            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string appName, string moduleName, BlocksLanguageManagerTimeline uilmAppTimeLine)
+            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string appName, string moduleName)
         {
             string appId;
             var application = dbApplications?.FirstOrDefault(x => x.ModuleName == moduleName);
             if (application != null)
             {
-                uilmAppTimeLine.LogFrom = "IMPORT_UPDATE_" + _format;
-                uilmAppTimeLine.PreviousData = new LanguageManagerDto
-                {
-                    UilmApplication = JsonConvert.DeserializeObject<BlocksLanguageModule>(JsonConvert.SerializeObject(application)),
-                };
+                //uilmAppTimeLine.LogFrom = "IMPORT_UPDATE_" + _format;
+                //uilmAppTimeLine.PreviousData = new LanguageManagerDto
+                //{
+                //    UilmApplication = JsonConvert.DeserializeObject<BlocksLanguageModule>(JsonConvert.SerializeObject(application)),
+                //};
 
                 appId = application.ItemId;
                 //appId = application.Id;
@@ -996,10 +1008,10 @@ namespace DomainService.Services
                     uilmApplicationsToBeUpdated.Add(application);
                 }
 
-                uilmAppTimeLine.CurrentData = new LanguageManagerDto
-                {
-                    UilmApplication = application,
-                };
+                //uilmAppTimeLine.CurrentData = new LanguageManagerDto
+                //{
+                //    UilmApplication = application,
+                //};
             }
             else
             {
@@ -1015,12 +1027,12 @@ namespace DomainService.Services
 
                     uilmApplicationsToBeInserted.Add(app);
 
-                    uilmAppTimeLine.PreviousData = null;
-                    uilmAppTimeLine.LogFrom = "IMPORT_ADD_" + _format;
-                    uilmAppTimeLine.CurrentData = new LanguageManagerDto
-                    {
-                        UilmApplication = application,
-                    };
+                    //uilmAppTimeLine.PreviousData = null;
+                    //uilmAppTimeLine.LogFrom = "IMPORT_ADD_" + _format;
+                    //uilmAppTimeLine.CurrentData = new LanguageManagerDto
+                    //{
+                    //    UilmApplication = application,
+                    //};
 
                     appId = app.ItemId;
                     //appId = app.Id;
@@ -1036,16 +1048,16 @@ namespace DomainService.Services
         }
 
         private void HandleApplicationWithAppId(List<BlocksLanguageModule> dbApplications, List<BlocksLanguageModule> uilmApplicationsToBeInserted, List<BlocksLanguageModule> uilmApplicationsToBeUpdated,
-            string appId, string appName, string moduleName, BlocksLanguageManagerTimeline uilmAppTimeLine)
+            string appId, string appName, string moduleName)
         {
             var application = dbApplications?.FirstOrDefault(x => x.ItemId == appId);
             if (application != null)
             {
-                uilmAppTimeLine.PreviousData = new LanguageManagerDto
-                {
-                    UilmApplication = JsonConvert.DeserializeObject<BlocksLanguageModule>(JsonConvert.SerializeObject(application)),
-                };
-                uilmAppTimeLine.LogFrom = "IMPORT_UPDATE_" + _format;
+                //uilmAppTimeLine.PreviousData = new LanguageManagerDto
+                //{
+                //    UilmApplication = JsonConvert.DeserializeObject<BlocksLanguageModule>(JsonConvert.SerializeObject(application)),
+                //};
+                //uilmAppTimeLine.LogFrom = "IMPORT_UPDATE_" + _format;
 
                 application.Name = appName;
                 application.ModuleName = moduleName;
@@ -1056,10 +1068,10 @@ namespace DomainService.Services
                     uilmApplicationsToBeUpdated.Add(application);
                 }
 
-                uilmAppTimeLine.CurrentData = new LanguageManagerDto
-                {
-                    UilmApplication = application,
-                };
+                //uilmAppTimeLine.CurrentData = new LanguageManagerDto
+                //{
+                //    UilmApplication = application,
+                //};
             }
             else
             {
@@ -1075,12 +1087,12 @@ namespace DomainService.Services
 
                     uilmApplicationsToBeInserted.Add(uilmApplication);
 
-                    uilmAppTimeLine.PreviousData = null;
-                    uilmAppTimeLine.LogFrom = "IMPORT_ADD_" + _format;
-                    uilmAppTimeLine.CurrentData = new LanguageManagerDto
-                    {
-                        UilmApplication = application,
-                    };
+                    //uilmAppTimeLine.PreviousData = null;
+                    //uilmAppTimeLine.LogFrom = "IMPORT_ADD_" + _format;
+                    //uilmAppTimeLine.CurrentData = new LanguageManagerDto
+                    //{
+                    //    UilmApplication = application,
+                    //};
                 }
             }
         }
@@ -1089,12 +1101,12 @@ namespace DomainService.Services
         {
             if (string.IsNullOrWhiteSpace(appId) || string.IsNullOrWhiteSpace(keyName)) return null;
 
-            if (_blocksBaseCommand.IsExternal)
-            {
-                return await _keyRepository.GetUilmResourceKey<BlocksLanguageResourceKey>(x => x.ModuleId == appId && x.KeyName == keyName);
-            }
+            //if (_blocksBaseCommand.IsExternal)
+            //{
+            //    return await _keyRepository.GetUilmResourceKey<BlocksLanguageResourceKey>(x => x.ModuleId == appId && x.KeyName == keyName);
+            //}
 
-            return await _keyRepository.GetUilmResourceKey(x => x.ModuleId == appId && x.KeyName == keyName, _blocksBaseCommand.ClientTenantId);
+            return await _keyRepository.GetUilmResourceKey(x => x.ModuleId == appId && x.KeyName == keyName, _blocksBaseCommand?.ClientTenantId);
         }
 
         private async Task SaveUilmResourceKey(List<BlocksLanguageKey> uilmResourceKeys, List<BlocksLanguageKey> resourceKeysWithoutId)
@@ -1103,18 +1115,18 @@ namespace DomainService.Services
             {
                 long? updateCount = 0;
 
-                updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(uilmResourceKeys, _blocksBaseCommand.OrganizationId, _blocksBaseCommand.IsExternal, _blocksBaseCommand.ClientTenantId);
+                updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(uilmResourceKeys, _blocksBaseCommand.OrganizationId, _blocksBaseCommand.IsExternal, _blocksBaseCommand?.ClientTenantId);
 
                 _logger.LogInformation("SaveUilmResourceKey: Updated UilmResourceKeys:{count}", updateCount);
             }
             if (resourceKeysWithoutId.Any())
             {
-                if (!_blocksBaseCommand.IsExternal)
-                {
-                    await _keyRepository.InsertUilmResourceKeys(resourceKeysWithoutId, _blocksBaseCommand.ClientTenantId);
-                }
+                //if (!_blocksBaseCommand.IsExternal)
+                //{
+                    await _keyRepository.InsertUilmResourceKeys(resourceKeysWithoutId, _blocksBaseCommand?.ClientTenantId);
+                //}
 
-                await _keyRepository.InsertUilmResourceKeys(resourceKeysWithoutId.Select(key => GetBlocksLanguageResourceKey(key)));
+                //await _keyRepository.InsertUilmResourceKeys(resourceKeysWithoutId.Select(key => GetBlocksLanguageResourceKey(key)));
 
                 _logger.LogInformation("SaveUilmResourceKey: Inserted UilmResourceKeys:{count}", resourceKeysWithoutId.Count);
             }
@@ -1139,7 +1151,7 @@ namespace DomainService.Services
         {
             if (uilmApplicationsToBeUpdated.Any())
             {
-                await _keyRepository.UpdateBulkUilmApplications(uilmApplicationsToBeUpdated, _blocksBaseCommand.OrganizationId, _blocksBaseCommand.IsExternal, _blocksBaseCommand.ClientTenantId);
+                await _keyRepository.UpdateBulkUilmApplications(uilmApplicationsToBeUpdated, _blocksBaseCommand.OrganizationId, _blocksBaseCommand.IsExternal, _blocksBaseCommand?.ClientTenantId);
 
                 await AddNumberOfKeysInUilmApplications(uilmApplicationsToBeUpdated);
             }
@@ -1156,23 +1168,23 @@ namespace DomainService.Services
         {
             foreach (var application in uilmApplications)
             {
-                await _keyRepository.UpdateKeysCountOfAppAsync(application.ItemId, _blocksBaseCommand.IsExternal, _blocksBaseCommand.ClientTenantId, _blocksBaseCommand.OrganizationId);
+                await _keyRepository.UpdateKeysCountOfAppAsync(application.ItemId, _blocksBaseCommand.IsExternal, _blocksBaseCommand?.ClientTenantId, _blocksBaseCommand.OrganizationId);
             }
         }
 
         private async Task InsertUilmApplications(List<BlocksLanguageModule> uilmApplicationsToBeInserted)
         {
-            if (!_blocksBaseCommand.IsExternal)
-            {
-                await _keyRepository.InsertUilmApplications(uilmApplicationsToBeInserted, _blocksBaseCommand.ClientTenantId);
-            }
+            //if (!_blocksBaseCommand.IsExternal)
+            //{
+                await _keyRepository.InsertUilmApplications(uilmApplicationsToBeInserted, _blocksBaseCommand?.ClientTenantId);
+            //}
 
-            await _keyRepository.InsertUilmApplications(uilmApplicationsToBeInserted.Select(x => new BlocksLanguageModule
-            {
-                ItemId = x.ItemId,
-                Name = x.Name,
-                ModuleName = x.ModuleName
-            }));
+            //await _keyRepository.InsertUilmApplications(uilmApplicationsToBeInserted.Select(x => new BlocksLanguageModule
+            //{
+            //    ItemId = x.ItemId,
+            //    Name = x.Name,
+            //    ModuleName = x.ModuleName
+            //}));
         }
 
         public async Task<bool> ExportUilmFile(UilmExportEvent request)
@@ -1198,7 +1210,7 @@ namespace DomainService.Services
         {
             BlocksLanguage languageSetting = null;
 
-            languageSetting = await _keyRepository.GetLanguageSettingAsync(_blocksBaseCommand.ClientTenantId);
+            languageSetting = await _keyRepository.GetLanguageSettingAsync(_blocksBaseCommand?.ClientTenantId);
 
             return languageSetting;
         }
@@ -1274,38 +1286,38 @@ namespace DomainService.Services
         {
             List<BlocksLanguageResourceKey> resourceKeys = null;
 
-            if (_blocksBaseCommand.IsExternal)
-            {
-                if (appIds != null && appIds.Count > 0)
-                {
-                    var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageResourceKey>(x =>
-                        x.OrganizationId == _blocksBaseCommand.OrganizationId &&
-                        appIds.Contains(x.ModuleId));
+            //if (_blocksBaseCommand.IsExternal)
+            //{
+            //    if (appIds != null && appIds.Count > 0)
+            //    {
+            //        var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageResourceKey>(x =>
+            //            x.OrganizationId == _blocksBaseCommand.OrganizationId &&
+            //            appIds.Contains(x.ModuleId));
 
-                    resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageResourceKey)x).ToList();
-                }
-                else
-                {
-                    var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageResourceKey>(x =>
-                        x.OrganizationId == _blocksBaseCommand.OrganizationId);
+            //        resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageResourceKey)x).ToList();
+            //    }
+            //    else
+            //    {
+            //        var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageResourceKey>(x =>
+            //            x.OrganizationId == _blocksBaseCommand.OrganizationId);
 
-                    resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageResourceKey)x).ToList();
-                }
-            }
-            else
-            {
+            //        resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageResourceKey)x).ToList();
+            //    }
+            //}
+            //else
+            //{
                 if (appIds != null && appIds.Count > 0)
                 {
                     resourceKeys = await _keyRepository.GetUilmResourceKeys(x =>
                         appIds.Contains(x.ModuleId),
-                        _blocksBaseCommand.ClientTenantId);
+                        _blocksBaseCommand?.ClientTenantId);
                 }
                 else
                 {
                     resourceKeys = await _keyRepository.GetUilmResourceKeys(x => true,
-                        _blocksBaseCommand.ClientTenantId);
+                        _blocksBaseCommand?.ClientTenantId);
                 }
-            }
+            //}
 
             return resourceKeys;
         }

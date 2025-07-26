@@ -32,13 +32,14 @@ namespace DomainService.Services
 
                     var model = new LanguageJsonModel
                     {
-                        Id = resourceKey.ItemId,
-                        AppId = resourceKey.ModuleId,
-                        Type = resourceKey.Value,
-                        App = app?.Name,
-                        Module = app?.ModuleName,
-                        Key = resourceKey.KeyName,
-                        Resources = resourceKey.Resources.Where(x => identifiers.Contains(x.Culture)).ToArray()
+                        _id = resourceKey.ItemId,
+                        ModuleId = resourceKey.ModuleId,
+                        Value = resourceKey.Value,
+                        KeyName = resourceKey.KeyName,
+                        Resources = resourceKey.Resources.Where(x => identifiers.Contains(x.Culture)).ToArray(),
+                        TenantId = resourceKey.TenantId,
+                        IsPartiallyTranslated = resourceKey.IsPartiallyTranslated,
+                        Routes = resourceKey.Routes
                     };
 
                     jsonOutputModels.Add(model);

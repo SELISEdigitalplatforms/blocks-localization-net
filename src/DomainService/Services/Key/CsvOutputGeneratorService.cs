@@ -33,13 +33,14 @@ namespace DomainService.Services
 
                     var model = new LanguageJsonModel
                     {
-                        Id = resourceKey.ItemId,
-                        AppId = resourceKey.ModuleId,
-                        Type = resourceKey.Value,
-                        App = app?.Name,
-                        Module = app?.ModuleName,
-                        Key = resourceKey.KeyName,
-                        Resources = resourceKey.Resources
+                        _id = resourceKey.ItemId,
+                        ModuleId = resourceKey.ModuleId,
+                        Value = resourceKey.Value,
+                        KeyName = resourceKey.KeyName,
+                        Resources = resourceKey.Resources,
+                        TenantId = resourceKey.TenantId,
+                        IsPartiallyTranslated = resourceKey.IsPartiallyTranslated,
+                        Routes = resourceKey.Routes
                     };
 
                     jsonOutputModels.Add(model);
@@ -71,12 +72,14 @@ namespace DomainService.Services
 
                 foreach (var item in jsonOutputModels)
                 {
-                    csv.WriteField(item.Id);
-                    csv.WriteField(item.AppId);
-                    csv.WriteField(item.Type);
-                    csv.WriteField(item.App);
-                    csv.WriteField(item.Module);
-                    csv.WriteField(item.Key);
+                    csv.WriteField(item._id);
+                    csv.WriteField(item.TenantId);
+                    csv.WriteField(item.Value);
+                    csv.WriteField(item.KeyName);
+                    csv.WriteField(item.ModuleId);
+                    csv.WriteField(item.Routes);
+                    csv.WriteField(item.Resources);
+                    csv.WriteField(item.IsPartiallyTranslated);
 
                     foreach (string identifier in identifiers)
                     {
