@@ -5,19 +5,18 @@ using CsvHelper.Configuration;
 using DomainService.Repositories;
 using DomainService.Services.HelperService;
 using DomainService.Shared;
-using DomainService.Shared.DTOs;
 using DomainService.Shared.Entities;
 using DomainService.Shared.Events;
 using DomainService.Shared.Utilities;
 using DomainService.Storage;
 using FluentValidation;
+using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Newtonsoft.Json;
 using StorageDriver;
 using System.Globalization;
-using System.IO;
 using System.Text;
 
 namespace DomainService.Services
@@ -657,26 +656,26 @@ namespace DomainService.Services
             {
                 var id = languageJsonModel._id;
                 var appId = languageJsonModel.ModuleId;
-                var appName = languageJsonModel.Value;
-                var moduleName = languageJsonModel.Value;
+                var isPartiallyTranslated = languageJsonModel.IsPartiallyTranslated;
+                var moduleName = dbApplications.First(x=>x.ItemId== languageJsonModel.ModuleId)?.ModuleName;
                 var keyName = languageJsonModel.KeyName;
                 //var type = languageJsonModel.Type;
 
 
-    //            var model = new LanguageJsonModel
-    //            {
-    //                _id = resourceKey.ItemId,
-    //                ModuleId = resourceKey.ModuleId,
-    //                Value = resourceKey.Value,
-    //                KeyName = resourceKey.KeyName,
-    //                Resources = resourceKey.Resources.Where(x => identifiers.Contains(x.Culture)).ToArray()
-    //TenantId = resourceKey.TenantId,
-    //                IsPartiallyTranslated = resourceKey.IsPartiallyTranslated,
-    //                Routes = resourceKey.Routes
-    //            };
+                //            var model = new LanguageJsonModel
+                //            {
+                //                _id = resourceKey.ItemId,
+                //                ModuleId = resourceKey.ModuleId,
+                //                Value = resourceKey.Value,
+                //                KeyName = resourceKey.KeyName,
+                //                Resources = resourceKey.Resources.Where(x => identifiers.Contains(x.Culture)).ToArray()
+                //TenantId = resourceKey.TenantId,
+                //                IsPartiallyTranslated = resourceKey.IsPartiallyTranslated,
+                //                Routes = resourceKey.Routes
+                //            };
                 //var uilmAppTimeLine = GetBlocksLanguageManagerTimeline();
 
-                appId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, appName,
+                appId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, isPartiallyTranslated,
                     moduleName);
 
                 //uilmAppTimeLines.Add(uilmAppTimeLine);
@@ -686,7 +685,8 @@ namespace DomainService.Services
                     KeyName = keyName,
                     Resources = languageJsonModel.Resources,
                     ItemId = id,
-                    ModuleId = appId
+                    ModuleId = appId,
+                    IsPartiallyTranslated = isPartiallyTranslated
                 };
 
                 //var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
@@ -720,7 +720,7 @@ namespace DomainService.Services
         {
             List<BlocksLanguageModule> applications = null;
 
-            //if (_blocksBaseCommand.IsExternal)
+            //if (_blocksBaseCommand?.IsExternal)
             //{
             //    if (appIds != null && appIds.Count > 0)
             //    {
@@ -735,14 +735,14 @@ namespace DomainService.Services
             //}
             //else
             //{
-                if (appIds != null && appIds.Count > 0)
-                {
-                    applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId), _blocksBaseCommand?.ClientTenantId);
-                }
-                else
-                {
-                    applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true, _blocksBaseCommand?.ClientTenantId);
-                }
+            if (appIds != null && appIds.Count > 0)
+            {
+                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId), _blocksBaseCommand?.ClientTenantId);
+            }
+            else
+            {
+                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true, _blocksBaseCommand?.ClientTenantId);
+            }
             //}
 
             return applications;
@@ -897,21 +897,25 @@ namespace DomainService.Services
                 string moduleId = worksheet.Cell(i, columns["ModuleId"]).Value.ToString();
                 string moduleName = worksheet.Cell(i, columns["Module"]).Value.ToString();
                 string keyName = worksheet.Cell(i, columns["KeyName"]).Value.ToString();
+                string resources = worksheet.Cell(i, columns["Resources"]).Value.ToString();
                 //string moduleName = worksheet.Cell(i, columns["module"]).Value.ToString();
                 //string type = worksheet.Cell(i, columns["type"]).Value.ToString();
 
                 //var uilmAppTimeLine = GetBlocksLanguageManagerTimeline();
 
-                moduleId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, moduleId, moduleName, moduleName);
+                //moduleId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, moduleId, moduleName, moduleName);
+                moduleId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, moduleId, false, moduleName);
 
                 //uilmAppTimeLines.Add(uilmAppTimeLine);
 
                 BlocksLanguageKey uilmResourceKey = new()
                 {
+                    KeyName = keyName,
+                    //Resources = resources,
                     ItemId = id,
                     ModuleId = moduleId,
-                    KeyName = keyName,
-                    LastUpdateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow
+                    //IsPartiallyTranslated = isPartiallyTranslated
                 };
 
                 uilmResourceKey.Resources = new Resource[cultures.Count];
@@ -959,15 +963,15 @@ namespace DomainService.Services
         }
 
         private string HandleUilmApplication(List<BlocksLanguageModule> dbApplications, List<BlocksLanguageModule> uilmApplicationsToBeInserted,
-            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string appId, string appName, string moduleName)
+            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string appId, bool isPartiallyTranslated, string moduleName)
         {
             if (string.IsNullOrWhiteSpace(appId))
             {
-                appId = HandleApplicationWithoutAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appName, moduleName);
+                appId = HandleApplicationWithoutAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, isPartiallyTranslated, moduleName);
             }
             else
             {
-                HandleApplicationWithAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, appName, moduleName);
+                HandleApplicationWithAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, isPartiallyTranslated, moduleName);
             }
 
             return appId;
@@ -978,14 +982,14 @@ namespace DomainService.Services
             return new BlocksLanguageManagerTimeline
             {
                 ClientTenantId = _blocksBaseCommand?.ClientTenantId,
-                ClientSiteId = _blocksBaseCommand.ClientSiteId,
-                OrganizationId = _blocksBaseCommand.OrganizationId,
+                ClientSiteId = _blocksBaseCommand?.ClientSiteId,
+                OrganizationId = _blocksBaseCommand?.OrganizationId,
                 UserId = BlocksContext.GetContext()?.UserId ?? ""
             };
         }
 
         private string HandleApplicationWithoutAppId(List<BlocksLanguageModule> dbApplications, List<BlocksLanguageModule> uilmApplicationsToBeInserted,
-            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string appName, string moduleName)
+            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, bool isPartiallyTranslated, string moduleName)
         {
             string appId;
             var application = dbApplications?.FirstOrDefault(x => x.ModuleName == moduleName);
@@ -999,7 +1003,7 @@ namespace DomainService.Services
 
                 appId = application.ItemId;
                 //appId = application.Id;
-                application.Name = appName;
+                //application.Name = appName;
                 application.ModuleName = moduleName;
 
                 var alreadyAddedToUpdateList = uilmApplicationsToBeUpdated.FirstOrDefault(x => x.ModuleName == moduleName);
@@ -1021,7 +1025,7 @@ namespace DomainService.Services
                     var app = new BlocksLanguageModule()
                     {
                         ItemId = Guid.NewGuid().ToString(),
-                        Name = appName,
+                        //Name = appName,
                         ModuleName = moduleName,
                     };
 
@@ -1048,7 +1052,7 @@ namespace DomainService.Services
         }
 
         private void HandleApplicationWithAppId(List<BlocksLanguageModule> dbApplications, List<BlocksLanguageModule> uilmApplicationsToBeInserted, List<BlocksLanguageModule> uilmApplicationsToBeUpdated,
-            string appId, string appName, string moduleName)
+            string appId, bool isPartiallyTranslated, string moduleName)
         {
             var application = dbApplications?.FirstOrDefault(x => x.ItemId == appId);
             if (application != null)
@@ -1059,7 +1063,7 @@ namespace DomainService.Services
                 //};
                 //uilmAppTimeLine.LogFrom = "IMPORT_UPDATE_" + _format;
 
-                application.Name = appName;
+                //application.Name = appName;
                 application.ModuleName = moduleName;
 
                 var alreadyAddedToUpdateList = uilmApplicationsToBeUpdated.FirstOrDefault(x => x.ItemId == appId);
@@ -1081,7 +1085,7 @@ namespace DomainService.Services
                     BlocksLanguageModule uilmApplication = new()
                     {
                         ItemId = appId,
-                        Name = appName,
+                        //Name = appName,
                         ModuleName = moduleName,
                     };
 
@@ -1101,7 +1105,7 @@ namespace DomainService.Services
         {
             if (string.IsNullOrWhiteSpace(appId) || string.IsNullOrWhiteSpace(keyName)) return null;
 
-            //if (_blocksBaseCommand.IsExternal)
+            //if (_blocksBaseCommand?.IsExternal)
             //{
             //    return await _keyRepository.GetUilmResourceKey<BlocksLanguageResourceKey>(x => x.ModuleId == appId && x.KeyName == keyName);
             //}
@@ -1115,15 +1119,15 @@ namespace DomainService.Services
             {
                 long? updateCount = 0;
 
-                updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(uilmResourceKeys, _blocksBaseCommand.OrganizationId, _blocksBaseCommand.IsExternal, _blocksBaseCommand?.ClientTenantId);
+                updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(uilmResourceKeys, _blocksBaseCommand?.OrganizationId, _blocksBaseCommand?.IsExternal ?? false, _blocksBaseCommand?.ClientTenantId);
 
                 _logger.LogInformation("SaveUilmResourceKey: Updated UilmResourceKeys:{count}", updateCount);
             }
             if (resourceKeysWithoutId.Any())
             {
-                //if (!_blocksBaseCommand.IsExternal)
+                //if (!_blocksBaseCommand?.IsExternal)
                 //{
-                    await _keyRepository.InsertUilmResourceKeys(resourceKeysWithoutId, _blocksBaseCommand?.ClientTenantId);
+                await _keyRepository.InsertUilmResourceKeys(resourceKeysWithoutId, _blocksBaseCommand?.ClientTenantId);
                 //}
 
                 //await _keyRepository.InsertUilmResourceKeys(resourceKeysWithoutId.Select(key => GetBlocksLanguageResourceKey(key)));
@@ -1142,7 +1146,7 @@ namespace DomainService.Services
                 ItemId = key.ItemId,
                 CreateDate = key.CreateDate,
                 LastUpdateDate = key.LastUpdateDate,
-                OrganizationId = _blocksBaseCommand.OrganizationId
+                OrganizationId = _blocksBaseCommand?.OrganizationId
             };
         }
 
@@ -1151,7 +1155,7 @@ namespace DomainService.Services
         {
             if (uilmApplicationsToBeUpdated.Any())
             {
-                await _keyRepository.UpdateBulkUilmApplications(uilmApplicationsToBeUpdated, _blocksBaseCommand.OrganizationId, _blocksBaseCommand.IsExternal, _blocksBaseCommand?.ClientTenantId);
+                await _keyRepository.UpdateBulkUilmApplications(uilmApplicationsToBeUpdated, _blocksBaseCommand?.OrganizationId, _blocksBaseCommand?.IsExternal ?? false, _blocksBaseCommand?.ClientTenantId);
 
                 await AddNumberOfKeysInUilmApplications(uilmApplicationsToBeUpdated);
             }
@@ -1168,15 +1172,15 @@ namespace DomainService.Services
         {
             foreach (var application in uilmApplications)
             {
-                await _keyRepository.UpdateKeysCountOfAppAsync(application.ItemId, _blocksBaseCommand.IsExternal, _blocksBaseCommand?.ClientTenantId, _blocksBaseCommand.OrganizationId);
+                await _keyRepository.UpdateKeysCountOfAppAsync(application.ItemId, _blocksBaseCommand?.IsExternal ?? false, _blocksBaseCommand?.ClientTenantId, _blocksBaseCommand?.OrganizationId);
             }
         }
 
         private async Task InsertUilmApplications(List<BlocksLanguageModule> uilmApplicationsToBeInserted)
         {
-            //if (!_blocksBaseCommand.IsExternal)
+            //if (!_blocksBaseCommand?.IsExternal)
             //{
-                await _keyRepository.InsertUilmApplications(uilmApplicationsToBeInserted, _blocksBaseCommand?.ClientTenantId);
+            await _keyRepository.InsertUilmApplications(uilmApplicationsToBeInserted, _blocksBaseCommand?.ClientTenantId);
             //}
 
             //await _keyRepository.InsertUilmApplications(uilmApplicationsToBeInserted.Select(x => new BlocksLanguageModule
@@ -1286,12 +1290,12 @@ namespace DomainService.Services
         {
             List<BlocksLanguageResourceKey> resourceKeys = null;
 
-            //if (_blocksBaseCommand.IsExternal)
+            //if (_blocksBaseCommand?.IsExternal)
             //{
             //    if (appIds != null && appIds.Count > 0)
             //    {
             //        var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageResourceKey>(x =>
-            //            x.OrganizationId == _blocksBaseCommand.OrganizationId &&
+            //            x.OrganizationId == _blocksBaseCommand?.OrganizationId &&
             //            appIds.Contains(x.ModuleId));
 
             //        resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageResourceKey)x).ToList();
@@ -1299,24 +1303,24 @@ namespace DomainService.Services
             //    else
             //    {
             //        var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageResourceKey>(x =>
-            //            x.OrganizationId == _blocksBaseCommand.OrganizationId);
+            //            x.OrganizationId == _blocksBaseCommand?.OrganizationId);
 
             //        resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageResourceKey)x).ToList();
             //    }
             //}
             //else
             //{
-                if (appIds != null && appIds.Count > 0)
-                {
-                    resourceKeys = await _keyRepository.GetUilmResourceKeys(x =>
-                        appIds.Contains(x.ModuleId),
-                        _blocksBaseCommand?.ClientTenantId);
-                }
-                else
-                {
-                    resourceKeys = await _keyRepository.GetUilmResourceKeys(x => true,
-                        _blocksBaseCommand?.ClientTenantId);
-                }
+            if (appIds != null && appIds.Count > 0)
+            {
+                resourceKeys = await _keyRepository.GetUilmResourceKeys(x =>
+                    appIds.Contains(x.ModuleId),
+                    _blocksBaseCommand?.ClientTenantId);
+            }
+            else
+            {
+                resourceKeys = await _keyRepository.GetUilmResourceKeys(x => true,
+                    _blocksBaseCommand?.ClientTenantId);
+            }
             //}
 
             return resourceKeys;

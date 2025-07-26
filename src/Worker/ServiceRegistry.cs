@@ -5,6 +5,8 @@ using DomainService.Services;
 using DomainService.Services.HelperService;
 using DomainService.Shared.Events;
 using FluentValidation;
+using Storage.DomainService.Storage;
+using Storage.DomainService.Storage.Validators;
 using Worker.Consumers;
 
 
@@ -36,6 +38,7 @@ namespace Worker
             services.AddSingleton<IAssistantService, AssistantService>();
 
             services.RegisterBlocksStorageServices();
+            services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
         }
     }
 }

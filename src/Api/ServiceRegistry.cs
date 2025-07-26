@@ -1,27 +1,24 @@
 ﻿using Blocks.Extension.DependencyInjection;
-using DomainService.Configuration;
 using DomainService.Repositories;
 using DomainService.Services;
 using DomainService.Services.HelperService;
-using DomainService.Shared;
-using DomainService.Shared.Services;
-using DomainService.Storage;
 using FluentValidation;
-using StorageDriver;
+using Storage.DomainService.Storage;
+using Storage.DomainService.Storage.Validators;
 
 namespace Api
 {
     /// <summary>
     /// A static class responsible for registering application services and validators.
     /// </summary>
-    
+
     public static class ServiceRegistry
     {
         /// <summary>
         /// Registers services and validators related to modules, languages, and keys.
         /// </summary>
         /// <param name="services">The collection of services to which dependencies are registered.</param>
-        
+
         public static void RegisterApplicationServices(this IServiceCollection services)
         {
             services.AddSingleton<IModuleManagementService, ModuleManagementService>();
@@ -40,6 +37,7 @@ namespace Api
 
             services.RegisterBlocksStorageServices();
 
+            services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
 
             services.AddSingleton<IAssistantService, AssistantService>();
 
