@@ -17,17 +17,17 @@ namespace DomainService.Repositories
         Task DeleteAsync(string itemId);
         Task<IQueryable<BlocksLanguageKey>> GetUilmResourceKeysWithPage(int page, int size);
         Task<long?> UpdateUilmResourceKeysForChangeAll(List<BlocksLanguageKey> uilmResourceKeys, string organizationId, bool isExternal, string clientTenantId);
-        Task<T> GetUilmResourceKey<T>(Expression<Func<BlocksLanguageResourceKey, bool>> expression);
-        Task<BlocksLanguageKey> GetUilmResourceKey(Expression<Func<BlocksLanguageResourceKey, bool>> expression, string tenantId);
-        Task InsertUilmResourceKeys(IEnumerable<BlocksLanguageResourceKey> entities);
+        Task<T> GetUilmResourceKey<T>(Expression<Func<BlocksLanguageKey, bool>> expression);
+        Task<BlocksLanguageKey> GetUilmResourceKey(Expression<Func<BlocksLanguageKey, bool>> expression, string tenantId);
+        Task InsertUilmResourceKeys(IEnumerable<BlocksLanguageKey> entities);
         Task InsertUilmResourceKeys(IEnumerable<BlocksLanguageKey> entities, string tenantId);
         Task UpdateBulkUilmApplications(List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string organizationId, bool isExternal, string clientTenantId);
         Task<bool> UpdateKeysCountOfAppAsync(string appId, bool isExternal, string tenantId, string organizationId);    
         Task InsertUilmApplications(List<BlocksLanguageModule> uilmApplicationsToBeInserted, string clientTenantId);
         Task InsertUilmApplications(IEnumerable<BlocksLanguageModule> entities);
         Task<List<T>> GetUilmApplications<T>(Expression<Func<BlocksLanguageModule, bool>> expression, string clientTenantId);
-        Task<List<BlocksLanguageResourceKey>> GetUilmResourceKeys(Expression<Func<BlocksLanguageResourceKey, bool>> expression, string tenantId);
-        Task<List<T>> GetUilmResourceKeys<T>(Expression<Func<BlocksLanguageResourceKey, bool>> expression);
+        Task<List<BlocksLanguageKey>> GetUilmResourceKeys(Expression<Func<BlocksLanguageKey, bool>> expression, string tenantId);
+        Task<List<T>> GetUilmResourceKeys<T>(Expression<Func<BlocksLanguageKey, bool>> expression);
         Task<BlocksLanguage> GetLanguageSettingAsync(string clientTenantId);
     }
 }

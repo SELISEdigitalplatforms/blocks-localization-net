@@ -47,7 +47,9 @@ namespace DomainService.Services
             IMessageClient messageClient,
             IAssistantService assistantService,
             IStorageDriverService storageDriverService,
-            StorageHelper storageHelperService)
+            StorageHelper storageHelperService,
+            IServiceProvider serviceProvider
+            )
         {
             _keyRepository = keyRepository;
             _validator = validator;
@@ -58,6 +60,7 @@ namespace DomainService.Services
             _assistantService = assistantService;
             _storageDriverService = storageDriverService;
             _storageHelperService = storageHelperService;
+            _serviceProvider = serviceProvider;
         }
 
         public async Task<ApiResponse> SaveKeyAsync(Key key)
@@ -1107,7 +1110,7 @@ namespace DomainService.Services
 
             //if (_blocksBaseCommand?.IsExternal)
             //{
-            //    return await _keyRepository.GetUilmResourceKey<BlocksLanguageResourceKey>(x => x.ModuleId == appId && x.KeyName == keyName);
+            //    return await _keyRepository.GetUilmResourceKey<BlocksLanguageKey>(x => x.ModuleId == appId && x.KeyName == keyName);
             //}
 
             return await _keyRepository.GetUilmResourceKey(x => x.ModuleId == appId && x.KeyName == keyName, _blocksBaseCommand?.ClientTenantId);
@@ -1130,15 +1133,15 @@ namespace DomainService.Services
                 await _keyRepository.InsertUilmResourceKeys(resourceKeysWithoutId, _blocksBaseCommand?.ClientTenantId);
                 //}
 
-                //await _keyRepository.InsertUilmResourceKeys(resourceKeysWithoutId.Select(key => GetBlocksLanguageResourceKey(key)));
+                //await _keyRepository.InsertUilmResourceKeys(resourceKeysWithoutId.Select(key => GetBlocksLanguageKey(key)));
 
                 _logger.LogInformation("SaveUilmResourceKey: Inserted UilmResourceKeys:{count}", resourceKeysWithoutId.Count);
             }
         }
 
-        private BlocksLanguageResourceKey GetBlocksLanguageResourceKey(BlocksLanguageKey key)
+        private BlocksLanguageKey GetBlocksLanguageKey(BlocksLanguageKey key)
         {
-            return new BlocksLanguageResourceKey
+            return new BlocksLanguageKey
             {
                 ModuleId = key.ModuleId,
                 KeyName = key.KeyName,
@@ -1146,7 +1149,6 @@ namespace DomainService.Services
                 ItemId = key.ItemId,
                 CreateDate = key.CreateDate,
                 LastUpdateDate = key.LastUpdateDate,
-                OrganizationId = _blocksBaseCommand?.OrganizationId
             };
         }
 
@@ -1220,7 +1222,7 @@ namespace DomainService.Services
         }
 
         private async Task<bool> GenerateXlsxFile(List<BlocksLanguageModule> applications,
-            List<BlocksLanguageResourceKey> resourceKeys, string fileId, BlocksLanguage languageSetting)
+            List<BlocksLanguageKey> resourceKeys, string fileId, BlocksLanguage languageSetting)
         {
             var xlsxOutputGenerator = _serviceProvider.GetService<XlsxOutputGeneratorService>();
             var workBook = await xlsxOutputGenerator.GenerateAsync<XLWorkbook>(languageSetting, applications, resourceKeys, languageSetting.LanguageCode);
@@ -1257,7 +1259,7 @@ namespace DomainService.Services
         }
 
         private async Task<bool> GenerateJsonFile(List<BlocksLanguageModule> applications,
-            List<BlocksLanguageResourceKey> resourceKeys, string fileId, BlocksLanguage languageSetting)
+            List<BlocksLanguageKey> resourceKeys, string fileId, BlocksLanguage languageSetting)
         {
             var jsonOutputGenerator = _serviceProvider.GetService<JsonOutputGeneratorService>();
             var jsonString = await jsonOutputGenerator.GenerateAsync<string>(languageSetting, applications, resourceKeys, languageSetting.LanguageCode);
@@ -1273,7 +1275,7 @@ namespace DomainService.Services
         }
 
         private async Task<bool> GenerateCsvFile(List<BlocksLanguageModule> applications,
-            List<BlocksLanguageResourceKey> resourceKeys, string fileId, BlocksLanguage languageSetting)
+            List<BlocksLanguageKey> resourceKeys, string fileId, BlocksLanguage languageSetting)
         {
             var csvOutputGenerator = _serviceProvider.GetService<CsvOutputGeneratorService>();
             var stream = await csvOutputGenerator.GenerateAsync<MemoryStream>(languageSetting, applications, resourceKeys, languageSetting.LanguageCode);
@@ -1286,26 +1288,26 @@ namespace DomainService.Services
             return await SaveUilmFile(fileId, csvFileName, stream);
         }
 
-        private async Task<List<BlocksLanguageResourceKey>> GetLanguageResourceKeys(List<string> appIds = null, DateTime startDate = default, DateTime endDate = default)
+        private async Task<List<BlocksLanguageKey>> GetLanguageResourceKeys(List<string> appIds = null, DateTime startDate = default, DateTime endDate = default)
         {
-            List<BlocksLanguageResourceKey> resourceKeys = null;
+            List<BlocksLanguageKey> resourceKeys = null;
 
             //if (_blocksBaseCommand?.IsExternal)
             //{
             //    if (appIds != null && appIds.Count > 0)
             //    {
-            //        var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageResourceKey>(x =>
+            //        var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageKey>(x =>
             //            x.OrganizationId == _blocksBaseCommand?.OrganizationId &&
             //            appIds.Contains(x.ModuleId));
 
-            //        resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageResourceKey)x).ToList();
+            //        resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageKey)x).ToList();
             //    }
             //    else
             //    {
-            //        var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageResourceKey>(x =>
+            //        var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageKey>(x =>
             //            x.OrganizationId == _blocksBaseCommand?.OrganizationId);
 
-            //        resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageResourceKey)x).ToList();
+            //        resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageKey)x).ToList();
             //    }
             //}
             //else

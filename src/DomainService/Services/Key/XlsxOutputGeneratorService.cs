@@ -20,7 +20,7 @@ namespace DomainService.Services
         }
 
         public override Task<T> GenerateAsync<T>(BlocksLanguage languageSetting, List<BlocksLanguageModule> applications,
-            List<BlocksLanguageResourceKey> resourceKeys, string defaultLanguage)
+            List<BlocksLanguageKey> resourceKeys, string defaultLanguage)
         {
             try
             {
@@ -71,9 +71,9 @@ namespace DomainService.Services
             worksheet.SheetView.FreezeRows(1);
         }
 
-        private static void AssignCellValues(ref int row, ref int column, IXLWorksheet worksheet, IEnumerable<string> indentifiers, List<BlocksLanguageModule> applications, List<BlocksLanguageResourceKey> resourceKeys, string defaultLanguage)
+        private static void AssignCellValues(ref int row, ref int column, IXLWorksheet worksheet, IEnumerable<string> indentifiers, List<BlocksLanguageModule> applications, List<BlocksLanguageKey> resourceKeys, string defaultLanguage)
         {
-            foreach (BlocksLanguageResourceKey resourceKey in resourceKeys)
+            foreach (BlocksLanguageKey resourceKey in resourceKeys)
             {
                 BlocksLanguageModule app = applications.FirstOrDefault(x => x.ItemId == resourceKey.ModuleId);
 
