@@ -41,6 +41,9 @@ namespace Api
 
             services.AddSingleton<IAssistantService, AssistantService>();
 
+            services.AddSingleton<INotificationService, NotificationService>();
+            services.AddSingleton<IHttpHelperServices, HttpHelperServices>();
+
         }
     }
 }

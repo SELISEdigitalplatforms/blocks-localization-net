@@ -45,6 +45,9 @@ namespace Worker
 
             services.RegisterBlocksStorageServices();
             services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
+
+            services.AddSingleton<INotificationService, NotificationService>();
+            services.AddSingleton<IHttpHelperServices, HttpHelperServices>();
         }
     }
 }

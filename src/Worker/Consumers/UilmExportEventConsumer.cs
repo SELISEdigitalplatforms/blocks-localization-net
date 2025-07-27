@@ -15,6 +15,12 @@ namespace Worker.Consumers
         public async Task Consume(UilmExportEvent @event)
         {
             var isSuccess = await _keyManagementService.ExportUilmFile(@event);
+
+            await _keyManagementService.PublishUilmExportNotification(
+                    response: isSuccess,
+                    fileId: @event.FileId,
+                    messageCoRelationId: @event.MessageCoRelationId,
+                    tenantId: @event.CallerTenantId);
         }
     }
 }

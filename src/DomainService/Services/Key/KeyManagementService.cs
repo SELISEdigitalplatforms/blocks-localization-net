@@ -10,7 +10,6 @@ using DomainService.Shared.Events;
 using DomainService.Shared.Utilities;
 using DomainService.Storage;
 using FluentValidation;
-using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
@@ -33,6 +32,7 @@ namespace DomainService.Services
         private readonly IStorageDriverService _storageDriverService;
         private readonly IServiceProvider _serviceProvider;
         private readonly StorageHelper _storageHelperService;
+        private readonly INotificationService _notificationService;
 
         private readonly string _tenantId = BlocksContext.GetContext()?.TenantId ?? "";
         private BaseBlocksCommand _blocksBaseCommand;
@@ -48,7 +48,8 @@ namespace DomainService.Services
             IAssistantService assistantService,
             IStorageDriverService storageDriverService,
             StorageHelper storageHelperService,
-            IServiceProvider serviceProvider
+            IServiceProvider serviceProvider,
+            INotificationService notificationService
             )
         {
             _keyRepository = keyRepository;
@@ -61,6 +62,7 @@ namespace DomainService.Services
             _storageDriverService = storageDriverService;
             _storageHelperService = storageHelperService;
             _serviceProvider = serviceProvider;
+            _notificationService = notificationService;
         }
 
         public async Task<ApiResponse> SaveKeyAsync(Key key)
@@ -597,9 +599,9 @@ namespace DomainService.Services
                             _id = csv.GetField<string>("_id"),
                             Value = csv.GetField<string>("Value"),
                             KeyName = csv.GetField<string>("KeyName"),
-                            //Resources = csv.GetField<string>("Resources"),
+                            Resources = csv.GetField<Resource[]>("Resources"),
                             ModuleId = csv.GetField<string>("ModuleId"),
-                            //IsPartiallyTranslated = csv.GetField<string>("IsPartiallyTranslated"),
+                            IsPartiallyTranslated = csv.GetField<bool>("IsPartiallyTranslated"),
                             //Routes = csv.GetField<string>("Routes")
                         };
 
@@ -660,7 +662,7 @@ namespace DomainService.Services
                 var id = languageJsonModel._id;
                 var appId = languageJsonModel.ModuleId;
                 var isPartiallyTranslated = languageJsonModel.IsPartiallyTranslated;
-                var moduleName = dbApplications.First(x=>x.ItemId== languageJsonModel.ModuleId)?.ModuleName;
+                var moduleName = dbApplications.First(x => x.ItemId == languageJsonModel.ModuleId)?.ModuleName;
                 var keyName = languageJsonModel.KeyName;
                 //var type = languageJsonModel.Type;
 
@@ -689,7 +691,11 @@ namespace DomainService.Services
                     Resources = languageJsonModel.Resources,
                     ItemId = id,
                     ModuleId = appId,
-                    IsPartiallyTranslated = isPartiallyTranslated
+                    IsPartiallyTranslated = isPartiallyTranslated,
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    Value = languageJsonModel.Value,
+                    Routes = languageJsonModel.Routes
                 };
 
                 //var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
@@ -914,11 +920,10 @@ namespace DomainService.Services
                 BlocksLanguageKey uilmResourceKey = new()
                 {
                     KeyName = keyName,
-                    //Resources = resources,
                     ItemId = id,
                     ModuleId = moduleId,
-                    LastUpdateDate = DateTime.UtcNow
-                    //IsPartiallyTranslated = isPartiallyTranslated
+                    LastUpdateDate = DateTime.UtcNow,
+                    CreateDate = DateTime.UtcNow
                 };
 
                 uilmResourceKey.Resources = new Resource[cultures.Count];
@@ -1292,26 +1297,6 @@ namespace DomainService.Services
         {
             List<BlocksLanguageKey> resourceKeys = null;
 
-            //if (_blocksBaseCommand?.IsExternal)
-            //{
-            //    if (appIds != null && appIds.Count > 0)
-            //    {
-            //        var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageKey>(x =>
-            //            x.OrganizationId == _blocksBaseCommand?.OrganizationId &&
-            //            appIds.Contains(x.ModuleId));
-
-            //        resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageKey)x).ToList();
-            //    }
-            //    else
-            //    {
-            //        var blocksResourceKeys = await _keyRepository.GetUilmResourceKeys<BlocksLanguageKey>(x =>
-            //            x.OrganizationId == _blocksBaseCommand?.OrganizationId);
-
-            //        resourceKeys = blocksResourceKeys?.Select(x => (BlocksLanguageKey)x).ToList();
-            //    }
-            //}
-            //else
-            //{
             if (appIds != null && appIds.Count > 0)
             {
                 resourceKeys = await _keyRepository.GetUilmResourceKeys(x =>
@@ -1323,9 +1308,21 @@ namespace DomainService.Services
                 resourceKeys = await _keyRepository.GetUilmResourceKeys(x => true,
                     _blocksBaseCommand?.ClientTenantId);
             }
-            //}
 
             return resourceKeys;
+        }
+
+        public async Task PublishUilmExportNotification(bool response, string fileId, string? messageCoRelationId, string tenantId)
+        {
+            var result = await _notificationService.NotifyExportEvent(response,fileId,messageCoRelationId,tenantId);
+            if (result)
+            {
+                _logger.LogInformation("Notification: sent succussfully messageCoRelationId: {MessageCoRelationId}, fileId={FileId}", messageCoRelationId, fileId);
+            }
+            else
+            {
+                _logger.LogError("Notification: sending failed messageCoRelationId: {MessageCoRelationId}, fileId={FileId}", messageCoRelationId, fileId);
+            }
         }
     }
 }
