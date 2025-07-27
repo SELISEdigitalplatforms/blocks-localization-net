@@ -21,13 +21,13 @@ namespace DomainService.Services
             _logger = logger;
         }
 
-        public override Task<T> GenerateAsync<T>(BlocksLanguage languageSetting, List<BlocksLanguageModule> applications, List<BlocksLanguageResourceKey> resourceKeys, string defaultLanguage)
+        public override Task<T> GenerateAsync<T>(BlocksLanguage languageSetting, List<BlocksLanguageModule> applications, List<BlocksLanguageKey> resourceKeys, string defaultLanguage)
         {
             try
             {
                 var jsonOutputModels = new List<LanguageJsonModel>();
 
-                foreach (BlocksLanguageResourceKey resourceKey in resourceKeys)
+                foreach (BlocksLanguageKey resourceKey in resourceKeys)
                 {
                     BlocksLanguageModule app = applications.FirstOrDefault(x => x.ItemId == resourceKey.ModuleId);
 

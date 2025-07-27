@@ -268,32 +268,32 @@ namespace DomainService.Repositories
             return response?.ModifiedCount;
         }
 
-        public async Task<T> GetUilmResourceKey<T>(Expression<Func<BlocksLanguageResourceKey, bool>> expression)
+        public async Task<T> GetUilmResourceKey<T>(Expression<Func<BlocksLanguageKey, bool>> expression)
         {
-            var project = Builders<BlocksLanguageResourceKey>.Projection.As<T>();
+            var project = Builders<BlocksLanguageKey>.Projection.As<T>();
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            return await dataBase.GetCollection<BlocksLanguageResourceKey>($"{nameof(BlocksLanguageKey)}s")
+            return await dataBase.GetCollection<BlocksLanguageKey>($"{nameof(BlocksLanguageKey)}s")
                 .Find(expression).Project(project).FirstOrDefaultAsync();
         }
 
-        public async Task<BlocksLanguageKey> GetUilmResourceKey(Expression<Func<BlocksLanguageResourceKey, bool>> expression, string tenantId)
+        public async Task<BlocksLanguageKey> GetUilmResourceKey(Expression<Func<BlocksLanguageKey, bool>> expression, string tenantId)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            return await dataBase.GetCollection<BlocksLanguageResourceKey>($"{nameof(BlocksLanguageKey)}s")
+            return await dataBase.GetCollection<BlocksLanguageKey>($"{nameof(BlocksLanguageKey)}s")
                 .Find(expression).FirstOrDefaultAsync();
         }
 
-        public async Task<List<BlocksLanguageResourceKey>> GetUilmResourceKeys(Expression<Func<BlocksLanguageResourceKey, bool>> expression, string tenantId)
+        public async Task<List<BlocksLanguageKey>> GetUilmResourceKeys(Expression<Func<BlocksLanguageKey, bool>> expression, string tenantId)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            return await dataBase.GetCollection<BlocksLanguageResourceKey>("BlocksLanguageResourceKeys").Find(expression).ToListAsync();
+            return await dataBase.GetCollection<BlocksLanguageKey>("BlocksLanguageKeys").Find(expression).ToListAsync();
         }
 
-        public async Task<List<T>> GetUilmResourceKeys<T>(Expression<Func<BlocksLanguageResourceKey, bool>> expression)
+        public async Task<List<T>> GetUilmResourceKeys<T>(Expression<Func<BlocksLanguageKey, bool>> expression)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            var project = Builders<BlocksLanguageResourceKey>.Projection.As<T>();
-            return await dataBase.GetCollection<BlocksLanguageResourceKey>($"{nameof(BlocksLanguageResourceKey)}s")
+            var project = Builders<BlocksLanguageKey>.Projection.As<T>();
+            return await dataBase.GetCollection<BlocksLanguageKey>($"{nameof(BlocksLanguageKey)}s")
                 .Find(expression).Project(project).ToListAsync();
         }
 
@@ -303,10 +303,10 @@ namespace DomainService.Repositories
             await dataBase.GetCollection<BlocksLanguageKey>("BlocksLanguageKeys").InsertManyAsync(entities);
         }
 
-        public async Task InsertUilmResourceKeys(IEnumerable<BlocksLanguageResourceKey> entities)
+        public async Task InsertUilmResourceKeys(IEnumerable<BlocksLanguageKey> entities)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            await dataBase.GetCollection<BlocksLanguageResourceKey>("BlocksLanguageResourceKeys").InsertManyAsync(entities);
+            await dataBase.GetCollection<BlocksLanguageKey>("BlocksLanguageKeys").InsertManyAsync(entities);
         }
 
         public async Task UpdateBulkUilmApplications(List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string organizationId, bool isExternal, string clientTenantId)
@@ -378,7 +378,7 @@ namespace DomainService.Repositories
             else
             {
                 countFilter &= Builders<BsonDocument>.Filter.Eq("OrganizationId", organizationId);
-                resourceKeyCount = await dataBase.GetCollection<BsonDocument>("BlocksLanguageResourceKeys").CountDocumentsAsync(countFilter);
+                resourceKeyCount = await dataBase.GetCollection<BsonDocument>("BlocksLanguageKeys").CountDocumentsAsync(countFilter);
                 await dataBase.GetCollection<BsonDocument>("BlocksLanguageApplications")
                 .UpdateOneAsync(filter, Builders<BsonDocument>.Update.Set("NumberOfKeys", resourceKeyCount));
             }
