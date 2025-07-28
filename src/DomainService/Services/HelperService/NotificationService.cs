@@ -43,7 +43,7 @@ namespace DomainService.Services.HelperService
                 ConfiguratoinName = _configuration["BlocksAppNotificationReceiver"],
                 ContentAvailable = true,
                 ResponseKey = messageCoRelationId,
-                ResponseValue = response
+                ResponseValue = response.ToString()
             };
 
             var blocksKey = _configuration["RootTenantId"];
