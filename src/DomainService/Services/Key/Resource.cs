@@ -7,7 +7,7 @@ namespace DomainService.Services
     {
         public string Value { get; set; }
         public string Culture { get; set; }
-        //public int CharacterLength { get; set; }
+        public int CharacterLength { get; set; }
 
     }
 }

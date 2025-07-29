@@ -13,7 +13,12 @@ namespace DomainService.Services
         Task<Key?> GetAsync(GetKeyRequest request);
         Task<BaseMutationResponse> DeleteAsysnc(DeleteKeyRequest request);
         Task SendTranslateAllEvent(TranslateAllRequest request);
+        Task SendUilmImportEvent(UilmImportRequest request);
+        Task SendUilmExportEvent(UilmExportRequest request);
         Task SendGenerateUilmFilesEvent(GenerateUilmFilesRequest request);
         Task<bool> ChangeAll(TranslateAllEvent request);
+        Task<bool> ImportUilmFile(UilmImportEvent request);
+        Task<bool> ExportUilmFile(UilmExportEvent request);
+        Task PublishUilmExportNotification(bool response, string fileId, string? messageCoRelationId, string tenantId);
     }
 }

@@ -10,7 +10,7 @@
             </summary>
             
         </member>
-        <member name="M:Api.Controllers.KeyController.#ctor(DomainService.Services.IKeyManagementService,Api.ChangeControllerContext)">
+        <member name="M:Api.Controllers.KeyController.#ctor(DomainService.Services.IKeyManagementService,Blocks.Genesis.ChangeControllerContext)">
             <summary>
             Initializes a new instance of the <see cref="T:Api.Controllers.KeyController"/> class.
             </summary>
@@ -34,7 +34,7 @@
             API Controller for managing language-related operations.
             </summary>
         </member>
-        <member name="M:Api.Controllers.LanguageController.#ctor(DomainService.Services.ILanguageManagementService,Api.ChangeControllerContext)">
+        <member name="M:Api.Controllers.LanguageController.#ctor(DomainService.Services.ILanguageManagementService,Blocks.Genesis.ChangeControllerContext)">
             <summary>
             Initializes a new instance of the <see cref="T:Api.Controllers.LanguageController"/> class.
             </summary>
@@ -58,7 +58,7 @@
             Handles operations related to managing modules, such as saving and retrieving module data.
             </summary>
         </member>
-        <member name="M:Api.Controllers.ModuleController.#ctor(DomainService.Services.IModuleManagementService,Api.ChangeControllerContext)">
+        <member name="M:Api.Controllers.ModuleController.#ctor(DomainService.Services.IModuleManagementService,Blocks.Genesis.ChangeControllerContext)">
             <summary>
             Initializes a new instance of the <see cref="T:Api.Controllers.ModuleController"/> class.
             </summary>
