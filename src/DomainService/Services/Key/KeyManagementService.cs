@@ -1314,7 +1314,7 @@ namespace DomainService.Services
 
         public async Task PublishUilmExportNotification(bool response, string fileId, string? messageCoRelationId, string tenantId)
         {
-            var result = await _notificationService.NotifyExportEvent(response,fileId,messageCoRelationId,tenantId);
+            var result = await _notificationService.NotifyExportEvent(response, fileId, messageCoRelationId, tenantId);
             if (result)
             {
                 _logger.LogInformation("Notification: sent succussfully messageCoRelationId: {MessageCoRelationId}, fileId={FileId}", messageCoRelationId, fileId);
@@ -1322,6 +1322,19 @@ namespace DomainService.Services
             else
             {
                 _logger.LogError("Notification: sending failed messageCoRelationId: {MessageCoRelationId}, fileId={FileId}", messageCoRelationId, fileId);
+            }
+        }
+        
+        public async Task PublishTranslateAllNotification(bool response, string? messageCoRelationId)
+        {
+            var result = await _notificationService.NotifyTranslateAllEvent(response, messageCoRelationId);
+            if (result)
+            {
+                _logger.LogInformation("Notification: sent succussfully for TranslateAllEvent with messageCoRelationId: {MessageCoRelationId}", messageCoRelationId);
+            }
+            else
+            {
+                _logger.LogError("Notification: sending failed for TranslateAllEvent with messageCoRelationId: {MessageCoRelationId}", messageCoRelationId);
             }
         }
     }

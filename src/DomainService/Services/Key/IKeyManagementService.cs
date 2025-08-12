@@ -20,5 +20,6 @@ namespace DomainService.Services
         Task<bool> ImportUilmFile(UilmImportEvent request);
         Task<bool> ExportUilmFile(UilmExportEvent request);
         Task PublishUilmExportNotification(bool response, string fileId, string? messageCoRelationId, string tenantId);
+        Task PublishTranslateAllNotification(bool response, string? messageCoRelationId);
     }
 }

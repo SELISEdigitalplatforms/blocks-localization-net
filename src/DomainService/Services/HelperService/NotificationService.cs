@@ -61,7 +61,47 @@ namespace DomainService.Services.HelperService
             var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
                  requestData, url, headers);
 
-            return result1==null?false:result1.isSuccess;
+            return result1 == null ? false : result1.isSuccess;
+        }
+
+        public async Task<bool> NotifyTranslateAllEvent(bool response, string? messageCoRelationId)
+        {
+            var requestData = new
+            {
+                ConnectionId = messageCoRelationId,
+                Roles = new List<string> { },
+                UserIds = new List<string> { BlocksContext.GetContext()?.UserId ?? "" },
+                DenormalizedPayload = JsonSerializer.Serialize(new
+                {
+                    Message = new
+                    {
+                        IsSuccess = response,
+                        Message = "Completed translation for all keys"
+                    }
+                }),
+                SaveDenormalizedPayloadAsAnObject = false,
+                ConfiguratoinName = "translate-all",
+                ContentAvailable = true,
+                ResponseKey = messageCoRelationId,
+                ResponseValue = response.ToString()
+            };
+
+            var blocksKey = _configuration["RootTenantId"];
+            var rootTenantId = _configuration["RootTenantId"];
+            var salt = _tenants.GetTenantByID(rootTenantId)?.TenantSalt;
+            var actulalSecret = _cryptoService.Hash(rootTenantId, salt);
+
+            var url = _configuration["NotificationServiceUrl"];
+            var headers = new Dictionary<string, string>
+            {
+                { "x-blocks-key", blocksKey },
+                { "Secret", actulalSecret}
+            };
+
+            var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
+                 requestData, url, headers);
+
+            return result1 == null ? false : result1.isSuccess;
         }
     }
 }

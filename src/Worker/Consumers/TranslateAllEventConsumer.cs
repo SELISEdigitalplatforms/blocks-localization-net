@@ -14,7 +14,11 @@ namespace Worker.Consumers
         }
         public async Task Consume(TranslateAllEvent @event)
         {
-            await _keyManagementService.ChangeAll(@event);
+            var response = await _keyManagementService.ChangeAll(@event);
+            await _keyManagementService.PublishTranslateAllNotification(
+                    response: response,
+                    messageCoRelationId: @event.MessageCoRelationId
+                    );
         }
     }
 }
