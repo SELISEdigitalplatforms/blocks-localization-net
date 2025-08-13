@@ -82,8 +82,8 @@ namespace DomainService.Services.HelperService
                 SaveDenormalizedPayloadAsAnObject = false,
                 ConfiguratoinName = "translate-all",
                 ContentAvailable = true,
-                ResponseKey = messageCoRelationId,
-                ResponseValue = response.ToString()
+                ResponseKey = "Translate All",
+                ResponseValue = "Successfully translated all keys"
             };
 
             var blocksKey = _configuration["RootTenantId"];
