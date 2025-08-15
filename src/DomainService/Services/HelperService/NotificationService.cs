@@ -73,12 +73,9 @@ namespace DomainService.Services.HelperService
                 UserIds = new List<string> { BlocksContext.GetContext()?.UserId ?? "" },
                 DenormalizedPayload = JsonSerializer.Serialize(new
                 {
-                    Message = new
-                    {
-                        IsSuccess = response,
-                        NotificationTitle = "Translation Completed",
-                        NotificationDescription = "Completed translation for all keys"
-                    }
+                    IsSuccess = response,
+                    NotificationTitle = "Translation Completed",
+                    NotificationDescription = "Completed translation for all keys"
                 }),
                 SaveDenormalizedPayloadAsAnObject = false,
                 ConfiguratoinName = "translate-all",
