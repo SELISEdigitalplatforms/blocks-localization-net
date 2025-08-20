@@ -36,7 +36,9 @@ namespace DomainService.Services.HelperService
                 {
                     Message = new
                     {
-                        IsSuccess = response
+                        IsSuccess = response,
+                        title = "Uilm Export Completed",
+                        description = "Completed export"
                     }
                 }),
                 SaveDenormalizedPayloadAsAnObject = false,
@@ -74,8 +76,8 @@ namespace DomainService.Services.HelperService
                 DenormalizedPayload = JsonSerializer.Serialize(new
                 {
                     IsSuccess = response,
-                    NotificationTitle = "Translation Completed",
-                    NotificationDescription = "Completed translation for all keys"
+                    title = "Translation Completed",
+                    description = "Completed translation for all keys"
                 }),
                 SaveDenormalizedPayloadAsAnObject = false,
                 ConfiguratoinName = "translate-all",
