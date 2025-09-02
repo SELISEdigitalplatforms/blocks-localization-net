@@ -76,13 +76,16 @@ namespace DomainService.Services
             {
                 var repoKey = await MappedIntoRepoKeyAsync(key);
                 await _keyRepository.SaveKeyAsync(repoKey);
-                var request = new GenerateUilmFilesRequest
+                if (key != null && key.ShouldPublish == true)
                 {
-                    Guid = key.ItemId,
-                    ModuleId = key.ModuleId,
-                    ProjectKey = key.ProjectKey
-                };
-                await SendGenerateUilmFilesEvent(request);
+                    var request = new GenerateUilmFilesRequest
+                    {
+                        Guid = key.ItemId,
+                        ModuleId = key.ModuleId,
+                        ProjectKey = key.ProjectKey
+                    };
+                    await SendGenerateUilmFilesEvent(request);
+                }
             }
             catch (Exception ex)
             {

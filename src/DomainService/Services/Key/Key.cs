@@ -16,7 +16,7 @@ namespace DomainService.Services
         public bool IsNewKey { get; set; }
         public DateTime LastUpdateDate { get; set; }
         public DateTime CreateDate { get; set; }
-        public string? ShouldPublish { get; set; }
+        public bool? ShouldPublish { get; set; }
         public string? ProjectKey { get; set; }
     }
 }
