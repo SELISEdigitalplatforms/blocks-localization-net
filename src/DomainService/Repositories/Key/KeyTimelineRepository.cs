@@ -56,7 +56,7 @@ namespace DomainService.Repositories
             {
                 timeline.LastUpdateDate = DateTime.Now;
                 var filter = Builders<KeyTimeline>.Filter.Eq(t => t.ItemId, timeline.ItemId);
-                await collection.ReplaceOneAsync(filter, timeline);
+                await collection.ReplaceOneAsync(filter, timeline, new ReplaceOptions { IsUpsert = true });
             }
         }
 

@@ -29,6 +29,13 @@
             </summary>
             <returns>A list of <see cref="T:Microsoft.AspNetCore.DataProtection.KeyManagement.Key"/> objects.</returns>
         </member>
+        <member name="M:Api.Controllers.KeyController.GetTimeline(DomainService.Services.GetKeyTimelineRequest)">
+            <summary>
+            Retrieves Key timeline with pagination.
+            </summary>
+            <param name="query">The query parameters for filtering and pagination.</param>
+            <returns>A paginated list of <see cref="T:DomainService.Services.KeyTimeline"/> objects.</returns>
+        </member>
         <member name="T:Api.Controllers.LanguageController">
             <summary>
             API Controller for managing language-related operations.

@@ -70,9 +70,9 @@ namespace Api.Controllers
         /// </summary>
         /// <param name="query">The query parameters for filtering and pagination.</param>
         /// <returns>A paginated list of <see cref="KeyTimeline"/> objects.</returns>
-        [HttpPost]
+        [HttpGet]
         [Authorize]
-        public async Task<GetKeyTimelineQueryResponse> GetTimeline([FromBody] GetKeyTimelineRequest query)
+        public async Task<GetKeyTimelineQueryResponse> GetTimeline([FromQuery] GetKeyTimelineRequest query)
         {
             if (query == null) BadRequest(new BaseMutationResponse());
             _changeControllerContext.ChangeContext(query);
