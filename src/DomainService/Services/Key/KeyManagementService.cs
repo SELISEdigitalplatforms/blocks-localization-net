@@ -205,12 +205,22 @@ namespace DomainService.Services
                     break;
                 }
 
+                // Create deep copies of original keys for timeline tracking
+                var originalResourceKeys = new Dictionary<string, BlocksLanguageKey>();
+                foreach (var key in dbResourceKeys)
+                {
+                    var originalKey = JsonConvert.DeserializeObject<BlocksLanguageKey>(JsonConvert.SerializeObject(key));
+                    if (originalKey != null)
+                    {
+                        originalResourceKeys[key.ItemId] = originalKey;
+                    }
+                }
 
                 var resourceKeys = await ProcessChangeAll(request, dbResourceKeys, languageSetting);
 
                 if (resourceKeys.Any())
                 {
-                    await UpdateResourceKey(resourceKeys, request);
+                    await UpdateResourceKey(resourceKeys, request, originalResourceKeys);
                 }
 
                 page++;
@@ -361,7 +371,7 @@ namespace DomainService.Services
             return keywordResources != null;
         }
 
-        public async Task UpdateResourceKey(List<BlocksLanguageKey> resourceKeys, TranslateAllEvent request)
+        public async Task UpdateResourceKey(List<BlocksLanguageKey> resourceKeys, TranslateAllEvent request, Dictionary<string, BlocksLanguageKey>? originalResourceKeys = null)
         {
             var updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(resourceKeys, null, false, null);
 
@@ -370,9 +380,14 @@ namespace DomainService.Services
             {
                 try
                 {
-                    // For TranslateAll, we don't have the previous state easily accessible
-                    // but we can indicate this was a translation operation
-                    await CreateKeyTimelineEntryAsync(null, resourceKey, "TranslateAll");
+                    // Use the original key for timeline comparison if available
+                    BlocksLanguageKey? previousKey = null;
+                    if (originalResourceKeys != null && originalResourceKeys.ContainsKey(resourceKey.ItemId))
+                    {
+                        previousKey = originalResourceKeys[resourceKey.ItemId];
+                    }
+                    
+                    await CreateKeyTimelineEntryAsync(previousKey, resourceKey, "TranslateAll");
                 }
                 catch (Exception ex)
                 {
