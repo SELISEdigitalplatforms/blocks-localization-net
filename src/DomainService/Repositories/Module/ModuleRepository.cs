@@ -26,6 +26,15 @@ namespace DomainService.Repositories
             return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
+        public async Task<BlocksLanguageModule> GetByIdAsync(string id)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId?? "");
+            var collection = dataBase.GetCollection<BlocksLanguageModule>(_collectionName);
+
+            var filter = Builders<BlocksLanguageModule>.Filter.Eq(mc => mc.ItemId, id);
+            return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
         public async Task<List<BlocksLanguageModule>> GetAllAsync()
         {
             var collection = _dbContextProvider.GetCollection<BlocksLanguageModule>(_collectionName);

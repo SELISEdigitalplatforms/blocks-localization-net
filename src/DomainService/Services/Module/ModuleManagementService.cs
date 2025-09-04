@@ -44,9 +44,15 @@ namespace DomainService.Services
             return new ApiResponse();
         }
 
-        public async Task<List<BlocksLanguageModule>> GetModulesAsync()
+        public async Task<List<BlocksLanguageModule>> GetModulesAsync(string? moduleId = null)
         {
-            return await _moduleRepository.GetAllAsync();
+            if (string.IsNullOrEmpty(moduleId))
+            {
+                return await _moduleRepository.GetAllAsync();
+            }
+
+            var module = await _moduleRepository.GetByIdAsync(moduleId);
+            return module != null ? new List<BlocksLanguageModule> { module } : new List<BlocksLanguageModule>();
         }
 
         private async Task<BlocksLanguageModule> MappedIntoRepoModuleAsync(Module module)

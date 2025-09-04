@@ -5,6 +5,7 @@ namespace DomainService.Repositories
     {
         Task SaveAsync(BlocksLanguageModule module);
         Task<BlocksLanguageModule> GetByNameAsync(string name);
+        Task<BlocksLanguageModule> GetByIdAsync(string id);
         Task<List<BlocksLanguageModule>> GetAllAsync();
     }
 }
