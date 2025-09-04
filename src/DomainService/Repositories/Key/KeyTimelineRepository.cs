@@ -65,12 +65,6 @@ namespace DomainService.Repositories
             var builder = Builders<KeyTimeline>.Filter;
             var filters = new List<FilterDefinition<KeyTimeline>>();
 
-            // Filter by ProjectKey
-            if (!string.IsNullOrWhiteSpace(request.ProjectKey))
-            {
-                filters.Add(builder.Eq(t => t.ProjectKey, request.ProjectKey));
-            }
-
             // Filter by EntityId (Key ItemId)
             if (!string.IsNullOrWhiteSpace(request.EntityId))
             {

@@ -11,7 +11,7 @@ Successfully implemented comprehensive timeline tracking for Key entities in the
 - **Purpose**: Links timeline entries to specific Key entities
 
 ### 2. **Timeline Models**
-- **KeyTimeline.cs**: Timeline entity inheriting from `BlocksBaseTimelineEntity<Key, Key>`
+- **KeyTimeline.cs**: Timeline entity inheriting from `BlocksBaseTimelineEntity<BlocksLanguageKey, BlocksLanguageKey>`
 - **GetKeyTimelineRequest.cs**: Request model with pagination and filtering options
 - **GetKeyTimelineQueryResponse.cs**: Response model with total count and timeline list
 
@@ -64,7 +64,6 @@ Successfully implemented comprehensive timeline tracking for Key entities in the
 Each timeline entry includes:
 - **ItemId**: Unique timeline entry ID
 - **EntityId**: The Key's ItemId being tracked
-- **ProjectKey**: Project context
 - **CurrentData**: Current state of the Key
 - **PreviousData**: Previous state (when available)
 - **LogFrom**: Source of the change (e.g., "KeyController.Save")
@@ -101,7 +100,6 @@ Each timeline entry includes:
     {
       "itemId": "timeline-entry-id",
       "entityId": "key-item-id",
-      "projectKey": "project-key",
       "currentData": { /* Current Key state */ },
       "previousData": { /* Previous Key state */ },
       "logFrom": "KeyController.Save",
@@ -129,7 +127,7 @@ Each timeline entry includes:
 ## 📁 **Database Collection**
 
 - **Collection Name**: `KeyTimelines`
-- **Indexing**: Consider adding indexes on `EntityId`, `CreateDate`, and `ProjectKey` for performance
+- **Indexing**: Consider adding indexes on `EntityId` and `CreateDate` for performance
 - **Retention**: No automatic cleanup implemented (consider adding if needed)
 
 ## 🚀 **Future Enhancements**

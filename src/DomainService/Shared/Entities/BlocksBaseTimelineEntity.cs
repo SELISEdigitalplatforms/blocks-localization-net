@@ -8,7 +8,6 @@ namespace DomainService.Shared.Entities
         [BsonId]
         public string ItemId { get; set; } = Guid.NewGuid().ToString();
         public string? EntityId { get; set; } // ID of the entity being tracked (e.g., Key ItemId)
-        public string? ProjectKey { get; set; }
         public DateTime CreateDate { get; set; } = DateTime.Now;
         public DateTime LastUpdateDate { get; set; } = DateTime.Now;
         public CT? CurrentData { get; set; }
