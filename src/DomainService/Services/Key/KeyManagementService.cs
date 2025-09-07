@@ -380,7 +380,7 @@ namespace DomainService.Services
 
         public async Task UpdateResourceKey(List<BlocksLanguageKey> resourceKeys, TranslateAllEvent request, Dictionary<string, BlocksLanguageKey>? originalResourceKeys = null)
         {
-            var updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(resourceKeys, null, false, null);
+            var updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(resourceKeys);
 
             // Create timeline entries for updated keys
             foreach (var resourceKey in resourceKeys)
@@ -1215,7 +1215,7 @@ namespace DomainService.Services
             {
                 long? updateCount = 0;
 
-                updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(uilmResourceKeys, _blocksBaseCommand?.OrganizationId, _blocksBaseCommand?.IsExternal ?? false, _blocksBaseCommand?.ClientTenantId);
+                updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(uilmResourceKeys);
 
                 // Create timeline entries for updated keys
                 foreach (var resourceKey in uilmResourceKeys)

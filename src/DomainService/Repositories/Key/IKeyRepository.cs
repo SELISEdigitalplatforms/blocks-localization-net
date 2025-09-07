@@ -16,7 +16,7 @@ namespace DomainService.Repositories
         Task<Key> GetByIdAsync(string itemId);
         Task DeleteAsync(string itemId);
         Task<IQueryable<BlocksLanguageKey>> GetUilmResourceKeysWithPage(int page, int size);
-        Task<long?> UpdateUilmResourceKeysForChangeAll(List<BlocksLanguageKey> uilmResourceKeys, string organizationId, bool isExternal, string clientTenantId);
+        Task<long?> UpdateUilmResourceKeysForChangeAll(List<BlocksLanguageKey> uilmResourceKeys);
         Task<T> GetUilmResourceKey<T>(Expression<Func<BlocksLanguageKey, bool>> expression);
         Task<BlocksLanguageKey> GetUilmResourceKey(Expression<Func<BlocksLanguageKey, bool>> expression, string tenantId);
         Task InsertUilmResourceKeys(IEnumerable<BlocksLanguageKey> entities);
