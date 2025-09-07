@@ -683,7 +683,7 @@ namespace DomainService.Services
                             _id = csv.GetField<string>("_id"),
                             Value = csv.GetField<string>("Value"),
                             KeyName = csv.GetField<string>("KeyName"),
-                            Resources = csv.GetField<Resource[]>("Resources"),
+                            // Resources will be populated from individual culture columns below
                             ModuleId = csv.GetField<string>("ModuleId"),
                             IsPartiallyTranslated = csv.GetField<bool>("IsPartiallyTranslated"),
                             //Routes = csv.GetField<string>("Routes")
@@ -953,6 +953,15 @@ namespace DomainService.Services
                 _logger.LogInformation("ImportExcelFile: Detected {ColumnsCount} columns={Columns} in FileName={FileDataName}", columns.Count, string.Join(", ", columns.Select(x => x.Key).ToList()), fileData.Name);
                 _logger.LogInformation("ImportExcelFile: Detected {LanguagesCount} cultures={Cultures} in FileName={FileDataName}", languages.Count, string.Join(", ", languages.Select(x => x.Key).ToList()), fileData.Name);
 
+                // Validate required columns exist
+                var requiredColumns = new[] { "ItemId", "ModuleId", "Module", "KeyName" };
+                var missingColumns = requiredColumns.Where(col => !columns.ContainsKey(col)).ToList();
+                if (missingColumns.Any())
+                {
+                    _logger.LogError("ImportExcelFile: Missing required columns {MissingColumns} in FileId: {id}, FileName: {name}", string.Join(", ", missingColumns), fileData.ItemId, fileData.Name);
+                    return false;
+                }
+
                 await ProcessExcelCells(worksheet, columns, languages, blocksLanguageKeys);
 
                 _logger.LogInformation("ImportExcelFile: Successfully imported FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
@@ -993,7 +1002,7 @@ namespace DomainService.Services
                 string moduleId = worksheet.Cell(i, columns["ModuleId"]).Value.ToString();
                 string moduleName = worksheet.Cell(i, columns["Module"]).Value.ToString();
                 string keyName = worksheet.Cell(i, columns["KeyName"]).Value.ToString();
-                string resources = worksheet.Cell(i, columns["Resources"]).Value.ToString();
+                // Note: Resources column is not required as resources are populated from language columns
                 //string moduleName = worksheet.Cell(i, columns["module"]).Value.ToString();
                 //string type = worksheet.Cell(i, columns["type"]).Value.ToString();
 
