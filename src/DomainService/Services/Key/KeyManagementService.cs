@@ -276,11 +276,23 @@ namespace DomainService.Services
                     if (string.IsNullOrEmpty(languageName))
                     {
                         _logger.LogError("ChangeAll: No language name found for languageCode {misssingResourceCulture}", missingResource.Culture);
-                        return missingResource; // Return the resource as-is if language name not found
+                        return new Resource 
+                        { 
+                            Culture = missingResource.Culture, 
+                            Value = missingResource.Value,
+                            CharacterLength = missingResource.CharacterLength
+                        };
                     }
 
-                    missingResource.Value = await _assistantService.SuggestTranslation(ConstructQuery(request, resourceKey, defaultResource, missingResource, languageName, languageSetting));
-                    return missingResource;
+                    var translatedValue = await _assistantService.SuggestTranslation(ConstructQuery(request, resourceKey, defaultResource, missingResource, languageName, languageSetting));
+                    
+                    // Return a new Resource object instead of modifying the original
+                    return new Resource 
+                    { 
+                        Culture = missingResource.Culture, 
+                        Value = translatedValue,
+                        CharacterLength = missingResource.CharacterLength
+                    };
                 }).ToArray();
 
                 var processedResources = await Task.WhenAll(processingTasks);
