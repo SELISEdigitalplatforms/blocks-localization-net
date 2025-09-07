@@ -268,44 +268,10 @@ namespace DomainService.Services
             {
                 //var timeline = MakeBlocksLanguageManagerTimeline(command, resourceKey);
 
-                // Process all missing resources concurrently
-                var processingTasks = missingResources.Select(async missingResource => 
+                foreach (var missingResource in missingResources)
                 {
-                    var languageName = languageSetting?.FirstOrDefault(x => x.LanguageCode == missingResource.Culture)?.LanguageName;
+                    await ProcessMissingResource(request, resourceKey, defaultResource, missingResource, resources, languageSetting);
 
-                    if (string.IsNullOrEmpty(languageName))
-                    {
-                        _logger.LogError("ChangeAll: No language name found for languageCode {misssingResourceCulture}", missingResource.Culture);
-                        return new Resource 
-                        { 
-                            Culture = missingResource.Culture, 
-                            Value = missingResource.Value,
-                            CharacterLength = missingResource.CharacterLength
-                        };
-                    }
-
-                    var translatedValue = await _assistantService.SuggestTranslation(ConstructQuery(request, resourceKey, defaultResource, missingResource, languageName, languageSetting));
-                    
-                    // Return a new Resource object instead of modifying the original
-                    return new Resource 
-                    { 
-                        Culture = missingResource.Culture, 
-                        Value = translatedValue,
-                        CharacterLength = missingResource.CharacterLength
-                    };
-                }).ToArray();
-
-                var processedResources = await Task.WhenAll(processingTasks);
-
-                // Update the resources list with processed results
-                foreach (var processedResource in processedResources)
-                {
-                    var matchedResource = resources.FirstOrDefault(x => x.Culture == processedResource.Culture);
-                    if (matchedResource != null)
-                    {
-                        resources.Remove(matchedResource);
-                    }
-                    resources.Add(processedResource);
                 }
 
                 resourceKey.Resources = resources.ToArray();
