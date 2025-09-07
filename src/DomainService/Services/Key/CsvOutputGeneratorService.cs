@@ -54,7 +54,6 @@ namespace DomainService.Services
 
                 csv.WriteField("ItemId");
                 csv.WriteField("ModuleId");
-                csv.WriteField("Value");
                 csv.WriteField("Module");
                 csv.WriteField("KeyName");
 
@@ -75,7 +74,6 @@ namespace DomainService.Services
                     
                     csv.WriteField(item._id);
                     csv.WriteField(item.ModuleId);
-                    csv.WriteField(item.Value);
                     csv.WriteField(app?.ModuleName);
                     csv.WriteField(item.KeyName);
 
