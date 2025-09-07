@@ -103,7 +103,14 @@ namespace DomainService.Services
                 // Create timeline entry
                 if (repoKey != null)
                 {
-                    await CreateKeyTimelineEntryAsync(previousKey, repoKey, "KeyController.Save");
+                    if (isNewKey)
+                    {
+                        await CreateKeyTimelineEntryAsync(null, repoKey, "KeyController.Create");
+                    }
+                    else
+                    {
+                        await CreateKeyTimelineEntryAsync(previousKey, repoKey, "KeyController.Save");
+                    }
                 }
             }
             catch (Exception ex)
