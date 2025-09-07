@@ -19,7 +19,7 @@ namespace DomainService.Services
             _logger = logger;
         }
 
-        public override Task<T> GenerateAsync<T>(BlocksLanguage languageSetting, List<BlocksLanguageModule> applications,
+        public override Task<T> GenerateAsync<T>(List<BlocksLanguage> languageSettings, List<BlocksLanguageModule> applications,
             List<BlocksLanguageKey> resourceKeys, string defaultLanguage)
         {
             try
@@ -39,7 +39,12 @@ namespace DomainService.Services
                 worksheet.Cell(row, column++).Value = "Module";
                 worksheet.Cell(row, column++).Value = "KeyName";
 
-                IEnumerable<string> indentifiers = new string[] { languageSetting.LanguageCode };
+                // Use all language codes from BlocksLanguage collection
+                IEnumerable<string> indentifiers = languageSettings
+                    .Select(x => x.LanguageCode)
+                    .Where(x => !string.IsNullOrEmpty(x))
+                    .Distinct()
+                    .OrderBy(x => x);
 
                 HandleLanguagesColumnName(row, column, worksheet, indentifiers, defaultLanguage);
 

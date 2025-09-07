@@ -29,5 +29,6 @@ namespace DomainService.Repositories
         Task<List<BlocksLanguageKey>> GetUilmResourceKeys(Expression<Func<BlocksLanguageKey, bool>> expression, string tenantId);
         Task<List<T>> GetUilmResourceKeys<T>(Expression<Func<BlocksLanguageKey, bool>> expression);
         Task<BlocksLanguage> GetLanguageSettingAsync(string clientTenantId);
+        Task<List<BlocksLanguage>> GetAllLanguagesAsync(string clientTenantId);
     }
 }

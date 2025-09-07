@@ -17,12 +17,18 @@ namespace DomainService.Services
         {
             _logger = logger;
         }
-        public override Task<T> GenerateAsync<T>(BlocksLanguage languageSetting, List<BlocksLanguageModule> applications,
+        public override Task<T> GenerateAsync<T>(List<BlocksLanguage> languageSettings, List<BlocksLanguageModule> applications,
             List<BlocksLanguageKey> resourceKeys, string defaultLanguage)
         {
             try
             {
-                var identifiers = new string[] { languageSetting.LanguageCode };
+                // Use all language codes from BlocksLanguage collection
+                var identifiers = languageSettings
+                    .Select(x => x.LanguageCode)
+                    .Where(x => !string.IsNullOrEmpty(x))
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToArray();
 
                 var jsonOutputModels = new List<LanguageJsonModel>();
 
@@ -36,7 +42,7 @@ namespace DomainService.Services
                         ModuleId = resourceKey.ModuleId,
                         Value = resourceKey.Value,
                         KeyName = resourceKey.KeyName,
-                        Resources = resourceKey.Resources.Where(x => identifiers.Contains(x.Culture)).ToArray(),
+                        Resources = resourceKey.Resources, // Include all resources, not filtered
                         TenantId = resourceKey.TenantId,
                         IsPartiallyTranslated = resourceKey.IsPartiallyTranslated,
                         Routes = resourceKey.Routes

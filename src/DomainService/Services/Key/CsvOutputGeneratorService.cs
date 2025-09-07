@@ -21,7 +21,7 @@ namespace DomainService.Services
             _logger = logger;
         }
 
-        public override Task<T> GenerateAsync<T>(BlocksLanguage languageSetting, List<BlocksLanguageModule> applications, List<BlocksLanguageKey> resourceKeys, string defaultLanguage)
+        public override Task<T> GenerateAsync<T>(List<BlocksLanguage> languageSettings, List<BlocksLanguageModule> applications, List<BlocksLanguageKey> resourceKeys, string defaultLanguage)
         {
             try
             {
@@ -46,7 +46,13 @@ namespace DomainService.Services
                     jsonOutputModels.Add(model);
                 }
 
-                var identifiers = new string[] { languageSetting.LanguageCode };
+                // Use all language codes from BlocksLanguage collection
+                var identifiers = languageSettings
+                    .Select(x => x.LanguageCode)
+                    .Where(x => !string.IsNullOrEmpty(x))
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToArray();
 
                 var builder = new StringBuilder();
                 var stringWriter = new StringWriter(builder);

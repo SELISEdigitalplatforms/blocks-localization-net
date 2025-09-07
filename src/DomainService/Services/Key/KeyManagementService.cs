@@ -1351,7 +1351,11 @@ namespace DomainService.Services
             List<BlocksLanguageKey> resourceKeys, string fileId, BlocksLanguage languageSetting)
         {
             var xlsxOutputGenerator = _serviceProvider.GetService<XlsxOutputGeneratorService>();
-            var workBook = await xlsxOutputGenerator.GenerateAsync<XLWorkbook>(languageSetting, applications, resourceKeys, languageSetting.LanguageCode);
+            
+            // Get all languages from BlocksLanguage collection
+            var allLanguages = await _keyRepository.GetAllLanguagesAsync(string.Empty);
+            
+            var workBook = await xlsxOutputGenerator.GenerateAsync<XLWorkbook>(allLanguages, applications, resourceKeys, languageSetting.LanguageCode);
             if (workBook == null)
             {
                 _logger.LogError("GenerateAndWriteFile: Workbook is null");
@@ -1388,7 +1392,11 @@ namespace DomainService.Services
             List<BlocksLanguageKey> resourceKeys, string fileId, BlocksLanguage languageSetting)
         {
             var jsonOutputGenerator = _serviceProvider.GetService<JsonOutputGeneratorService>();
-            var jsonString = await jsonOutputGenerator.GenerateAsync<string>(languageSetting, applications, resourceKeys, languageSetting.LanguageCode);
+            
+            // Get all languages from BlocksLanguage collection
+            var allLanguages = await _keyRepository.GetAllLanguagesAsync(string.Empty);
+            
+            var jsonString = await jsonOutputGenerator.GenerateAsync<string>(allLanguages, applications, resourceKeys, languageSetting.LanguageCode);
             if (string.IsNullOrEmpty(jsonString))
             {
                 _logger.LogError("GenerateAndWriteFile: Json is null");
@@ -1404,7 +1412,11 @@ namespace DomainService.Services
             List<BlocksLanguageKey> resourceKeys, string fileId, BlocksLanguage languageSetting)
         {
             var csvOutputGenerator = _serviceProvider.GetService<CsvOutputGeneratorService>();
-            var stream = await csvOutputGenerator.GenerateAsync<MemoryStream>(languageSetting, applications, resourceKeys, languageSetting.LanguageCode);
+            
+            // Get all languages from BlocksLanguage collection
+            var allLanguages = await _keyRepository.GetAllLanguagesAsync(string.Empty);
+            
+            var stream = await csvOutputGenerator.GenerateAsync<MemoryStream>(allLanguages, applications, resourceKeys, languageSetting.LanguageCode);
             if (stream is null)
             {
                 _logger.LogError("GenerateAndWriteFile: Csv Stream is null");
