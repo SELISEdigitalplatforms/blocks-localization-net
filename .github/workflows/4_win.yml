@@ -12,6 +12,9 @@ on:
       SERVICE_NAME:
         required: true
         type: string
+      CLUSTER_VALUES:
+        required: true
+        type: string
 
     secrets:
       SELISE_GITHUB_PAT:
@@ -31,7 +34,7 @@ env:
   SERVICE_TYPE: "winservice"
 
 jobs:
-  deployWinToK8s:
+  integrateWin:
     permissions:
       contents: read
       id-token: write
@@ -53,8 +56,32 @@ jobs:
 
       - name: Build and push image to ACR
         run: |
-          az acr build --image ${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ inputs.CONTAINER_NAME }}:${{ github.sha }} --registry ${{ secrets.AZURE_CONTAINER_REGISTRY }} -g ${{ secrets.ACR_RESOURCE_GROUP }} --file ${{ env.WIN_DOCKERFILE }} .
+          az acr build \
+          --image ${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ inputs.CONTAINER_NAME }}:${{ github.sha }} \
+          --registry ${{ secrets.AZURE_CONTAINER_REGISTRY }} -g ${{ secrets.ACR_RESOURCE_GROUP }} \
+          --file ${{ env.WIN_DOCKERFILE }} .
       
+  deployWinToK8s:
+    needs: [integrateWin]
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      #Checks out the repository this file is in
+      - uses: actions/checkout@v3
+
+      - name: Set Environment Variables
+        uses: ./.github/actions/setvars
+        with:
+          varFilePath: ./.github/variables/vars.env
+
+      # Logs in with your Azure credentials
+      - name: Azure login
+        uses: azure/login@v1.4.3
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: pull helm repo
         uses: actions/checkout@v2
         with:
@@ -83,4 +110,10 @@ jobs:
 
       - name: Deploy To Kubernetes
         run: |
-          helm upgrade --install ${{inputs.CONTAINER_NAME}} ./new-templates/ecap3-${{env.SERVICE_TYPE}}/ --namespace=${{inputs.NAMESPACE}} --values ./${{ secrets.CLUSTER_NAME }}/${{inputs.SERVICE_NAME}}-win.values.yaml --set image.repository=${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ inputs.CONTAINER_NAME }} --set image.tag=${{ github.sha }} --set fullnameOverride=${{inputs.CONTAINER_NAME}}
+          helm upgrade \
+          --install ${{inputs.CONTAINER_NAME}} ./new-templates/ecap3-${{env.SERVICE_TYPE}}/ \
+          --namespace=${{inputs.NAMESPACE}} \
+          --values ./${{ inputs.CLUSTER_VALUES }}/${{inputs.SERVICE_NAME}}-win.values.yaml \
+          --set image.repository=${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ inputs.CONTAINER_NAME }} \
+          --set image.tag=${{ github.sha }} \
+          --set fullnameOverride=${{inputs.CONTAINER_NAME}}
