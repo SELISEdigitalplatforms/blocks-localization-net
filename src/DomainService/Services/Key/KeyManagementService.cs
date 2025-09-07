@@ -268,10 +268,32 @@ namespace DomainService.Services
             {
                 //var timeline = MakeBlocksLanguageManagerTimeline(command, resourceKey);
 
-                foreach (var missingResource in missingResources)
+                // Process all missing resources concurrently
+                var processingTasks = missingResources.Select(async missingResource => 
                 {
-                    await ProcessMissingResource(request, resourceKey, defaultResource, missingResource, resources, languageSetting);
+                    var languageName = languageSetting?.FirstOrDefault(x => x.LanguageCode == missingResource.Culture)?.LanguageName;
 
+                    if (string.IsNullOrEmpty(languageName))
+                    {
+                        _logger.LogError("ChangeAll: No language name found for languageCode {misssingResourceCulture}", missingResource.Culture);
+                        return missingResource; // Return the resource as-is if language name not found
+                    }
+
+                    missingResource.Value = await _assistantService.SuggestTranslation(ConstructQuery(request, resourceKey, defaultResource, missingResource, languageName, languageSetting));
+                    return missingResource;
+                }).ToArray();
+
+                var processedResources = await Task.WhenAll(processingTasks);
+
+                // Update the resources list with processed results
+                foreach (var processedResource in processedResources)
+                {
+                    var matchedResource = resources.FirstOrDefault(x => x.Culture == processedResource.Culture);
+                    if (matchedResource != null)
+                    {
+                        resources.Remove(matchedResource);
+                    }
+                    resources.Add(processedResource);
                 }
 
                 resourceKey.Resources = resources.ToArray();
