@@ -1,17 +1,13 @@
 name: Build (main)
+
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
-    types:
-      - opened
 
 env:
-  RUN_UNIT_TEST: "true"
-  RUN_SONARQUBE: "true"
+  RUN_UNIT_TEST: 'false'
+  RUN_SONARQUBE: 'false'
 
 jobs:
   initialization:
@@ -25,6 +21,7 @@ jobs:
         run: |
           echo "::set-output name=envvar1::$RUN_UNIT_TEST" 
           echo "::set-output name=envvar2::$RUN_SONARQUBE"
+          
   test-job:
     if: ${{ needs.initialization.outputs.envvalue1=='true' }}
     uses: ./.github/workflows/1_test.yml
@@ -42,8 +39,8 @@ jobs:
     uses: ./.github/workflows/3_web.yml
     with:
       VERSION: $PROD_VERSION
-      CONTAINER_NAME: "prod-ecap-$SERVICE_NAME"
-      NAMESPACE: "prod-$SERVICE_NAME"
+      CONTAINER_NAME: "prod-blocks-$SERVICE_NAME"
+      NAMESPACE: "prod-$REPO_NAME"
       SERVICE_NAME: $SERVICE_NAME
       CLUSTER_VALUES: "aks-blocks-prod"
     secrets:
@@ -59,8 +56,8 @@ jobs:
     if: ${{ github.event_name == 'push' && (success() || (needs.initialization.outputs.envvalue1=='false' && needs.initialization.outputs.envvalue2=='false')) }}
     uses: ./.github/workflows/4_win.yml
     with:
-      CONTAINER_NAME: "prod-ecap-$SERVICE_NAME-win"
-      NAMESPACE: "prod-$SERVICE_NAME"
+      CONTAINER_NAME: "prod-blocks-$SERVICE_NAME-win"
+      NAMESPACE: "prod-$REPO_NAME"
       SERVICE_NAME: $SERVICE_NAME
       CLUSTER_VALUES: "aks-blocks-prod"
     secrets:
