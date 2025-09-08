@@ -398,13 +398,10 @@ namespace DomainService.Repositories
             await dataBase.GetCollection<BlocksLanguageModule>("BlocksLanguageModules").InsertManyAsync(entities);
         }
 
-        public async Task<List<T>> GetUilmApplications<T>(Expression<Func<BlocksLanguageModule, bool>> expression, string clientTenantId)
+        public async Task<List<T>> GetUilmApplications<T>(Expression<Func<BlocksLanguageModule, bool>> expression)
         {
             var project = Builders<BlocksLanguageModule>.Projection.As<T>();
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            if(!string.IsNullOrEmpty(clientTenantId))
-                dataBase = _dbContextProvider.GetDatabase(clientTenantId ?? "");
-
             return await dataBase.GetCollection<BlocksLanguageModule>($"{nameof(BlocksLanguageModule)}s")
                 .Find(expression).Project(project).ToListAsync();
         }

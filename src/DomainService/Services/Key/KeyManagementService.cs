@@ -747,7 +747,7 @@ namespace DomainService.Services
                 var id = languageJsonModel._id;
                 var appId = languageJsonModel.ModuleId;
                 var isPartiallyTranslated = languageJsonModel.IsPartiallyTranslated;
-                var moduleName = dbApplications.First(x => x.ItemId == languageJsonModel.ModuleId)?.ModuleName;
+                var moduleName = languageJsonModel?.Module;
                 var keyName = languageJsonModel.KeyName;
                 //var type = languageJsonModel.Type;
 
@@ -832,11 +832,11 @@ namespace DomainService.Services
             //{
             if (appIds != null && appIds.Count > 0)
             {
-                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId), _blocksBaseCommand?.ClientTenantId);
+                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId));
             }
             else
             {
-                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true, _blocksBaseCommand?.ClientTenantId);
+                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true );
             }
             //}
 
