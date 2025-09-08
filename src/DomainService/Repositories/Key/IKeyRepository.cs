@@ -25,10 +25,11 @@ namespace DomainService.Repositories
         Task<bool> UpdateKeysCountOfAppAsync(string appId, bool isExternal, string tenantId, string organizationId);    
         Task InsertUilmApplications(List<BlocksLanguageModule> uilmApplicationsToBeInserted, string clientTenantId);
         Task InsertUilmApplications(IEnumerable<BlocksLanguageModule> entities);
-        Task<List<T>> GetUilmApplications<T>(Expression<Func<BlocksLanguageModule, bool>> expression, string clientTenantId);
+        Task<List<T>> GetUilmApplications<T>(Expression<Func<BlocksLanguageModule, bool>> expression);
         Task<List<BlocksLanguageKey>> GetUilmResourceKeys(Expression<Func<BlocksLanguageKey, bool>> expression, string tenantId);
         Task<List<T>> GetUilmResourceKeys<T>(Expression<Func<BlocksLanguageKey, bool>> expression);
         Task<BlocksLanguage> GetLanguageSettingAsync(string clientTenantId);
         Task<List<BlocksLanguage>> GetAllLanguagesAsync(string clientTenantId);
+        Task<Dictionary<string, long>> DeleteCollectionsAsync(List<string> collections);
     }
 }

@@ -10,8 +10,8 @@ on:
       - opened
 
 env:
-  RUN_UNIT_TEST: 'true'
-  RUN_SONARQUBE: 'true'
+  RUN_UNIT_TEST: "true"
+  RUN_SONARQUBE: "true"
 
 jobs:
   initialization:
@@ -45,13 +45,14 @@ jobs:
       CONTAINER_NAME: "prod-ecap-$SERVICE_NAME"
       NAMESPACE: "prod-$SERVICE_NAME"
       SERVICE_NAME: $SERVICE_NAME
+      CLUSTER_VALUES: "aks-blocks-prod"
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-      AZURE_CONTAINER_REGISTRY: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
-      ClUSTER_RESOURCE_GROUP: ${{ secrets.ClUSTER_RESOURCE_GROUP }}
-      CLUSTER_NAME: ${{ secrets.PROD_CLUSTER }}
-      ACR_RESOURCE_GROUP: ${{ secrets.ACR_RESOURCE_GROUP }}
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_AKS_BLOCKS_PROD_CREDENTIALS }}
+      AZURE_CONTAINER_REGISTRY: ${{ secrets.AZURE_BLOCKS_PROD_CONTAINER_REGISTRY }}
+      ClUSTER_RESOURCE_GROUP: ${{ secrets.ClUSTER_AKS_BLOCKS_PROD_RESOURCE_GROUP }}
+      CLUSTER_NAME: ${{ secrets.AKS_BLOCKS_PROD_CLUSTER }}
+      ACR_RESOURCE_GROUP: ${{ secrets.ClUSTER_AKS_BLOCKS_PROD_RESOURCE_GROUP }}
     needs: [sonarqube-job]
 
   cd-job-win:
@@ -61,11 +62,12 @@ jobs:
       CONTAINER_NAME: "prod-ecap-$SERVICE_NAME-win"
       NAMESPACE: "prod-$SERVICE_NAME"
       SERVICE_NAME: $SERVICE_NAME
+      CLUSTER_VALUES: "aks-blocks-prod"
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-      AZURE_CONTAINER_REGISTRY: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
-      ClUSTER_RESOURCE_GROUP: ${{ secrets.ClUSTER_RESOURCE_GROUP }}
-      CLUSTER_NAME: ${{ secrets.PROD_CLUSTER }}
-      ACR_RESOURCE_GROUP: ${{ secrets.ACR_RESOURCE_GROUP }}
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_AKS_BLOCKS_PROD_CREDENTIALS }}
+      AZURE_CONTAINER_REGISTRY: ${{ secrets.AZURE_BLOCKS_PROD_CONTAINER_REGISTRY }}
+      ClUSTER_RESOURCE_GROUP: ${{ secrets.ClUSTER_AKS_BLOCKS_PROD_RESOURCE_GROUP }}
+      CLUSTER_NAME: ${{ secrets.AKS_BLOCKS_PROD_CLUSTER }}
+      ACR_RESOURCE_GROUP: ${{ secrets.ClUSTER_AKS_BLOCKS_PROD_RESOURCE_GROUP }}
     needs: [sonarqube-job]

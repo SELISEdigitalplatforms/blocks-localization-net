@@ -681,7 +681,7 @@ namespace DomainService.Services
                         var languageJsonModel = new LanguageJsonModel
                         {
                             _id = csv.GetField<string>("ItemId"),
-                            Value = csv.GetField<string>("Value"),
+                            Module = csv.GetField<string>("Module"),
                             KeyName = csv.GetField<string>("KeyName"),
                             // Resources will be populated from individual culture columns below
                             ModuleId = csv.GetField<string>("ModuleId"),
@@ -747,7 +747,7 @@ namespace DomainService.Services
                 var id = languageJsonModel._id;
                 var appId = languageJsonModel.ModuleId;
                 var isPartiallyTranslated = languageJsonModel.IsPartiallyTranslated;
-                var moduleName = dbApplications.First(x => x.ItemId == languageJsonModel.ModuleId)?.ModuleName;
+                var moduleName = languageJsonModel?.Module;
                 var keyName = languageJsonModel.KeyName;
                 //var type = languageJsonModel.Type;
 
@@ -779,7 +779,7 @@ namespace DomainService.Services
                     IsPartiallyTranslated = isPartiallyTranslated,
                     CreateDate = DateTime.UtcNow,
                     LastUpdateDate = DateTime.UtcNow,
-                    Value = languageJsonModel.Value,
+                    Value = string.Empty, // Value field is not exported, set to empty
                     Routes = languageJsonModel.Routes
                 };
 
@@ -832,11 +832,11 @@ namespace DomainService.Services
             //{
             if (appIds != null && appIds.Count > 0)
             {
-                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId), _blocksBaseCommand?.ClientTenantId);
+                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId));
             }
             else
             {
-                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true, _blocksBaseCommand?.ClientTenantId);
+                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true );
             }
             //}
 
@@ -1468,6 +1468,66 @@ namespace DomainService.Services
             else
             {
                 _logger.LogError("Notification: sending failed for TranslateAllEvent with messageCoRelationId: {MessageCoRelationId}", messageCoRelationId);
+            }
+        }
+
+        public async Task<BaseMutationResponse> DeleteCollectionsAsync(DeleteCollectionsRequest request)
+        {
+            _logger.LogInformation("Delete collections operation started");
+
+            if (request.Collections == null || !request.Collections.Any())
+            {
+                _logger.LogWarning("Delete collections operation ended - No collections specified");
+                return new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "Collections", "At least one collection must be specified" }
+                    }
+                };
+            }
+
+            var validCollections = new List<string> { "BlocksLanguageKeys", "BlocksLanguages", "BlocksLanguageModules", "UilmFiles" };
+            var invalidCollections = request.Collections.Where(c => !validCollections.Contains(c)).ToList();
+
+            if (invalidCollections.Any())
+            {
+                _logger.LogWarning("Delete collections operation ended - Invalid collections specified: {InvalidCollections}", string.Join(", ", invalidCollections));
+                return new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "Collections", $"Invalid collections specified: {string.Join(", ", invalidCollections)}. Valid collections are: {string.Join(", ", validCollections)}" }
+                    }
+                };
+            }
+
+            try
+            {
+                var deleteResults = await _keyRepository.DeleteCollectionsAsync(request.Collections);
+                
+                var totalDeleted = deleteResults.Values.Sum();
+                _logger.LogInformation("Delete collections operation completed successfully. Collections: {Collections}, Total records deleted: {TotalDeleted}", 
+                    string.Join(", ", request.Collections), totalDeleted);
+
+                return new BaseMutationResponse 
+                { 
+                    IsSuccess = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Delete collections operation failed");
+                return new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "Operation", "Failed to delete collections data. Please try again." }
+                    }
+                };
             }
         }
 

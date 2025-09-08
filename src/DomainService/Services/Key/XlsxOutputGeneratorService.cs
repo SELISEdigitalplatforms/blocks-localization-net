@@ -35,7 +35,6 @@ namespace DomainService.Services
                 //create all the required columns
                 worksheet.Cell(row, column++).Value = "ItemId";
                 worksheet.Cell(row, column++).Value = "ModuleId";
-                worksheet.Cell(row, column++).Value = "Value";
                 worksheet.Cell(row, column++).Value = "Module";
                 worksheet.Cell(row, column++).Value = "KeyName";
 
@@ -66,7 +65,7 @@ namespace DomainService.Services
 
         private static void HideColumns(IXLWorksheet worksheet)
         {
-            for (int i = 1; i <= 3; i++)
+            for (int i = 1; i <= 2; i++)
             {
                 IXLColumn xlcol = worksheet.Column(i);
                 xlcol.Hide();
@@ -83,7 +82,6 @@ namespace DomainService.Services
 
                 worksheet.Cell(row, column++).Value = resourceKey.ItemId;
                 worksheet.Cell(row, column++).Value = resourceKey.ModuleId;
-                worksheet.Cell(row, column++).Value = resourceKey.Value;
                 worksheet.Cell(row, column++).Value = app?.ModuleName;
                 worksheet.Cell(row, column++).Value = resourceKey.KeyName;
 
