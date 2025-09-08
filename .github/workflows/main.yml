@@ -4,10 +4,15 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
 
 env:
-  RUN_UNIT_TEST: 'false'
-  RUN_SONARQUBE: 'false'
+  RUN_UNIT_TEST: "false"
+  RUN_SONARQUBE: "false"
 
 jobs:
   initialization:
@@ -21,7 +26,7 @@ jobs:
         run: |
           echo "::set-output name=envvar1::$RUN_UNIT_TEST" 
           echo "::set-output name=envvar2::$RUN_SONARQUBE"
-          
+
   test-job:
     if: ${{ needs.initialization.outputs.envvalue1=='true' }}
     uses: ./.github/workflows/1_test.yml

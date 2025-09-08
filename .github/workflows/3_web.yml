@@ -15,6 +15,9 @@ on:
       SERVICE_NAME:
         required: true
         type: string
+      CLUSTER_VALUES:
+        required: true
+        type: string
 
     secrets:
       SELISE_GITHUB_PAT:
@@ -123,8 +126,9 @@ jobs:
             helm upgrade \
             --install ${{inputs.CONTAINER_NAME}}-v${{inputs.VERSION}} ./new-templates/ecap3-${{env.SERVICE_TYPE}}/ \
             --namespace=${{inputs.NAMESPACE}} \
-            --values ./${{ secrets.CLUSTER_NAME }}/${{inputs.SERVICE_NAME}}.values.yaml \
+            --values ./${{ inputs.CLUSTER_VALUES }}/${{inputs.SERVICE_NAME}}.values.yaml \
             --set image.repository=${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ inputs.CONTAINER_NAME }}-v${{inputs.VERSION}} \
             --set image.tag=${{ github.sha }} \
             --set fullnameOverride=${{inputs.CONTAINER_NAME}}-v${{ inputs.VERSION }} \
             --set ingress.hosts[0].paths[0].path="/${{inputs.SERVICE_NAME}}/v${{inputs.VERSION}}(/|$)(.*)" 
+          
