@@ -662,22 +662,60 @@ namespace DomainService.Services
                     var firstRow = csv.Parser.RawRecord;
                     var fields = firstRow.Split(',');
 
-                    var cultures = new Dictionary<string, string>();
+                    var cultures = new Dictionary<string, string?>();
 
-                    for (int i = 5; i < fields.Length; i++)
+                    // First, identify all culture columns (non-character length columns)
+                    var cultureColumns = new List<string>();
+                    for (int i = 4; i < fields.Length; i++) // Start from index 4 (after KeyName)
                     {
-                        if (fields[i].Contains("_CharacterLength"))
+                        var fieldName = fields[i].Trim();
+                        if (!fieldName.Contains("_CharacterLength"))
                         {
-                            continue;
+                            cultureColumns.Add(fieldName);
+                        }
+                    }
+
+                    // Then map each culture to its corresponding character length column
+                    foreach (var culture in cultureColumns)
+                    {
+                        string? characterLengthColumn = null;
+                        var expectedCharLengthColumn = $"{culture}_CharacterLength";
+                        
+                        // Look for the character length column
+                        for (int i = 4; i < fields.Length; i++)
+                        {
+                            if (fields[i].Trim().Equals(expectedCharLengthColumn, StringComparison.OrdinalIgnoreCase))
+                            {
+                                characterLengthColumn = expectedCharLengthColumn;
+                                break;
+                            }
                         }
 
-                        cultures.Add(fields[i].Trim(), fields[i + 1].Trim());
+                        cultures.Add(culture, characterLengthColumn);
                     }
 
                     var languageJsonModels = new List<LanguageJsonModel>();
 
                     while (csv.Read())
                     {
+                        // Helper method to safely get optional fields
+                        bool TryGetField<T>(string fieldName, out T value)
+                        {
+                            try
+                            {
+                                if (csv.TryGetField<T>(fieldName, out value))
+                                {
+                                    return true;
+                                }
+                            }
+                            catch
+                            {
+                                // Field doesn't exist or conversion failed
+                            }
+                            value = default(T);
+                            return false;
+                        }
+
                         var languageJsonModel = new LanguageJsonModel
                         {
                             _id = csv.GetField<string>("ItemId"),
@@ -685,7 +723,7 @@ namespace DomainService.Services
                             KeyName = csv.GetField<string>("KeyName"),
                             // Resources will be populated from individual culture columns below
                             ModuleId = csv.GetField<string>("ModuleId"),
-                            IsPartiallyTranslated = csv.GetField<bool>("IsPartiallyTranslated"),
+                            IsPartiallyTranslated = TryGetField<bool>("IsPartiallyTranslated", out bool isPartiallyTranslated) ? isPartiallyTranslated : false,
                             //Routes = csv.GetField<string>("Routes")
                         };
 
