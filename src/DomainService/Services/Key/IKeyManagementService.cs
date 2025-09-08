@@ -8,6 +8,7 @@ namespace DomainService.Services
     {
         Task<ApiResponse> SaveKeyAsync(Key key);
         Task<GetKeysQueryResponse> GetKeysAsync(GetKeysRequest query);
+        Task<GetUilmExportedFilesQueryResponse> GetUilmExportedFilesAsync(GetUilmExportedFilesRequest request);
         Task<GetKeyTimelineQueryResponse> GetKeyTimelineAsync(GetKeyTimelineRequest query);
         Task<bool> GenerateAsync(GenerateUilmFilesEvent command);
         Task<string> GetUilmFile(GetUilmFileRequest request);
@@ -22,5 +23,6 @@ namespace DomainService.Services
         Task<bool> ExportUilmFile(UilmExportEvent request);
         Task PublishUilmExportNotification(bool response, string fileId, string? messageCoRelationId, string tenantId);
         Task PublishTranslateAllNotification(bool response, string? messageCoRelationId);
+        Task<BaseMutationResponse> DeleteCollectionsAsync(DeleteCollectionsRequest request);
     }
 }

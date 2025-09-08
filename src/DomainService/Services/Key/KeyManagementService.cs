@@ -144,6 +144,11 @@ namespace DomainService.Services
             return await _keyRepository.GetAllKeysAsync(query);
         }
 
+        public async Task<GetUilmExportedFilesQueryResponse> GetUilmExportedFilesAsync(GetUilmExportedFilesRequest request)
+        {
+            return await _keyRepository.GetUilmExportedFilesAsync(request);
+        }
+
         public async Task<GetKeyTimelineQueryResponse> GetKeyTimelineAsync(GetKeyTimelineRequest query)
         {
             return await _keyTimelineRepository.GetKeyTimelineAsync(query);
@@ -662,30 +667,68 @@ namespace DomainService.Services
                     var firstRow = csv.Parser.RawRecord;
                     var fields = firstRow.Split(',');
 
-                    var cultures = new Dictionary<string, string>();
+                    var cultures = new Dictionary<string, string?>();
 
-                    for (int i = 5; i < fields.Length; i++)
+                    // First, identify all culture columns (non-character length columns)
+                    var cultureColumns = new List<string>();
+                    for (int i = 4; i < fields.Length; i++) // Start from index 4 (after KeyName)
                     {
-                        if (fields[i].Contains("_CharacterLength"))
+                        var fieldName = fields[i].Trim();
+                        if (!fieldName.Contains("_CharacterLength"))
                         {
-                            continue;
+                            cultureColumns.Add(fieldName);
+                        }
+                    }
+
+                    // Then map each culture to its corresponding character length column
+                    foreach (var culture in cultureColumns)
+                    {
+                        string? characterLengthColumn = null;
+                        var expectedCharLengthColumn = $"{culture}_CharacterLength";
+                        
+                        // Look for the character length column
+                        for (int i = 4; i < fields.Length; i++)
+                        {
+                            if (fields[i].Trim().Equals(expectedCharLengthColumn, StringComparison.OrdinalIgnoreCase))
+                            {
+                                characterLengthColumn = expectedCharLengthColumn;
+                                break;
+                            }
                         }
 
-                        cultures.Add(fields[i].Trim(), fields[i + 1].Trim());
+                        cultures.Add(culture, characterLengthColumn);
                     }
 
                     var languageJsonModels = new List<LanguageJsonModel>();
 
                     while (csv.Read())
                     {
+                        // Helper method to safely get optional fields
+                        bool TryGetField<T>(string fieldName, out T value)
+                        {
+                            try
+                            {
+                                if (csv.TryGetField<T>(fieldName, out value))
+                                {
+                                    return true;
+                                }
+                            }
+                            catch
+                            {
+                                // Field doesn't exist or conversion failed
+                            }
+                            value = default(T);
+                            return false;
+                        }
+
                         var languageJsonModel = new LanguageJsonModel
                         {
                             _id = csv.GetField<string>("ItemId"),
-                            Value = csv.GetField<string>("Value"),
+                            Module = csv.GetField<string>("Module"),
                             KeyName = csv.GetField<string>("KeyName"),
                             // Resources will be populated from individual culture columns below
                             ModuleId = csv.GetField<string>("ModuleId"),
-                            IsPartiallyTranslated = csv.GetField<bool>("IsPartiallyTranslated"),
+                            IsPartiallyTranslated = TryGetField<bool>("IsPartiallyTranslated", out bool isPartiallyTranslated) ? isPartiallyTranslated : false,
                             //Routes = csv.GetField<string>("Routes")
                         };
 
@@ -747,7 +790,7 @@ namespace DomainService.Services
                 var id = languageJsonModel._id;
                 var appId = languageJsonModel.ModuleId;
                 var isPartiallyTranslated = languageJsonModel.IsPartiallyTranslated;
-                var moduleName = dbApplications.First(x => x.ItemId == languageJsonModel.ModuleId)?.ModuleName;
+                var moduleName = languageJsonModel?.Module;
                 var keyName = languageJsonModel.KeyName;
                 //var type = languageJsonModel.Type;
 
@@ -779,7 +822,7 @@ namespace DomainService.Services
                     IsPartiallyTranslated = isPartiallyTranslated,
                     CreateDate = DateTime.UtcNow,
                     LastUpdateDate = DateTime.UtcNow,
-                    Value = languageJsonModel.Value,
+                    Value = string.Empty, // Value field is not exported, set to empty
                     Routes = languageJsonModel.Routes
                 };
 
@@ -832,11 +875,11 @@ namespace DomainService.Services
             //{
             if (appIds != null && appIds.Count > 0)
             {
-                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId), _blocksBaseCommand?.ClientTenantId);
+                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => appIds.Contains(x.ItemId));
             }
             else
             {
-                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true, _blocksBaseCommand?.ClientTenantId);
+                applications = await _keyRepository.GetUilmApplications<BlocksLanguageModule>(x => true );
             }
             //}
 
@@ -1379,6 +1422,9 @@ namespace DomainService.Services
             if (result)
             {
                 _logger.LogInformation("SaveUilmFile: Uploaded fileName={FileName}, fileId={NewFileId}", fileName, fileId);
+                
+                // Create UilmExportedFile entry in DB after successful storage
+                await CreateUilmExportedFileEntryAsync(fileId);
             }
             else
             {
@@ -1386,6 +1432,27 @@ namespace DomainService.Services
             }
 
             return result;
+        }
+
+        private async Task CreateUilmExportedFileEntryAsync(string fileId)
+        {
+            try
+            {
+                var exportedFile = new UilmExportedFile
+                {
+                    FileId = fileId,
+                    CreateDate = DateTime.UtcNow,
+                    CreatedBy = BlocksContext.GetContext()?.UserId ?? "System"
+                };
+                
+                await _keyRepository.SaveUilmExportedFileAsync(exportedFile);
+                _logger.LogInformation("SaveUilmFile: Created UilmExportedFile entry for fileId={FileId}", fileId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("SaveUilmFile: Failed to create UilmExportedFile entry for fileId={FileId}, Error: {Error}", fileId, ex.Message);
+                // Don't fail the entire operation if just the DB entry creation fails
+            }
         }
 
         private async Task<bool> GenerateJsonFile(List<BlocksLanguageModule> applications,
@@ -1468,6 +1535,66 @@ namespace DomainService.Services
             else
             {
                 _logger.LogError("Notification: sending failed for TranslateAllEvent with messageCoRelationId: {MessageCoRelationId}", messageCoRelationId);
+            }
+        }
+
+        public async Task<BaseMutationResponse> DeleteCollectionsAsync(DeleteCollectionsRequest request)
+        {
+            _logger.LogInformation("Delete collections operation started");
+
+            if (request.Collections == null || !request.Collections.Any())
+            {
+                _logger.LogWarning("Delete collections operation ended - No collections specified");
+                return new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "Collections", "At least one collection must be specified" }
+                    }
+                };
+            }
+
+            var validCollections = new List<string> { "BlocksLanguageKeys", "BlocksLanguages", "BlocksLanguageModules", "UilmFiles" };
+            var invalidCollections = request.Collections.Where(c => !validCollections.Contains(c)).ToList();
+
+            if (invalidCollections.Any())
+            {
+                _logger.LogWarning("Delete collections operation ended - Invalid collections specified: {InvalidCollections}", string.Join(", ", invalidCollections));
+                return new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "Collections", $"Invalid collections specified: {string.Join(", ", invalidCollections)}. Valid collections are: {string.Join(", ", validCollections)}" }
+                    }
+                };
+            }
+
+            try
+            {
+                var deleteResults = await _keyRepository.DeleteCollectionsAsync(request.Collections);
+                
+                var totalDeleted = deleteResults.Values.Sum();
+                _logger.LogInformation("Delete collections operation completed successfully. Collections: {Collections}, Total records deleted: {TotalDeleted}", 
+                    string.Join(", ", request.Collections), totalDeleted);
+
+                return new BaseMutationResponse 
+                { 
+                    IsSuccess = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Delete collections operation failed");
+                return new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "Operation", "Failed to delete collections data. Please try again." }
+                    }
+                };
             }
         }
 

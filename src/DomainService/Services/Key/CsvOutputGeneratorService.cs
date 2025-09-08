@@ -42,7 +42,7 @@ namespace DomainService.Services
                     {
                         _id = resourceKey.ItemId,
                         ModuleId = resourceKey.ModuleId,
-                        Value = resourceKey.Value,
+                        Module = app?.ModuleName,
                         KeyName = resourceKey.KeyName,
                         Resources = filteredResources, // Use filtered resources
                         TenantId = resourceKey.TenantId,

@@ -222,5 +222,61 @@ namespace Api.Controllers
             await _keyManagementService.SendUilmExportEvent(request);
             return Ok(new BaseMutationResponse { IsSuccess = true });
         }
+
+        /// <summary>
+        /// Deletes all data from specified collections.
+        /// </summary>
+        /// <param name="request">The request containing the list of collections to delete from.</param>
+        /// <returns>An <see cref="IActionResult"/> indicating the success or failure of the delete operation.</returns>
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> DeleteCollections([FromBody] DeleteCollectionsRequest request)
+        {
+            if (request == null) return BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(request);
+
+            if (request.Collections == null || !request.Collections.Any())
+            {
+                return BadRequest(new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "Collections", "At least one collection must be specified" }
+                    }
+                });
+            }
+
+            var result = await _keyManagementService.DeleteCollectionsAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Gets a paginated list of exported UILM files.
+        /// </summary>
+        /// <param name="request">The request containing pagination parameters.</param>
+        /// <returns>A paginated list of exported UILM files.</returns>
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> GetUilmExportedFiles([FromQuery] GetUilmExportedFilesRequest request)
+        {
+            if (request == null) return BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(request);
+
+            if (request.PageSize <= 0 || request.PageNumber < 0)
+            {
+                return BadRequest(new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "Pagination", "PageSize must be greater than 0 and PageNumber must be 0 or greater" }
+                    }
+                });
+            }
+
+            var result = await _keyManagementService.GetUilmExportedFilesAsync(request);
+            return Ok(result);
+        }
     }
 }

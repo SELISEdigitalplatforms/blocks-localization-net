@@ -398,13 +398,10 @@ namespace DomainService.Repositories
             await dataBase.GetCollection<BlocksLanguageModule>("BlocksLanguageModules").InsertManyAsync(entities);
         }
 
-        public async Task<List<T>> GetUilmApplications<T>(Expression<Func<BlocksLanguageModule, bool>> expression, string clientTenantId)
+        public async Task<List<T>> GetUilmApplications<T>(Expression<Func<BlocksLanguageModule, bool>> expression)
         {
             var project = Builders<BlocksLanguageModule>.Projection.As<T>();
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            if(!string.IsNullOrEmpty(clientTenantId))
-                dataBase = _dbContextProvider.GetDatabase(clientTenantId ?? "");
-
             return await dataBase.GetCollection<BlocksLanguageModule>($"{nameof(BlocksLanguageModule)}s")
                 .Find(expression).Project(project).ToListAsync();
         }
@@ -419,6 +416,63 @@ namespace DomainService.Repositories
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
             return await dataBase.GetCollection<BlocksLanguage>("BlocksLanguages").Find(_ => true).ToListAsync();
+        }
+
+        public async Task<Dictionary<string, long>> DeleteCollectionsAsync(List<string> collections)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var result = new Dictionary<string, long>();
+
+            var validCollections = new List<string> { "BlocksLanguageKeys", "BlocksLanguages", "BlocksLanguageModules", "UilmFiles" };
+
+            foreach (var collection in collections)
+            {
+                if (validCollections.Contains(collection))
+                {
+                    var deleteResult = await dataBase.GetCollection<BsonDocument>(collection).DeleteManyAsync(Builders<BsonDocument>.Filter.Empty);
+                    result[collection] = deleteResult.DeletedCount;
+                }
+                else
+                {
+                    result[collection] = -1; // Invalid collection
+                }
+            }
+
+            return result;
+        }
+
+        public async Task SaveUilmExportedFileAsync(UilmExportedFile exportedFile)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<UilmExportedFile>("UilmExportedFiles");
+            
+            await collection.InsertOneAsync(exportedFile);
+        }
+
+        public async Task<GetUilmExportedFilesQueryResponse> GetUilmExportedFilesAsync(GetUilmExportedFilesRequest request)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<UilmExportedFile>("UilmExportedFiles");
+
+            var filter = Builders<UilmExportedFile>.Filter.Empty;
+            var sort = Builders<UilmExportedFile>.Sort.Descending(x => x.CreateDate);
+
+            var findFilesTask = collection
+                .Find(filter)
+                .Skip(request.PageNumber * request.PageSize)
+                .Limit(request.PageSize)
+                .Sort(sort)
+                .ToListAsync();
+
+            var countDocumentsTask = collection.CountDocumentsAsync(filter);
+
+            await Task.WhenAll(findFilesTask, countDocumentsTask);
+
+            return new GetUilmExportedFilesQueryResponse
+            {
+                UilmExportedFiles = findFilesTask.Result,
+                TotalCount = countDocumentsTask.Result
+            };
         }
     }
 }
