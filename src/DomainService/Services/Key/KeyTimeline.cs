@@ -7,5 +7,6 @@ namespace DomainService.Services
     [BsonIgnoreExtraElements]
     public class KeyTimeline : BlocksBaseTimelineEntity<BlocksLanguageKey, BlocksLanguageKey>
     {
+        public string? UserName { get; set; }
     }
 }

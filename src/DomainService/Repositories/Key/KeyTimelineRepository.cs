@@ -1,5 +1,7 @@
 using Blocks.Genesis;
 using DomainService.Services;
+using DomainService.Shared.Entities;
+using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 
 namespace DomainService.Repositories
@@ -7,11 +9,13 @@ namespace DomainService.Repositories
     public class KeyTimelineRepository : IKeyTimelineRepository
     {
         private readonly IDbContextProvider _dbContextProvider;
+        private readonly IConfiguration _configuration;
         private const string _collectionName = "KeyTimelines";
 
-        public KeyTimelineRepository(IDbContextProvider dbContextProvider)
+        public KeyTimelineRepository(IDbContextProvider dbContextProvider, IConfiguration configuration)
         {
             _dbContextProvider = dbContextProvider;
+            _configuration = configuration;
         }
 
         public async Task<GetKeyTimelineQueryResponse> GetKeyTimelineAsync(GetKeyTimelineRequest query)
@@ -32,6 +36,53 @@ namespace DomainService.Repositories
                 .Skip((query.PageNumber - 1) * query.PageSize)
                 .Limit(query.PageSize)
                 .ToListAsync();
+
+            // Get unique user IDs from timelines
+            var uniqueUserIds = timelines
+                .Where(t => !string.IsNullOrEmpty(t.UserId))
+                .Select(t => t.UserId)
+                .Distinct()
+                .ToList();
+
+            // Fetch user information if there are any user IDs
+            Dictionary<string, User> userLookup = new Dictionary<string, User>();
+            if (uniqueUserIds.Any())
+            {
+                var rootTenantId = _configuration["RootTenantId"];
+                var rootDB = _dbContextProvider.GetDatabase(rootTenantId);
+                var usersCollection = rootDB.GetCollection<User>("Users");
+                var userFilter = Builders<User>.Filter.In(u => u.ItemId, uniqueUserIds);
+                var users = await usersCollection.Find(userFilter).ToListAsync();
+
+                userLookup = users.ToDictionary(u => u.ItemId, u => u);
+            }
+
+            // Populate UserName property for each timeline
+            foreach (var timeline in timelines)
+            {
+                if (!string.IsNullOrEmpty(timeline.UserId) && userLookup.TryGetValue(timeline.UserId, out var user))
+                {
+                    // Use FirstName + LastName if available, otherwise use Email
+                    if (!string.IsNullOrEmpty(user.FirstName) || !string.IsNullOrEmpty(user.LastName))
+                    {
+                        var firstName = user.FirstName ?? "";
+                        var lastName = user.LastName ?? "";
+                        timeline.UserName = $"{firstName} {lastName}".Trim();
+                    }
+                    else if (!string.IsNullOrEmpty(user.Email))
+                    {
+                        timeline.UserName = user.Email;
+                    }
+                    else
+                    {
+                        timeline.UserName = timeline.UserId; // Fallback to UserId
+                    }
+                }
+                else
+                {
+                    timeline.UserName = timeline.UserId ?? "Unknown"; // Fallback
+                }
+            }
 
             return new GetKeyTimelineQueryResponse
             {
