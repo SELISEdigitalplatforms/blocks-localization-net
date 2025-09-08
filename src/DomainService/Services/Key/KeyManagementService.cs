@@ -681,7 +681,7 @@ namespace DomainService.Services
                         var languageJsonModel = new LanguageJsonModel
                         {
                             _id = csv.GetField<string>("ItemId"),
-                            Value = csv.GetField<string>("Value"),
+                            Module = csv.GetField<string>("Module"),
                             KeyName = csv.GetField<string>("KeyName"),
                             // Resources will be populated from individual culture columns below
                             ModuleId = csv.GetField<string>("ModuleId"),
@@ -779,7 +779,7 @@ namespace DomainService.Services
                     IsPartiallyTranslated = isPartiallyTranslated,
                     CreateDate = DateTime.UtcNow,
                     LastUpdateDate = DateTime.UtcNow,
-                    Value = languageJsonModel.Value,
+                    Value = string.Empty, // Value field is not exported, set to empty
                     Routes = languageJsonModel.Routes
                 };
 
