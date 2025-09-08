@@ -144,6 +144,11 @@ namespace DomainService.Services
             return await _keyRepository.GetAllKeysAsync(query);
         }
 
+        public async Task<GetUilmExportedFilesQueryResponse> GetUilmExportedFilesAsync(GetUilmExportedFilesRequest request)
+        {
+            return await _keyRepository.GetUilmExportedFilesAsync(request);
+        }
+
         public async Task<GetKeyTimelineQueryResponse> GetKeyTimelineAsync(GetKeyTimelineRequest query)
         {
             return await _keyTimelineRepository.GetKeyTimelineAsync(query);
@@ -1417,6 +1422,9 @@ namespace DomainService.Services
             if (result)
             {
                 _logger.LogInformation("SaveUilmFile: Uploaded fileName={FileName}, fileId={NewFileId}", fileName, fileId);
+                
+                // Create UilmExportedFile entry in DB after successful storage
+                await CreateUilmExportedFileEntryAsync(fileId);
             }
             else
             {
@@ -1424,6 +1432,27 @@ namespace DomainService.Services
             }
 
             return result;
+        }
+
+        private async Task CreateUilmExportedFileEntryAsync(string fileId)
+        {
+            try
+            {
+                var exportedFile = new UilmExportedFile
+                {
+                    FileId = fileId,
+                    CreateDate = DateTime.UtcNow,
+                    CreatedBy = BlocksContext.GetContext()?.UserId ?? "System"
+                };
+                
+                await _keyRepository.SaveUilmExportedFileAsync(exportedFile);
+                _logger.LogInformation("SaveUilmFile: Created UilmExportedFile entry for fileId={FileId}", fileId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("SaveUilmFile: Failed to create UilmExportedFile entry for fileId={FileId}, Error: {Error}", fileId, ex.Message);
+                // Don't fail the entire operation if just the DB entry creation fails
+            }
         }
 
         private async Task<bool> GenerateJsonFile(List<BlocksLanguageModule> applications,

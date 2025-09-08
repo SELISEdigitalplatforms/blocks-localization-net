@@ -440,5 +440,39 @@ namespace DomainService.Repositories
 
             return result;
         }
+
+        public async Task SaveUilmExportedFileAsync(UilmExportedFile exportedFile)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<UilmExportedFile>("UilmExportedFiles");
+            
+            await collection.InsertOneAsync(exportedFile);
+        }
+
+        public async Task<GetUilmExportedFilesQueryResponse> GetUilmExportedFilesAsync(GetUilmExportedFilesRequest request)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<UilmExportedFile>("UilmExportedFiles");
+
+            var filter = Builders<UilmExportedFile>.Filter.Empty;
+            var sort = Builders<UilmExportedFile>.Sort.Descending(x => x.CreateDate);
+
+            var findFilesTask = collection
+                .Find(filter)
+                .Skip(request.PageNumber * request.PageSize)
+                .Limit(request.PageSize)
+                .Sort(sort)
+                .ToListAsync();
+
+            var countDocumentsTask = collection.CountDocumentsAsync(filter);
+
+            await Task.WhenAll(findFilesTask, countDocumentsTask);
+
+            return new GetUilmExportedFilesQueryResponse
+            {
+                UilmExportedFiles = findFilesTask.Result,
+                TotalCount = countDocumentsTask.Result
+            };
+        }
     }
 }

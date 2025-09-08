@@ -43,6 +43,13 @@
             <param name="request">The request containing the list of collections to delete from.</param>
             <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> indicating the success or failure of the delete operation.</returns>
         </member>
+        <member name="M:Api.Controllers.KeyController.GetUilmExportedFiles(DomainService.Services.GetUilmExportedFilesRequest)">
+            <summary>
+            Gets a paginated list of exported UILM files.
+            </summary>
+            <param name="request">The request containing pagination parameters.</param>
+            <returns>A paginated list of exported UILM files.</returns>
+        </member>
         <member name="T:Api.Controllers.LanguageController">
             <summary>
             API Controller for managing language-related operations.

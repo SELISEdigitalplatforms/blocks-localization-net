@@ -31,5 +31,7 @@ namespace DomainService.Repositories
         Task<BlocksLanguage> GetLanguageSettingAsync(string clientTenantId);
         Task<List<BlocksLanguage>> GetAllLanguagesAsync(string clientTenantId);
         Task<Dictionary<string, long>> DeleteCollectionsAsync(List<string> collections);
+        Task SaveUilmExportedFileAsync(UilmExportedFile exportedFile);
+        Task<GetUilmExportedFilesQueryResponse> GetUilmExportedFilesAsync(GetUilmExportedFilesRequest request);
     }
 }
