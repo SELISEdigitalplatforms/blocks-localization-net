@@ -6,8 +6,8 @@ on:
       - dev
 
 env:
-  RUN_UNIT_TEST: 'false'
-  RUN_SONARQUBE: 'false'
+  RUN_UNIT_TEST: "false"
+  RUN_SONARQUBE: "false"
 
 jobs:
   initialization:
@@ -21,7 +21,7 @@ jobs:
         run: |
           echo "::set-output name=envvar1::$RUN_UNIT_TEST" 
           echo "::set-output name=envvar2::$RUN_SONARQUBE"
-          
+
   test-job:
     if: ${{ needs.initialization.outputs.envvalue1=='true' }}
     uses: ./.github/workflows/1_test.yml
@@ -42,7 +42,7 @@ jobs:
       CONTAINER_NAME: "dev-blocks-$SERVICE_NAME"
       NAMESPACE: "dev-$REPO_NAME"
       SERVICE_NAME: $SERVICE_NAME
-      POD_VALUES: "dev"
+      CLUSTER_VALUES: "aks-blocks-dev"
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
       AZURE_CREDENTIALS: ${{ secrets.AZURE_AKS_BLOCKS_CREDENTIALS }}
@@ -59,6 +59,7 @@ jobs:
       CONTAINER_NAME: "dev-blocks-$SERVICE_NAME-win"
       NAMESPACE: "dev-$REPO_NAME"
       SERVICE_NAME: $SERVICE_NAME
+      CLUSTER_VALUES: "aks-blocks-dev"
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
       AZURE_CREDENTIALS: ${{ secrets.AZURE_AKS_BLOCKS_CREDENTIALS }}
