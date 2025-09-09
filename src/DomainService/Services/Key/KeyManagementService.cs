@@ -1424,7 +1424,7 @@ namespace DomainService.Services
                 _logger.LogInformation("SaveUilmFile: Uploaded fileName={FileName}, fileId={NewFileId}", fileName, fileId);
                 
                 // Create UilmExportedFile entry in DB after successful storage
-                await CreateUilmExportedFileEntryAsync(fileId);
+                await CreateUilmExportedFileEntryAsync(fileId, fileName);
             }
             else
             {
@@ -1434,13 +1434,14 @@ namespace DomainService.Services
             return result;
         }
 
-        private async Task CreateUilmExportedFileEntryAsync(string fileId)
+        private async Task CreateUilmExportedFileEntryAsync(string fileId, string fileName)
         {
             try
             {
                 var exportedFile = new UilmExportedFile
                 {
                     FileId = fileId,
+                    FileName = fileName,
                     CreateDate = DateTime.UtcNow,
                     CreatedBy = BlocksContext.GetContext()?.UserId ?? "System"
                 };

@@ -454,7 +454,7 @@ namespace DomainService.Repositories
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
             var collection = dataBase.GetCollection<UilmExportedFile>("UilmExportedFiles");
 
-            var filter = Builders<UilmExportedFile>.Filter.Empty;
+            var filter = GetUilmExportedFilesFilter(request);
             var sort = Builders<UilmExportedFile>.Sort.Descending(x => x.CreateDate);
 
             var findFilesTask = collection
@@ -473,6 +473,34 @@ namespace DomainService.Repositories
                 UilmExportedFiles = findFilesTask.Result,
                 TotalCount = countDocumentsTask.Result
             };
+        }
+
+        private FilterDefinition<UilmExportedFile> GetUilmExportedFilesFilter(GetUilmExportedFilesRequest request)
+        {
+            var builder = Builders<UilmExportedFile>.Filter;
+            var filters = new List<FilterDefinition<UilmExportedFile>>();
+
+            // Apply regex-based search filter on FileName if SearchText is provided
+            if (!string.IsNullOrEmpty(request.SearchText))
+            {
+                var regexFilter = builder.Regex(x => x.FileName, new MongoDB.Bson.BsonRegularExpression(request.SearchText, "i")); // "i" for case-insensitive
+                filters.Add(regexFilter);
+            }
+
+            // Apply date range filter on CreateDate
+            if (request.CreateDateRange != null)
+            {
+                if (request.CreateDateRange.StartDate.HasValue)
+                {
+                    filters.Add(builder.Gte(x => x.CreateDate, request.CreateDateRange.StartDate.Value));
+                }
+                if (request.CreateDateRange.EndDate.HasValue)
+                {
+                    filters.Add(builder.Lte(x => x.CreateDate, request.CreateDateRange.EndDate.Value));
+                }
+            }
+
+            return filters.Count > 0 ? builder.And(filters) : builder.Empty;
         }
     }
 }
