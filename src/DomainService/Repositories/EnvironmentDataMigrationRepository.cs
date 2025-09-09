@@ -1,0 +1,118 @@
+using Blocks.Genesis;
+using DomainService.Services;
+using MongoDB.Driver;
+
+namespace DomainService.Repositories
+{
+    public class EnvironmentDataMigrationRepository : IEnvironmentDataMigrationRepository
+    {
+        private readonly IDbContextProvider _dbContextProvider;
+        private const string _modulesCollectionName = "BlocksLanguageModules";
+        private const string _keysCollectionName = "BlocksLanguageKeys";
+
+        public EnvironmentDataMigrationRepository(IDbContextProvider dbContextProvider)
+        {
+            _dbContextProvider = dbContextProvider;
+        }
+
+        public async Task<List<BlocksLanguageModule>> GetAllModulesAsync(string tenantId)
+        {
+            var database = _dbContextProvider.GetDatabase(tenantId);
+            var collection = database.GetCollection<BlocksLanguageModule>(_modulesCollectionName);
+            return await collection.Find(_ => true).ToListAsync();
+        }
+
+        public async Task<List<BlocksLanguageKey>> GetAllKeysAsync(string tenantId)
+        {
+            var database = _dbContextProvider.GetDatabase(tenantId);
+            var collection = database.GetCollection<BlocksLanguageKey>(_keysCollectionName);
+            return await collection.Find(_ => true).ToListAsync();
+        }
+
+        public async Task BulkUpsertModulesAsync(List<BlocksLanguageModule> modules, string tenantId, bool shouldOverwrite)
+        {
+            if (!modules.Any()) return;
+
+            var database = _dbContextProvider.GetDatabase(tenantId);
+            var collection = database.GetCollection<BlocksLanguageModule>(_modulesCollectionName);
+
+            if (shouldOverwrite)
+            {
+                // Replace existing + insert new
+                var bulkOps = modules.Select(module =>
+                {
+                    var filter = Builders<BlocksLanguageModule>.Filter.Eq(m => m.ItemId, module.ItemId);
+                    return new ReplaceOneModel<BlocksLanguageModule>(filter, module) { IsUpsert = true };
+                }).ToList();
+
+                await collection.BulkWriteAsync(bulkOps);
+            }
+            else
+            {
+                // Only insert new (use $setOnInsert to avoid overwriting existing data)
+                var bulkOps = modules.Select(module =>
+                {
+                    var filter = Builders<BlocksLanguageModule>.Filter.Eq(m => m.ItemId, module.ItemId);
+                    var update = Builders<BlocksLanguageModule>.Update
+                        .SetOnInsert(m => m.ItemId, module.ItemId)
+                        .SetOnInsert(m => m.ModuleName, module.ModuleName)
+                        .SetOnInsert(m => m.Name, module.Name)
+                        .SetOnInsert(m => m.CreateDate, module.CreateDate)
+                        .SetOnInsert(m => m.LastUpdateDate, module.LastUpdateDate)
+                        .SetOnInsert(m => m.TenantId, module.TenantId)
+                        .SetOnInsert(m => m.CreatedBy, module.CreatedBy)
+                        .SetOnInsert(m => m.LastUpdatedBy, module.LastUpdatedBy);
+                    
+                    return new UpdateOneModel<BlocksLanguageModule>(filter, update) { IsUpsert = true };
+                }).ToList();
+
+                await collection.BulkWriteAsync(bulkOps);
+            }
+        }
+
+        public async Task BulkUpsertKeysAsync(List<BlocksLanguageKey> keys, string tenantId, bool shouldOverwrite)
+        {
+            if (!keys.Any()) return;
+
+            var database = _dbContextProvider.GetDatabase(tenantId);
+            var collection = database.GetCollection<BlocksLanguageKey>(_keysCollectionName);
+
+            if (shouldOverwrite)
+            {
+                // Replace existing + insert new
+                var bulkOps = keys.Select(key =>
+                {
+                    var filter = Builders<BlocksLanguageKey>.Filter.Eq(k => k.ItemId, key.ItemId);
+                    return new ReplaceOneModel<BlocksLanguageKey>(filter, key) { IsUpsert = true };
+                }).ToList();
+
+                await collection.BulkWriteAsync(bulkOps);
+            }
+            else
+            {
+                // Only insert new (use $setOnInsert to avoid overwriting existing data)
+                var bulkOps = keys.Select(key =>
+                {
+                    var filter = Builders<BlocksLanguageKey>.Filter.Eq(k => k.ItemId, key.ItemId);
+                    var update = Builders<BlocksLanguageKey>.Update
+                        .SetOnInsert(k => k.ItemId, key.ItemId)
+                        .SetOnInsert(k => k.KeyName, key.KeyName)
+                        .SetOnInsert(k => k.ModuleId, key.ModuleId)
+                        .SetOnInsert(k => k.Value, key.Value)
+                        .SetOnInsert(k => k.Resources, key.Resources)
+                        .SetOnInsert(k => k.Routes, key.Routes)
+                        .SetOnInsert(k => k.IsPartiallyTranslated, key.IsPartiallyTranslated)
+                        .SetOnInsert(k => k.CreateDate, key.CreateDate)
+                        .SetOnInsert(k => k.LastUpdateDate, key.LastUpdateDate)
+                        .SetOnInsert(k => k.TenantId, key.TenantId)
+                        .SetOnInsert(k => k.CreatedBy, key.CreatedBy)
+                        .SetOnInsert(k => k.LastUpdatedBy, key.LastUpdatedBy);
+                    
+                    return new UpdateOneModel<BlocksLanguageKey>(filter, update) { IsUpsert = true };
+                }).ToList();
+
+                await collection.BulkWriteAsync(bulkOps);
+            }
+        }
+    }
+}

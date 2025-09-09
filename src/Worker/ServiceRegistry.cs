@@ -22,6 +22,7 @@ namespace Worker
             services.AddSingleton<IConsumer<TranslateAllEvent>, TranslateAllEventConsumer>();
             services.AddSingleton<IConsumer<UilmImportEvent>, UilmImportEventConsumer>();
             services.AddSingleton<IConsumer<UilmExportEvent>, UilmExportEventConsumer>();
+            services.AddSingleton<IConsumer<EnvironmentDataMigrationEvent>, EnvironmentDataMigrationEventConsumer>();
 
             services.AddSingleton<XlsxOutputGeneratorService>();
             services.AddSingleton<JsonOutputGeneratorService>();

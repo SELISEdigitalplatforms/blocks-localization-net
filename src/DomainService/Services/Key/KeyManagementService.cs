@@ -528,7 +528,7 @@ namespace DomainService.Services
             await _messageClient.SendToConsumerAsync(
                 new ConsumerMessage<TranslateAllEvent>
                 {
-                    ConsumerName = Utilities.Constants.UilmQueue,
+                    ConsumerName = Utilities.Constants.TranslateAllKeysQueue,
                     Payload = new TranslateAllEvent
                     {
                         MessageCoRelationId = request.MessageCoRelationId,
