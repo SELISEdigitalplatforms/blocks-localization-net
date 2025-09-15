@@ -111,6 +111,16 @@ namespace DomainService.Repositories
             }
         }
 
+        public async Task<KeyTimeline?> GetTimelineByItemIdAsync(string itemId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<KeyTimeline>(_collectionName);
+
+            var filter = Builders<KeyTimeline>.Filter.Eq(t => t.ItemId, itemId);
+
+            return await collection.Find(filter).FirstOrDefaultAsync();
+        }
+
         private FilterDefinition<KeyTimeline> GetTimelineFilter(GetKeyTimelineRequest request)
         {
             var builder = Builders<KeyTimeline>.Filter;

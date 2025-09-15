@@ -1605,17 +1605,8 @@ namespace DomainService.Services
 
             try
             {
-                // Get the timeline entry by ItemId
-                var timelineRequest = new GetKeyTimelineRequest
-                {
-                    EntityId = request.ItemId,
-                    PageSize = 1,
-                    PageNumber = 1,
-                    ProjectKey = request.ProjectKey
-                };
-
-                var timelineResponse = await GetKeyTimelineAsync(timelineRequest);
-                var timeline = timelineResponse.Timelines.FirstOrDefault();
+                // Get the timeline entry directly by ItemId
+                var timeline = await _keyTimelineRepository.GetTimelineByItemIdAsync(request.ItemId);
 
                 if (timeline == null)
                 {

@@ -6,5 +6,6 @@ namespace DomainService.Repositories
     {
         Task<GetKeyTimelineQueryResponse> GetKeyTimelineAsync(GetKeyTimelineRequest query);
         Task SaveKeyTimelineAsync(KeyTimeline timeline);
+        Task<KeyTimeline?> GetTimelineByItemIdAsync(string itemId);
     }
 }
