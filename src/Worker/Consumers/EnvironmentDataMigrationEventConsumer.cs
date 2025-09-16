@@ -177,6 +177,9 @@ namespace Worker.Consumers
             _logger.LogInformation("Bulk {OperationType} {Count} keys into target project {TargetedProjectKey}",
                 operationType, targetKeys.Count, @event.TargetedProjectKey);
 
+            // Create bulk timeline entries for migrated keys
+            await _keyManagementService.CreateBulkKeyTimelineEntriesAsync(targetKeys, "EnvironmentDataMigration", @event.TargetedProjectKey);
+
             _logger.LogInformation("BlocksLanguageKey migration completed from {ProjectKey} to {TargetedProjectKey}",
                 @event.ProjectKey, @event.TargetedProjectKey);
         }

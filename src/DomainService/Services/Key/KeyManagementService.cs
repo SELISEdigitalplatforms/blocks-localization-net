@@ -1728,6 +1728,34 @@ namespace DomainService.Services
             }
         }
 
+        public async Task CreateBulkKeyTimelineEntriesAsync(List<BlocksLanguageKey> keys, string logFrom, string targetedProjectKey)
+        {
+            try
+            {
+                if (!keys.Any()) return;
+
+                var context = BlocksContext.GetContext();
+                var timelines = keys.Select(key => new KeyTimeline
+                {
+                    EntityId = key.ItemId,
+                    CurrentData = key,
+                    PreviousData = null, // For migration, we don't have previous data
+                    LogFrom = logFrom,
+                    UserId = context?.UserId ?? "System",
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow
+                }).ToList();
+
+                await _keyTimelineRepository.BulkSaveKeyTimelinesAsync(timelines, targetedProjectKey);
+                _logger.LogInformation("Bulk timeline entries created for {Count} keys from {LogFrom}", keys.Count, logFrom);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to create bulk timeline entries for {Count} keys: {Error}", keys.Count, ex.Message);
+                // Don't throw - timeline creation should not break the main operation
+            }
+        }
+
         private Key MapBlocksLanguageKeyToKey(BlocksLanguageKey blocksKey, string? projectKey = null)
         {
             return new Key

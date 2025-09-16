@@ -111,6 +111,29 @@ namespace DomainService.Repositories
             }
         }
 
+        public async Task BulkSaveKeyTimelinesAsync(List<KeyTimeline> timelines, string targetedProjectKey)
+        {
+            if (!timelines.Any()) return;
+
+            var dataBase = _dbContextProvider.GetDatabase(targetedProjectKey);
+            var collection = dataBase.GetCollection<KeyTimeline>(_collectionName);
+
+            // Prepare timelines for bulk insert
+            var now = DateTime.UtcNow;
+            foreach (var timeline in timelines)
+            {
+                if (string.IsNullOrEmpty(timeline.ItemId))
+                {
+                    timeline.ItemId = Guid.NewGuid().ToString();
+                }
+                timeline.CreateDate = now;
+                timeline.LastUpdateDate = now;
+            }
+
+            // Use InsertManyAsync for bulk insertion
+            await collection.InsertManyAsync(timelines);
+        }
+
         public async Task<KeyTimeline?> GetTimelineByItemIdAsync(string itemId)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
