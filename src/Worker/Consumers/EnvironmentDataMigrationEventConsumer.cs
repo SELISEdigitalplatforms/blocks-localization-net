@@ -1,9 +1,11 @@
 using Blocks.Genesis;
 using DomainService.Services;
 using DomainService.Shared.Events;
+using DomainService.Shared.Entities;
 using DomainService.Repositories;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using DomainService.Utilities;
 
 namespace Worker.Consumers
 {
@@ -36,11 +38,49 @@ namespace Worker.Consumers
                 // Then migrate BlocksLanguageKey
                 await MigrateKeysAsync(@event);
 
+                // Update migration tracker for LanguageService completion
+                if (!string.IsNullOrEmpty(@event.TrackerId))
+                {
+                    var languageServiceStatus = new ServiceMigrationStatus
+                    {
+                        ShouldOverWriteExistingData = @event.ShouldOverWriteExistingData,
+                        IsCompleted = true,
+                        CompletedAt = DateTime.UtcNow,
+                        QueueName = Constants.EnvironmentDataMigrationQueue
+                    };
+
+                    await _migrationRepository.UpdateMigrationTrackerAsync(@event.TrackerId, languageServiceStatus);
+                    
+                    _logger.LogInformation("Updated migration tracker {TrackerId} for LanguageService completion", @event.TrackerId);
+                }
+
                 _logger.LogInformation("Environment data migration completed successfully from {ProjectKey} to {TargetedProjectKey}",
                     @event.ProjectKey, @event.TargetedProjectKey);
             }
             catch (Exception ex)
             {
+                // Update migration tracker with error status if TrackerId is provided
+                if (!string.IsNullOrEmpty(@event.TrackerId))
+                {
+                    try
+                    {
+                        var languageServiceErrorStatus = new ServiceMigrationStatus
+                        {
+                            ShouldOverWriteExistingData = @event.ShouldOverWriteExistingData,
+                            IsCompleted = false,
+                            ErrorMessage = ex.Message,
+                            QueueName = Constants.EnvironmentDataMigrationQueue
+                        };
+
+                        await _migrationRepository.UpdateMigrationTrackerAsync(@event.TrackerId, languageServiceErrorStatus);
+                        _logger.LogInformation("Updated migration tracker {TrackerId} with error status", @event.TrackerId);
+                    }
+                    catch (Exception trackerEx)
+                    {
+                        _logger.LogError(trackerEx, "Failed to update migration tracker {TrackerId} with error status", @event.TrackerId);
+                    }
+                }
+
                 _logger.LogError(ex, "Environment data migration failed from {ProjectKey} to {TargetedProjectKey}",
                     @event.ProjectKey, @event.TargetedProjectKey);
                 throw;

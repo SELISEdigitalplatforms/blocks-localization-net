@@ -1,5 +1,6 @@
 using Blocks.Genesis;
 using DomainService.Services;
+using DomainService.Shared.Entities;
 using MongoDB.Driver;
 
 namespace DomainService.Repositories
@@ -27,6 +28,20 @@ namespace DomainService.Repositories
             var database = _dbContextProvider.GetDatabase(tenantId);
             var collection = database.GetCollection<BlocksLanguageKey>(_keysCollectionName);
             return await collection.Find(_ => true).ToListAsync();
+        }
+
+        public async Task UpdateMigrationTrackerAsync(string trackerId, ServiceMigrationStatus LanguageServiceStatus)
+        {
+            var database = _dbContextProvider.GetDatabase();
+            var collection = database.GetCollection<MigrationTracker>("MigrationTrackers");
+
+            var filter = Builders<MigrationTracker>.Filter.Eq(t => t.ItemId, trackerId);
+
+            var update = Builders<MigrationTracker>.Update
+                .Set(t => t.LastUpdateDate, DateTime.UtcNow)
+                .Set(t => t.LanguageService, LanguageServiceStatus);
+
+            await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
         }
 
         public async Task BulkUpsertModulesAsync(List<BlocksLanguageModule> modules, string tenantId, bool shouldOverwrite)
@@ -62,7 +77,7 @@ namespace DomainService.Repositories
                         .SetOnInsert(m => m.TenantId, module.TenantId)
                         .SetOnInsert(m => m.CreatedBy, module.CreatedBy)
                         .SetOnInsert(m => m.LastUpdatedBy, module.LastUpdatedBy);
-                    
+
                     return new UpdateOneModel<BlocksLanguageModule>(filter, update) { IsUpsert = true };
                 }).ToList();
 

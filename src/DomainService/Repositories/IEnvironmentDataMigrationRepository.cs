@@ -1,4 +1,5 @@
 using DomainService.Services;
+using DomainService.Shared.Entities;
 using MongoDB.Driver;
 
 namespace DomainService.Repositories
@@ -9,5 +10,6 @@ namespace DomainService.Repositories
         Task<List<BlocksLanguageKey>> GetAllKeysAsync(string tenantId);
         Task BulkUpsertModulesAsync(List<BlocksLanguageModule> modules, string tenantId, bool shouldOverwrite);
         Task BulkUpsertKeysAsync(List<BlocksLanguageKey> keys, string tenantId, bool shouldOverwrite);
+        Task UpdateMigrationTrackerAsync(string trackerId, ServiceMigrationStatus LanguageServiceStatus);
     }
 }
