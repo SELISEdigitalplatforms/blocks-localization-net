@@ -103,5 +103,45 @@ namespace DomainService.Services.HelperService
 
             return result1 == null ? false : result1.isSuccess;
         }
+
+        public async Task<bool> NotifyEnvironmentDataMigrationEvent(bool response, string? messageCoRelationId, string projectKey, string targetedProjectKey)
+        {
+            var requestData = new
+            {
+                ConnectionId = messageCoRelationId,
+                Roles = new List<string> { },
+                UserIds = new List<string> { BlocksContext.GetContext()?.UserId ?? "" },
+                DenormalizedPayload = JsonSerializer.Serialize(new
+                {
+                    IsSuccess = response,
+                    title = "Language Migration Completed",
+                    description = $"Language Migration {(response ? "completed successfully" : "failed")}",
+                    projectKey = projectKey,
+                    targetedProjectKey = targetedProjectKey
+                }),
+                SaveDenormalizedPayloadAsAnObject = false,
+                ConfiguratoinName = "EnvironmentDataMigration",
+                ContentAvailable = true,
+                ResponseKey = "Language Migration",
+                ResponseValue = response ? "Migration completed" : "Migration failed"
+            };
+
+            var blocksKey = _configuration["RootTenantId"];
+            var rootTenantId = _configuration["RootTenantId"];
+            var salt = _tenants.GetTenantByID(rootTenantId)?.TenantSalt;
+            var actulalSecret = _cryptoService.Hash(rootTenantId, salt);
+
+            var url = _configuration["NotificationServiceUrl"];
+            var headers = new Dictionary<string, string>
+            {
+                { "x-blocks-key", blocksKey },
+                { "Secret", actulalSecret}
+            };
+
+            var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
+                 requestData, url, headers);
+
+            return result1 == null ? false : result1.isSuccess;
+        }
     }
 }

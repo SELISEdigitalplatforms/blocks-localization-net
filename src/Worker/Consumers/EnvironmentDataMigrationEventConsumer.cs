@@ -54,6 +54,13 @@ namespace Worker.Consumers
                     _logger.LogInformation("Updated migration tracker {TrackerId} for LanguageService completion", @event.TrackerId);
                 }
 
+                // Send notification for successful migration
+                await _keyManagementService.PublishEnvironmentDataMigrationNotification(
+                    response: true,
+                    messageCoRelationId: @event.TrackerId,
+                    projectKey: @event.ProjectKey,
+                    targetedProjectKey: @event.TargetedProjectKey);
+
                 _logger.LogInformation("Environment data migration completed successfully from {ProjectKey} to {TargetedProjectKey}",
                     @event.ProjectKey, @event.TargetedProjectKey);
             }
@@ -80,6 +87,13 @@ namespace Worker.Consumers
                         _logger.LogError(trackerEx, "Failed to update migration tracker {TrackerId} with error status", @event.TrackerId);
                     }
                 }
+
+                // Send notification for failed migration
+                await _keyManagementService.PublishEnvironmentDataMigrationNotification(
+                    response: false,
+                    messageCoRelationId: @event.TrackerId,
+                    projectKey: @event.ProjectKey,
+                    targetedProjectKey: @event.TargetedProjectKey);
 
                 _logger.LogError(ex, "Environment data migration failed from {ProjectKey} to {TargetedProjectKey}",
                     @event.ProjectKey, @event.TargetedProjectKey);

@@ -1539,6 +1539,21 @@ namespace DomainService.Services
             }
         }
 
+        public async Task PublishEnvironmentDataMigrationNotification(bool response, string? messageCoRelationId, string projectKey, string targetedProjectKey)
+        {
+            var result = await _notificationService.NotifyEnvironmentDataMigrationEvent(response, messageCoRelationId, projectKey, targetedProjectKey);
+            if (result)
+            {
+                _logger.LogInformation("Notification: sent successfully for EnvironmentDataMigrationEvent with messageCoRelationId: {MessageCoRelationId}, ProjectKey: {ProjectKey}, TargetedProjectKey: {TargetedProjectKey}", 
+                    messageCoRelationId, projectKey, targetedProjectKey);
+            }
+            else
+            {
+                _logger.LogError("Notification: sending failed for EnvironmentDataMigrationEvent with messageCoRelationId: {MessageCoRelationId}, ProjectKey: {ProjectKey}, TargetedProjectKey: {TargetedProjectKey}", 
+                    messageCoRelationId, projectKey, targetedProjectKey);
+            }
+        }
+
         public async Task<BaseMutationResponse> DeleteCollectionsAsync(DeleteCollectionsRequest request)
         {
             _logger.LogInformation("Delete collections operation started");
