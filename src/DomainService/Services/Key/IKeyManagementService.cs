@@ -26,6 +26,7 @@ namespace DomainService.Services
         Task PublishTranslateAllNotification(bool response, string? messageCoRelationId);
         Task PublishEnvironmentDataMigrationNotification(bool response, string? messageCoRelationId, string projectKey, string targetedProjectKey);
         Task CreateBulkKeyTimelineEntriesAsync(List<BlocksLanguageKey> keys, string logFrom, string targetedProjectKey);
+        Task CreateBulkKeyTimelineEntriesAsync(List<BlocksLanguageKey> keys, List<BlocksLanguageKey> previousKeys, string logFrom, string targetedProjectKey);
         Task<BaseMutationResponse> DeleteCollectionsAsync(DeleteCollectionsRequest request);
         Task<BaseMutationResponse> RollbackAsync(RollbackRequest request);
     }

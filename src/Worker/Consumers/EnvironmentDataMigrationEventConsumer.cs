@@ -153,6 +153,10 @@ namespace Worker.Consumers
                 return;
             }
 
+            // Get existing keys from target environment for PreviousData in timeline
+            var sourceKeyIds = sourceKeys.Select(k => k.ItemId).ToList();
+            var existingTargetKeys = await _migrationRepository.GetExistingKeysByItemIdsAsync(sourceKeyIds, @event.TargetedProjectKey);
+
             // Prepare keys for target environment
             var targetKeys = sourceKeys.Select(sourceKey => new BlocksLanguageKey
             {
@@ -170,15 +174,28 @@ namespace Worker.Consumers
                 LastUpdatedBy = sourceKey.LastUpdatedBy
             }).ToList();
 
-            // Bulk upsert keys using repository
-            await _migrationRepository.BulkUpsertKeysAsync(targetKeys, @event.TargetedProjectKey, @event.ShouldOverWriteExistingData);
+            // Bulk upsert keys using repository and get information about what was actually affected
+            var upsertResult = await _migrationRepository.BulkUpsertKeysAsync(targetKeys, @event.TargetedProjectKey, @event.ShouldOverWriteExistingData);
 
             var operationType = @event.ShouldOverWriteExistingData ? "upserted" : "inserted new";
+            var affectedKeysCount = @event.ShouldOverWriteExistingData ? targetKeys.Count : upsertResult.InsertedKeys.Count;
             _logger.LogInformation("Bulk {OperationType} {Count} keys into target project {TargetedProjectKey}",
-                operationType, targetKeys.Count, @event.TargetedProjectKey);
+                operationType, affectedKeysCount, @event.TargetedProjectKey);
 
-            // Create bulk timeline entries for migrated keys
-            await _keyManagementService.CreateBulkKeyTimelineEntriesAsync(targetKeys, "EnvironmentDataMigration", @event.TargetedProjectKey);
+            // Create timeline entries based on the ShouldOverWriteExistingData flag
+            if (@event.ShouldOverWriteExistingData)
+            {
+                // When overwriting, create timeline entries for all keys with their previous data
+                await _keyManagementService.CreateBulkKeyTimelineEntriesAsync(targetKeys, existingTargetKeys, "EnvironmentDataMigration", @event.TargetedProjectKey);
+            }
+            else
+            {
+                // When not overwriting, only create timeline entries for keys that were actually inserted (new keys)
+                if (upsertResult.InsertedKeys.Any())
+                {
+                    await _keyManagementService.CreateBulkKeyTimelineEntriesAsync(upsertResult.InsertedKeys, "EnvironmentDataMigration", @event.TargetedProjectKey);
+                }
+            }
 
             _logger.LogInformation("BlocksLanguageKey migration completed from {ProjectKey} to {TargetedProjectKey}",
                 @event.ProjectKey, @event.TargetedProjectKey);
