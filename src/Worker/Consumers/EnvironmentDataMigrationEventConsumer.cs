@@ -27,6 +27,7 @@ namespace Worker.Consumers
 
         public async Task Consume(EnvironmentDataMigrationEvent @event)
         {
+            var startTime = DateTime.UtcNow;
             try
             {
                 _logger.LogInformation("Starting environment data migration from {ProjectKey} to {TargetedProjectKey}. OverwriteExisting: {ShouldOverwrite}",
@@ -45,12 +46,13 @@ namespace Worker.Consumers
                     {
                         ShouldOverWriteExistingData = @event.ShouldOverWriteExistingData,
                         IsCompleted = true,
+                        StartedAt = startTime,
                         CompletedAt = DateTime.UtcNow,
                         QueueName = Constants.EnvironmentDataMigrationQueue
                     };
 
                     await _migrationRepository.UpdateMigrationTrackerAsync(@event.TrackerId, languageServiceStatus);
-                    
+
                     _logger.LogInformation("Updated migration tracker {TrackerId} for LanguageService completion", @event.TrackerId);
                 }
 
@@ -75,6 +77,7 @@ namespace Worker.Consumers
                         {
                             ShouldOverWriteExistingData = @event.ShouldOverWriteExistingData,
                             IsCompleted = false,
+                            StartedAt = startTime,
                             ErrorMessage = ex.Message,
                             QueueName = Constants.EnvironmentDataMigrationQueue
                         };

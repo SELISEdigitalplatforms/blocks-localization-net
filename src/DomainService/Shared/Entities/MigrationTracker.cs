@@ -9,7 +9,6 @@ namespace DomainService.Shared.Entities
         public required string TargetedProjectKey { get; set; }
         public required string TenantGroupId { get; set; }
         public DateTime MigrationStartedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? MigrationCompletedAt { get; set; }
         public string? ErrorMessage { get; set; }
 
         // Individual service properties
@@ -29,6 +28,7 @@ namespace DomainService.Shared.Entities
     {
         public bool ShouldOverWriteExistingData { get; set; } = false;
         public bool IsCompleted { get; set; } = false;
+        public DateTime? StartedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
         public string? ErrorMessage { get; set; }
         public string? QueueName { get; set; }
