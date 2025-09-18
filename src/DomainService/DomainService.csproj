@@ -11,7 +11,7 @@
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="FluentValidation" Version="11.10.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="SeliseBlocks.Genesis" Version="9.0.0-preview.93" />
+    <PackageReference Include="SeliseBlocks.Genesis" Version="9.0.0-preview.98" />
     <PackageReference Include="SeliseBlocks.StorageDriver" Version="9.0.0-preview.15" />
   </ItemGroup>
 
