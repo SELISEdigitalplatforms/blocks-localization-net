@@ -22,6 +22,7 @@ namespace Worker
             services.AddSingleton<IConsumer<TranslateAllEvent>, TranslateAllEventConsumer>();
             services.AddSingleton<IConsumer<UilmImportEvent>, UilmImportEventConsumer>();
             services.AddSingleton<IConsumer<UilmExportEvent>, UilmExportEventConsumer>();
+            services.AddSingleton<IConsumer<EnvironmentDataMigrationEvent>, EnvironmentDataMigrationEventConsumer>();
 
             services.AddSingleton<XlsxOutputGeneratorService>();
             services.AddSingleton<JsonOutputGeneratorService>();
@@ -41,6 +42,7 @@ namespace Worker
             services.AddSingleton<IKeyRepository, KeyRepository>();
             services.AddSingleton<IKeyTimelineRepository, KeyTimelineRepository>();
             services.AddSingleton<IValidator<Key>, KeyValidator>();
+            services.AddSingleton<IEnvironmentDataMigrationRepository, EnvironmentDataMigrationRepository>();
 
             services.AddSingleton<IAssistantService, AssistantService>();
 

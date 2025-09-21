@@ -17,12 +17,12 @@ namespace Api.Controllers
 
     [ApiController]
     [Route("[controller]/[action]")]
-    
+
     public class KeyController : Controller
     {
         private readonly IKeyManagementService _keyManagementService;
         private readonly ChangeControllerContext _changeControllerContext;
-        
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="KeyController"/> class.
@@ -42,7 +42,7 @@ namespace Api.Controllers
         /// </summary>
         /// <param name="key">The key object to be saved.</param>
         /// <returns>An <see cref="ApiResponse"/> indicating the success or failure of the save operation.</returns>
-   
+
         [HttpPost]
         [Authorize]
         public async Task<ApiResponse> Save(Key key)
@@ -277,6 +277,29 @@ namespace Api.Controllers
 
             var result = await _keyManagementService.GetUilmExportedFilesAsync(request);
             return Ok(result);
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> RollBack([FromBody] RollbackRequest request)
+        {
+            if (request == null) return BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(request);
+
+            if (string.IsNullOrWhiteSpace(request.ItemId))
+            {
+                return BadRequest(new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "ItemId", "Invalid or missing ItemId" }
+                    }
+                });
+            }
+
+            var result = await _keyManagementService.RollbackAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
     }
 }

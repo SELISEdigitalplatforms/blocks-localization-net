@@ -1,4 +1,5 @@
 ﻿using Blocks.Genesis;
+using DomainService.Repositories;
 using DomainService.Shared;
 using DomainService.Shared.Events;
 
@@ -23,6 +24,10 @@ namespace DomainService.Services
         Task<bool> ExportUilmFile(UilmExportEvent request);
         Task PublishUilmExportNotification(bool response, string fileId, string? messageCoRelationId, string tenantId);
         Task PublishTranslateAllNotification(bool response, string? messageCoRelationId);
+        Task PublishEnvironmentDataMigrationNotification(bool response, string? messageCoRelationId, string projectKey, string targetedProjectKey);
+        Task CreateBulkKeyTimelineEntriesAsync(List<BlocksLanguageKey> keys, string logFrom, string targetedProjectKey);
+        Task CreateBulkKeyTimelineEntriesAsync(List<BlocksLanguageKey> keys, List<BlocksLanguageKey> previousKeys, string logFrom, string targetedProjectKey);
         Task<BaseMutationResponse> DeleteCollectionsAsync(DeleteCollectionsRequest request);
+        Task<BaseMutationResponse> RollbackAsync(RollbackRequest request);
     }
 }
