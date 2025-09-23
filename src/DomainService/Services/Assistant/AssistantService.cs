@@ -62,11 +62,11 @@ namespace DomainService.Services
 
         public string GenerateSuggestTranslationContext(SuggestLanguageRequest request)
         {
-            var context = "The requirement is to translate a user interface element of a webpage.The output should include only the text of the specified element, without any additional text or quotes.";
+            var context = !string.IsNullOrWhiteSpace(request.ElementDetailContext) ? request.ElementDetailContext: $"The requirement is to translate a user interface element of a webpage. The output should include only the text of the specified element, without any additional text or quotes.";
             // context += request.MaxCharacterLength > 0 ? $"Ideally,it should not exceed {request.MaxCharacterLength} Characters." : "";
             // context += !string.IsNullOrEmpty(request.ElementType) ? $"The element type in question is '{request.ElementType}'." : "";
             // context += !string.IsNullOrEmpty(request.ElementApplicationContext) ? $"The element application context in question is '{request.ElementApplicationContext}'." : "";
-            context += !string.IsNullOrEmpty(request.ElementDetailContext) ? $"The element detail context in question is: '{request.ElementDetailContext}'." : "";
+            // context += !string.IsNullOrEmpty(request.ElementDetailContext) ? $"The element detail context in question is: '{request.ElementDetailContext}'." : "";
             context += $"\nConsidering the above, translate the following from {request.CurrentLanguage} to {request.DestinationLanguage}:'{request.SourceText}'.";
             return context;
         }
