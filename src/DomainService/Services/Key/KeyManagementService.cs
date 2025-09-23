@@ -135,6 +135,7 @@ namespace DomainService.Services
             repoKey.Resources = key.Resources;
             repoKey.IsPartiallyTranslated = key.IsPartiallyTranslated;
             repoKey.Routes = key.Routes;
+            repoKey.Context = key.Context;
 
             return repoKey;
         }

@@ -10,6 +10,7 @@ namespace DomainService.Repositories
         public string Value { get; set; }
         public Resource[] Resources { get; set; }
         public List<string> Routes { get; set; }
+        public string? Context { get; set; }
         public bool IsPartiallyTranslated { get; set; }
     }
 }
