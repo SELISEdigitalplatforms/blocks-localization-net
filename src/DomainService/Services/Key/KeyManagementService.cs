@@ -357,7 +357,7 @@ namespace DomainService.Services
                 Temperature = 0.1,
                 //MaxCharacterLength = missingResource.CharacterLength,
                 //ElementApplicationContext = command.ElementApplicationContext,
-                //ElementDetailContext = resourceKey.Context,
+                ElementDetailContext = resourceKey.Context,
                 SourceText = defaultResource?.Value,
                 DestinationLanguage = languageName,
                 CurrentLanguage = languageSetting?.FirstOrDefault(x => x.LanguageCode == request.DefaultLanguage).LanguageName
