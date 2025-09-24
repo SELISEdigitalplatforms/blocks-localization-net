@@ -4,6 +4,7 @@ using DomainService.Repositories;
 using DomainService.Services;
 using DomainService.Services.HelperService;
 using DomainService.Shared.Events;
+using DomainService.Validation;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Storage.DomainService.Storage;
@@ -20,6 +21,7 @@ namespace Worker
 
             services.AddSingleton<IConsumer<GenerateUilmFilesEvent>, GenerateUilmFilesConsumer>();
             services.AddSingleton<IConsumer<TranslateAllEvent>, TranslateAllEventConsumer>();
+            services.AddSingleton<IConsumer<TranslateBlocksLanguageKeyEvent>, TranslateBlocksLanguageKeyEventConsumer>();
             services.AddSingleton<IConsumer<UilmImportEvent>, UilmImportEventConsumer>();
             services.AddSingleton<IConsumer<UilmExportEvent>, UilmExportEventConsumer>();
             services.AddSingleton<IConsumer<EnvironmentDataMigrationEvent>, EnvironmentDataMigrationEventConsumer>();
@@ -42,6 +44,7 @@ namespace Worker
             services.AddSingleton<IKeyRepository, KeyRepository>();
             services.AddSingleton<IKeyTimelineRepository, KeyTimelineRepository>();
             services.AddSingleton<IValidator<Key>, KeyValidator>();
+            services.AddSingleton<IValidator<TranslateBlocksLanguageKeyRequest>, TranslateBlocksLanguageKeyRequestValidator>();
             services.AddSingleton<IEnvironmentDataMigrationRepository, EnvironmentDataMigrationRepository>();
 
             services.AddSingleton<IAssistantService, AssistantService>();

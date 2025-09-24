@@ -2,6 +2,7 @@
 using DomainService.Repositories;
 using DomainService.Services;
 using DomainService.Services.HelperService;
+using DomainService.Validation;
 using FluentValidation;
 using Storage.DomainService.Storage;
 using Storage.DomainService.Storage.Validators;
@@ -35,6 +36,7 @@ namespace Api
             services.AddSingleton<IKeyRepository, KeyRepository>();
             services.AddSingleton<IKeyTimelineRepository, KeyTimelineRepository>();
             services.AddSingleton<IValidator<Key>, KeyValidator>();
+            services.AddSingleton<IValidator<TranslateBlocksLanguageKeyRequest>, TranslateBlocksLanguageKeyRequestValidator>();
 
             services.RegisterBlocksStorageServices();
 

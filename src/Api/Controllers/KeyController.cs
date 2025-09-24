@@ -4,6 +4,7 @@ using DomainService.Services;
 using DomainService.Shared;
 using DomainService.Shared.Events;
 using DomainService.Utilities;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Mvc;
@@ -22,19 +23,24 @@ namespace Api.Controllers
     {
         private readonly IKeyManagementService _keyManagementService;
         private readonly ChangeControllerContext _changeControllerContext;
+        private readonly IValidator<TranslateBlocksLanguageKeyRequest> _translateBlocksLanguageKeyRequestValidator;
 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="KeyController"/> class.
         /// </summary>
         /// <param name="keyManagementService">The service for managing keys.</param>
+        /// <param name="changeControllerContext">The context for changing controller state.</param>
+        /// <param name="translateBlocksLanguageKeyRequestValidator">The validator for TranslateBlocksLanguageKeyRequest.</param>
 
         public KeyController(
             IKeyManagementService keyManagementService,
-            ChangeControllerContext changeControllerContext)
+            ChangeControllerContext changeControllerContext,
+            IValidator<TranslateBlocksLanguageKeyRequest> translateBlocksLanguageKeyRequestValidator)
         {
             _keyManagementService = keyManagementService;
             _changeControllerContext = changeControllerContext;
+            _translateBlocksLanguageKeyRequestValidator = translateBlocksLanguageKeyRequestValidator;
         }
 
         /// <summary>
@@ -156,7 +162,7 @@ namespace Api.Controllers
         }
 
         [HttpPost]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> TranslateAll(TranslateAllRequest request)
         {
             if (request == null) BadRequest(new BaseMutationResponse());
@@ -175,6 +181,32 @@ namespace Api.Controllers
             }
 
             await _keyManagementService.SendTranslateAllEvent(request);
+            return Ok(new BaseMutationResponse { IsSuccess = true });
+        }
+
+        /// <summary>
+        /// Translates a specific BlocksLanguageKey by sending it to the translation queue.
+        /// </summary>
+        /// <param name="request">The request containing key ID, project key, and translation parameters.</param>
+        /// <returns>An <see cref="IActionResult"/> indicating the success or failure of the translation request.</returns>
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> TranslateKey(TranslateBlocksLanguageKeyRequest request)
+        {
+            if (request == null) return BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(request);
+
+            var validationResult = await _translateBlocksLanguageKeyRequestValidator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = validationResult.Errors.ToDictionary(e => e.PropertyName, e => e.ErrorMessage)
+                });
+            }
+
+            await _keyManagementService.SendTranslateBlocksLanguageKeyEvent(request);
             return Ok(new BaseMutationResponse { IsSuccess = true });
         }
 

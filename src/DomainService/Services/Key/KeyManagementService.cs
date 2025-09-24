@@ -242,6 +242,60 @@ namespace DomainService.Services
             return true;
         }
 
+        public async Task<bool> TranslateBlocksLanguageKey(TranslateBlocksLanguageKeyEvent request)
+        {
+            try
+            {
+                List<Language> languageSetting = await _languageManagementService.GetLanguagesAsync();
+
+                // Get the specific key by ID
+                var resourceKey = await _keyRepository.GetUilmResourceKey(
+                    x => x.ItemId == request.KeyId, 
+                    BlocksContext.GetContext()?.TenantId ?? ""
+                );
+
+                if (resourceKey == null)
+                {
+                    _logger.LogWarning("TranslateBlocksLanguageKey: Key with ID {KeyId} not found", request.KeyId);
+                    return false;
+                }
+
+                // Create deep copy for timeline tracking
+                var originalKey = JsonConvert.DeserializeObject<BlocksLanguageKey>(JsonConvert.SerializeObject(resourceKey));
+                
+                var uilmResourceKeyList = new List<BlocksLanguageKey>();
+
+                // Convert event to TranslateAllEvent format for reusing existing logic
+                var translateAllEvent = new TranslateAllEvent
+                {
+                    MessageCoRelationId = request.MessageCoRelationId,
+                    ProjectKey = request.ProjectKey,
+                    DefaultLanguage = request.DefaultLanguage,
+                    ModuleId = resourceKey.ModuleId // Use the ModuleId from the retrieved key
+                };
+
+                await ProcessResourceKey(translateAllEvent, resourceKey, languageSetting, uilmResourceKeyList);
+
+                if (uilmResourceKeyList.Any())
+                {
+                    var originalResourceKeys = new Dictionary<string, BlocksLanguageKey>();
+                    if (originalKey != null)
+                    {
+                        originalResourceKeys[resourceKey.ItemId] = originalKey;
+                    }
+                    
+                    await UpdateResourceKey(uilmResourceKeyList, translateAllEvent, originalResourceKeys);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while translating BlocksLanguageKey with ID {KeyId}", request.KeyId);
+                return false;
+            }
+        }
+
         public async Task<List<BlocksLanguageKey>> ProcessChangeAll(TranslateAllEvent request, IQueryable<BlocksLanguageKey> dbResourceKeys, List<Language> languageSetting)
         {
             var uilmResourceKeyList = new List<BlocksLanguageKey>();
@@ -563,6 +617,23 @@ namespace DomainService.Services
                         MessageCoRelationId = request.MessageCoRelationId,
                         ProjectKey = request.ProjectKey,
                         DefaultLanguage = request.DefaultLanguage
+                    }
+                }
+            );
+        }
+
+        public async Task SendTranslateBlocksLanguageKeyEvent(TranslateBlocksLanguageKeyRequest request)
+        {
+            await _messageClient.SendToConsumerAsync(
+                new ConsumerMessage<TranslateBlocksLanguageKeyEvent>
+                {
+                    ConsumerName = Utilities.Constants.TranslateBlocksLanguageKeyQueue,
+                    Payload = new TranslateBlocksLanguageKeyEvent
+                    {
+                        MessageCoRelationId = request.MessageCoRelationId,
+                        ProjectKey = request.ProjectKey,
+                        DefaultLanguage = request.DefaultLanguage,
+                        KeyId = request.KeyId
                     }
                 }
             );
@@ -1565,6 +1636,19 @@ namespace DomainService.Services
             else
             {
                 _logger.LogError("Notification: sending failed for TranslateAllEvent with messageCoRelationId: {MessageCoRelationId}", messageCoRelationId);
+            }
+        }
+
+        public async Task PublishTranslateBlocksLanguageKeyNotification(bool response, string? messageCoRelationId)
+        {
+            var result = await _notificationService.NotifyTranslateBlocksLanguageKeyEvent(response, messageCoRelationId);
+            if (result)
+            {
+                _logger.LogInformation("Notification: sent successfully for TranslateBlocksLanguageKeyEvent with messageCoRelationId: {MessageCoRelationId}", messageCoRelationId);
+            }
+            else
+            {
+                _logger.LogError("Notification: sending failed for TranslateBlocksLanguageKeyEvent with messageCoRelationId: {MessageCoRelationId}", messageCoRelationId);
             }
         }
 
