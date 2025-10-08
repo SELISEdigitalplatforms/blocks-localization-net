@@ -8,6 +8,7 @@ namespace DomainService.Services
     public interface IKeyManagementService
     {
         Task<ApiResponse> SaveKeyAsync(Key key);
+        Task<ApiResponse> SaveKeysAsync(List<Key> keys);
         Task<GetKeysQueryResponse> GetKeysAsync(GetKeysRequest query);
         Task<GetUilmExportedFilesQueryResponse> GetUilmExportedFilesAsync(GetUilmExportedFilesRequest request);
         Task<GetKeyTimelineQueryResponse> GetKeyTimelineAsync(GetKeyTimelineRequest query);

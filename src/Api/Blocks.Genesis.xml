@@ -10,11 +10,13 @@
             </summary>
             
         </member>
-        <member name="M:Api.Controllers.KeyController.#ctor(DomainService.Services.IKeyManagementService,Blocks.Genesis.ChangeControllerContext)">
+        <member name="M:Api.Controllers.KeyController.#ctor(DomainService.Services.IKeyManagementService,Blocks.Genesis.ChangeControllerContext,FluentValidation.IValidator{DomainService.Services.TranslateBlocksLanguageKeyRequest})">
             <summary>
             Initializes a new instance of the <see cref="T:Api.Controllers.KeyController"/> class.
             </summary>
             <param name="keyManagementService">The service for managing keys.</param>
+            <param name="changeControllerContext">The context for changing controller state.</param>
+            <param name="translateBlocksLanguageKeyRequestValidator">The validator for TranslateBlocksLanguageKeyRequest.</param>
         </member>
         <member name="M:Api.Controllers.KeyController.Save(DomainService.Services.Key)">
             <summary>
@@ -22,6 +24,13 @@
             </summary>
             <param name="key">The key object to be saved.</param>
             <returns>An <see cref="T:DomainService.Shared.ApiResponse"/> indicating the success or failure of the save operation.</returns>
+        </member>
+        <member name="M:Api.Controllers.KeyController.SaveKeys(System.Collections.Generic.List{DomainService.Services.Key})">
+            <summary>
+            Saves multiple keys to the system in a single operation.
+            </summary>
+            <param name="keys">The list of key objects to be saved.</param>
+            <returns>An <see cref="T:DomainService.Shared.ApiResponse"/> indicating the success or failure of the bulk save operation.</returns>
         </member>
         <member name="M:Api.Controllers.KeyController.Gets(DomainService.Services.GetKeysRequest)">
             <summary>
@@ -35,6 +44,13 @@
             </summary>
             <param name="query">The query parameters for filtering and pagination.</param>
             <returns>A paginated list of <see cref="T:DomainService.Services.KeyTimeline"/> objects.</returns>
+        </member>
+        <member name="M:Api.Controllers.KeyController.TranslateKey(DomainService.Services.TranslateBlocksLanguageKeyRequest)">
+            <summary>
+            Translates a specific BlocksLanguageKey by sending it to the translation queue.
+            </summary>
+            <param name="request">The request containing key ID, project key, and translation parameters.</param>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> indicating the success or failure of the translation request.</returns>
         </member>
         <member name="M:Api.Controllers.KeyController.DeleteCollections(DomainService.Services.DeleteCollectionsRequest)">
             <summary>

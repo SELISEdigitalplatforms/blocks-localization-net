@@ -59,6 +59,25 @@ namespace Api.Controllers
         }
 
         /// <summary>
+        /// Saves multiple keys to the system in a single operation.
+        /// </summary>
+        /// <param name="keys">The list of key objects to be saved.</param>
+        /// <returns>An <see cref="ApiResponse"/> indicating the success or failure of the bulk save operation.</returns>
+        [HttpPost]
+        [Authorize]
+        public async Task<ApiResponse> SaveKeys([FromBody] List<Key> keys)
+        {
+            if (keys == null || !keys.Any()) 
+                return new ApiResponse("Keys list cannot be null or empty.");
+            
+            // Set context for the first key if available (for tenant/project context)
+            if (keys.Any())
+                _changeControllerContext.ChangeContext(keys.First());
+            
+            return await _keyManagementService.SaveKeysAsync(keys);
+        }
+
+        /// <summary>
         /// Retrieves all available Keys.
         /// </summary>
         /// <returns>A list of <see cref="Key"/> objects.</returns>

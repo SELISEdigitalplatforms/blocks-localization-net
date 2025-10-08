@@ -122,6 +122,86 @@ namespace DomainService.Services
             return new ApiResponse();
         }
 
+        public async Task<ApiResponse> SaveKeysAsync(List<Key> keys)
+        {
+            if (keys == null || !keys.Any())
+            {
+                return new ApiResponse("Keys list cannot be null or empty.");
+            }
+
+            var errors = new List<string>();
+            var successCount = 0;
+
+            foreach (var key in keys)
+            {
+                try
+                {
+                    var validationResult = await _validator.ValidateAsync(key);
+
+                    if (!validationResult.IsValid)
+                    {
+                        var validationErrors = string.Join("; ", validationResult.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}"));
+                        errors.Add($"Key '{key.KeyName}' in Module '{key.ModuleId}': {validationErrors}");
+                        continue;
+                    }
+
+                    // Get existing key for timeline tracking
+                    var existingRepoKey = await _keyRepository.GetKeyByNameAsync(key.KeyName, key.ModuleId);
+                    BlocksLanguageKey? previousKey = null;
+                    bool isNewKey = existingRepoKey == null;
+                    
+                    if (!isNewKey && existingRepoKey != null)
+                    {
+                        previousKey = existingRepoKey;
+                    }
+
+                    var repoKey = await MappedIntoRepoKeyAsync(key);
+                    await _keyRepository.SaveKeyAsync(repoKey);
+
+                    if (key.ShouldPublish == true)
+                    {
+                        var request = new GenerateUilmFilesRequest
+                        {
+                            Guid = key.ItemId,
+                            ModuleId = key.ModuleId,
+                            ProjectKey = key.ProjectKey
+                        };
+                        await SendGenerateUilmFilesEvent(request);
+                    }
+
+                    // Create timeline entry
+                    if (repoKey != null)
+                    {
+                        if (isNewKey)
+                        {
+                            await CreateKeyTimelineEntryAsync(null, repoKey, "KeyController.BulkCreate");
+                        }
+                        else
+                        {
+                            await CreateKeyTimelineEntryAsync(previousKey, repoKey, "KeyController.BulkSave");
+                        }
+                    }
+
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Error while saving Key '{KeyName}' in Module '{ModuleId}': {ErrorMessage}", key.KeyName, key.ModuleId, ex.Message);
+                    errors.Add($"Key '{key.KeyName}' in Module '{key.ModuleId}': {ex.Message}");
+                }
+            }
+
+            _logger.LogInformation("Bulk save completed. Success: {SuccessCount}, Errors: {ErrorCount}", successCount, errors.Count);
+
+            if (errors.Any())
+            {
+                var errorMessage = $"Bulk save completed with {errors.Count} errors out of {keys.Count} keys:\n" + string.Join("\n", errors);
+                return new ApiResponse(errorMessage);
+            }
+
+            return new ApiResponse();
+        }
+
         private async Task<BlocksLanguageKey> MappedIntoRepoKeyAsync(Key key)
         {
             var repoKey = await _keyRepository.GetKeyByNameAsync(key.KeyName, key.ModuleId);
