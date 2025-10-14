@@ -1,8 +1,10 @@
 ﻿using DomainService.Services;
 using DomainService.Shared;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace DomainService.Repositories
 {
+    [BsonIgnoreExtraElements]
     public class BlocksLanguageKey : BaseEntity
     {
         public string KeyName { get; set; }
