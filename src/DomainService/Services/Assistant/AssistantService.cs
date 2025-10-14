@@ -70,7 +70,7 @@ namespace DomainService.Services
             // context += !string.IsNullOrEmpty(request.ElementApplicationContext) ? $"The element application context in question is '{request.ElementApplicationContext}'." : "";
             // context += !string.IsNullOrEmpty(request.ElementDetailContext) ? $"The element detail context in question is: '{request.ElementDetailContext}'." : "";
             //context += $"\nConsidering the above, translate the following from {request.CurrentLanguage} to {request.DestinationLanguage}:'{request.SourceText}'.";
-            context += $"Translate the following from {request.CurrentLanguage} to {request.DestinationLanguage}: {request.SourceText}";
+            context += $"Translate the following from {request.CurrentLanguage} to {request.DestinationLanguage}: '{request.SourceText}'";
             return context;
         }
 
