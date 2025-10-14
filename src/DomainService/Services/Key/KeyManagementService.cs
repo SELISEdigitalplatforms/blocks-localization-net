@@ -122,6 +122,86 @@ namespace DomainService.Services
             return new ApiResponse();
         }
 
+        public async Task<ApiResponse> SaveKeysAsync(List<Key> keys)
+        {
+            if (keys == null || !keys.Any())
+            {
+                return new ApiResponse("Keys list cannot be null or empty.");
+            }
+
+            var errors = new List<string>();
+            var successCount = 0;
+
+            foreach (var key in keys)
+            {
+                try
+                {
+                    var validationResult = await _validator.ValidateAsync(key);
+
+                    if (!validationResult.IsValid)
+                    {
+                        var validationErrors = string.Join("; ", validationResult.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}"));
+                        errors.Add($"Key '{key.KeyName}' in Module '{key.ModuleId}': {validationErrors}");
+                        continue;
+                    }
+
+                    // Get existing key for timeline tracking
+                    var existingRepoKey = await _keyRepository.GetKeyByNameAsync(key.KeyName, key.ModuleId);
+                    BlocksLanguageKey? previousKey = null;
+                    bool isNewKey = existingRepoKey == null;
+                    
+                    if (!isNewKey && existingRepoKey != null)
+                    {
+                        previousKey = existingRepoKey;
+                    }
+
+                    var repoKey = await MappedIntoRepoKeyAsync(key);
+                    await _keyRepository.SaveKeyAsync(repoKey);
+
+                    if (key.ShouldPublish == true)
+                    {
+                        var request = new GenerateUilmFilesRequest
+                        {
+                            Guid = key.ItemId,
+                            ModuleId = key.ModuleId,
+                            ProjectKey = key.ProjectKey
+                        };
+                        await SendGenerateUilmFilesEvent(request);
+                    }
+
+                    // Create timeline entry
+                    if (repoKey != null)
+                    {
+                        if (isNewKey)
+                        {
+                            await CreateKeyTimelineEntryAsync(null, repoKey, "KeyController.BulkCreate");
+                        }
+                        else
+                        {
+                            await CreateKeyTimelineEntryAsync(previousKey, repoKey, "KeyController.BulkSave");
+                        }
+                    }
+
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Error while saving Key '{KeyName}' in Module '{ModuleId}': {ErrorMessage}", key.KeyName, key.ModuleId, ex.Message);
+                    errors.Add($"Key '{key.KeyName}' in Module '{key.ModuleId}': {ex.Message}");
+                }
+            }
+
+            _logger.LogInformation("Bulk save completed. Success: {SuccessCount}, Errors: {ErrorCount}", successCount, errors.Count);
+
+            if (errors.Any())
+            {
+                var errorMessage = $"Bulk save completed with {errors.Count} errors out of {keys.Count} keys:\n" + string.Join("\n", errors);
+                return new ApiResponse(errorMessage);
+            }
+
+            return new ApiResponse();
+        }
+
         private async Task<BlocksLanguageKey> MappedIntoRepoKeyAsync(Key key)
         {
             var repoKey = await _keyRepository.GetKeyByNameAsync(key.KeyName, key.ModuleId);
@@ -135,6 +215,7 @@ namespace DomainService.Services
             repoKey.Resources = key.Resources;
             repoKey.IsPartiallyTranslated = key.IsPartiallyTranslated;
             repoKey.Routes = key.Routes;
+            repoKey.Context = key.Context;
 
             return repoKey;
         }
@@ -239,6 +320,60 @@ namespace DomainService.Services
             }
 
             return true;
+        }
+
+        public async Task<bool> TranslateBlocksLanguageKey(TranslateBlocksLanguageKeyEvent request)
+        {
+            try
+            {
+                List<Language> languageSetting = await _languageManagementService.GetLanguagesAsync();
+
+                // Get the specific key by ID
+                var resourceKey = await _keyRepository.GetUilmResourceKey(
+                    x => x.ItemId == request.KeyId, 
+                    BlocksContext.GetContext()?.TenantId ?? ""
+                );
+
+                if (resourceKey == null)
+                {
+                    _logger.LogWarning("TranslateBlocksLanguageKey: Key with ID {KeyId} not found", request.KeyId);
+                    return false;
+                }
+
+                // Create deep copy for timeline tracking
+                var originalKey = JsonConvert.DeserializeObject<BlocksLanguageKey>(JsonConvert.SerializeObject(resourceKey));
+                
+                var uilmResourceKeyList = new List<BlocksLanguageKey>();
+
+                // Convert event to TranslateAllEvent format for reusing existing logic
+                var translateAllEvent = new TranslateAllEvent
+                {
+                    MessageCoRelationId = request.MessageCoRelationId,
+                    ProjectKey = request.ProjectKey,
+                    DefaultLanguage = request.DefaultLanguage,
+                    ModuleId = resourceKey.ModuleId // Use the ModuleId from the retrieved key
+                };
+
+                await ProcessResourceKey(translateAllEvent, resourceKey, languageSetting, uilmResourceKeyList);
+
+                if (uilmResourceKeyList.Any())
+                {
+                    var originalResourceKeys = new Dictionary<string, BlocksLanguageKey>();
+                    if (originalKey != null)
+                    {
+                        originalResourceKeys[resourceKey.ItemId] = originalKey;
+                    }
+                    
+                    await UpdateResourceKey(uilmResourceKeyList, translateAllEvent, originalResourceKeys);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while translating BlocksLanguageKey with ID {KeyId}", request.KeyId);
+                return false;
+            }
         }
 
         public async Task<List<BlocksLanguageKey>> ProcessChangeAll(TranslateAllEvent request, IQueryable<BlocksLanguageKey> dbResourceKeys, List<Language> languageSetting)
@@ -356,7 +491,7 @@ namespace DomainService.Services
                 Temperature = 0.1,
                 //MaxCharacterLength = missingResource.CharacterLength,
                 //ElementApplicationContext = command.ElementApplicationContext,
-                //ElementDetailContext = resourceKey.Context,
+                ElementDetailContext = resourceKey.Context,
                 SourceText = defaultResource?.Value,
                 DestinationLanguage = languageName,
                 CurrentLanguage = languageSetting?.FirstOrDefault(x => x.LanguageCode == request.DefaultLanguage).LanguageName
@@ -436,19 +571,37 @@ namespace DomainService.Services
 
             _logger.LogInformation("++JsonOutputGeneratorService: GenerateAsync execution successful!");
 
+            if(!string.IsNullOrWhiteSpace(command.ModuleId))
+            {
+                await _notificationService.NotifyExtensionEvent(true, command.ProjectKey);
+            }
+
             return true;
         }
 
         public List<UilmFile> ProcessUilmFile(GenerateUilmFilesEvent command, List<Language> languages, List<Key> resourceKeys, BlocksLanguageModule application)
         {
-
+            var keyLang = new Language
+            {
+                LanguageName = "key",
+                LanguageCode = "key",
+            };
+            if (languages.FindIndex(x => x.LanguageName == "key") == -1)
+            {
+                languages.Add(keyLang);
+            }
             List<UilmFile> uilmfiles = new List<UilmFile>();
             foreach (Language language in languages)
             {
                 Dictionary<string, object> dictionary = new Dictionary<string, object>();
-
-                AssignResourceKeysToDictionary(resourceKeys, language, dictionary);
-
+                if (language.LanguageCode == "key")
+                {
+                    AssignResourceKeysToDictionaryForKeyMode(resourceKeys, keyLang, dictionary);
+                }
+                else
+                {
+                    AssignResourceKeysToDictionary(resourceKeys, language, dictionary);
+                }
                 UilmFile uilmFile = new UilmFile()
                 {
                     Id = Guid.NewGuid().ToString(),
@@ -474,6 +627,16 @@ namespace DomainService.Services
                 string resourceValue = resource == null ? "[ KEY MISSING ]" : resource.Value;
 
                 AssignToDictionary(dictionary: dictionary, keyPath: reosurceKey.KeyName, value: resourceValue);
+            });
+        }
+        private void AssignResourceKeysToDictionaryForKeyMode(
+           List<Key> resourceKeys,
+           Language language,
+           Dictionary<string, object> dictionary)
+        {
+            resourceKeys.ForEach((Key resourceKey) =>
+            {
+                AssignToDictionary(dictionary: dictionary, keyPath: resourceKey.KeyName, value: resourceKey.KeyName);
             });
         }
 
@@ -534,6 +697,23 @@ namespace DomainService.Services
                         MessageCoRelationId = request.MessageCoRelationId,
                         ProjectKey = request.ProjectKey,
                         DefaultLanguage = request.DefaultLanguage
+                    }
+                }
+            );
+        }
+
+        public async Task SendTranslateBlocksLanguageKeyEvent(TranslateBlocksLanguageKeyRequest request)
+        {
+            await _messageClient.SendToConsumerAsync(
+                new ConsumerMessage<TranslateBlocksLanguageKeyEvent>
+                {
+                    ConsumerName = Utilities.Constants.TranslateBlocksLanguageKeyQueue,
+                    Payload = new TranslateBlocksLanguageKeyEvent
+                    {
+                        MessageCoRelationId = request.MessageCoRelationId,
+                        ProjectKey = request.ProjectKey,
+                        DefaultLanguage = request.DefaultLanguage,
+                        KeyId = request.KeyId
                     }
                 }
             );
@@ -1536,6 +1716,19 @@ namespace DomainService.Services
             else
             {
                 _logger.LogError("Notification: sending failed for TranslateAllEvent with messageCoRelationId: {MessageCoRelationId}", messageCoRelationId);
+            }
+        }
+
+        public async Task PublishTranslateBlocksLanguageKeyNotification(bool response, string? messageCoRelationId)
+        {
+            var result = await _notificationService.NotifyTranslateBlocksLanguageKeyEvent(response, messageCoRelationId);
+            if (result)
+            {
+                _logger.LogInformation("Notification: sent successfully for TranslateBlocksLanguageKeyEvent with messageCoRelationId: {MessageCoRelationId}", messageCoRelationId);
+            }
+            else
+            {
+                _logger.LogError("Notification: sending failed for TranslateBlocksLanguageKeyEvent with messageCoRelationId: {MessageCoRelationId}", messageCoRelationId);
             }
         }
 

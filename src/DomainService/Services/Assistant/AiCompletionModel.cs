@@ -12,14 +12,12 @@ namespace DomainService.Services
         {
             return new AiCompletionModel
             {
-                model = "gpt-3.5-turbo",
+                model = "gpt-4o-mini",
                 messages = new List<Message>
                 {
-                    new Message
-                    {
-                        role = "user",
-                        content = content
-                    }
+                    new Message { role = "system", 
+                                content = "You are a translator for UI text. Output EXACTLY the translated UI text and NOTHING ELSE. No quotes, no explanation, no metadata, no JSON wrappers, no punctuation beyond what belongs to the translated text itself. If the original text is blank, return an empty string. Preserve casing and punctuation only as appropriate for the UI element. Do not include surrounding whitespace or newlines." },
+                    new Message { role = "user", content = content }
                 },
                 temperature = temperature
             };

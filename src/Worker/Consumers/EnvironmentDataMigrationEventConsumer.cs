@@ -14,15 +14,18 @@ namespace Worker.Consumers
         private readonly IKeyManagementService _keyManagementService;
         private readonly IEnvironmentDataMigrationRepository _migrationRepository;
         private readonly ILogger<EnvironmentDataMigrationEventConsumer> _logger;
+        private readonly IMessageClient _messageClient;
 
         public EnvironmentDataMigrationEventConsumer(
             IKeyManagementService keyManagementService,
             IEnvironmentDataMigrationRepository migrationRepository,
-            ILogger<EnvironmentDataMigrationEventConsumer> logger)
+            ILogger<EnvironmentDataMigrationEventConsumer> logger,
+            IMessageClient messageClient)
         {
             _keyManagementService = keyManagementService;
             _migrationRepository = migrationRepository;
             _logger = logger;
+            _messageClient = messageClient;
         }
 
         public async Task Consume(EnvironmentDataMigrationEvent @event)
@@ -51,17 +54,19 @@ namespace Worker.Consumers
                         QueueName = Constants.EnvironmentDataMigrationQueue
                     };
 
-                    await _migrationRepository.UpdateMigrationTrackerAsync(@event.TrackerId, languageServiceStatus);
-
+                    // await _migrationRepository.UpdateMigrationTrackerAsync(@event.TrackerId, languageServiceStatus);
+                    await NotifyMigrationCompletion(@event.TrackerId, isSuccess: true);
                     _logger.LogInformation("Updated migration tracker {TrackerId} for LanguageService completion", @event.TrackerId);
                 }
 
                 // Send notification for successful migration
-                await _keyManagementService.PublishEnvironmentDataMigrationNotification(
-                    response: true,
-                    messageCoRelationId: @event.TrackerId,
-                    projectKey: @event.ProjectKey,
-                    targetedProjectKey: @event.TargetedProjectKey);
+                // await _keyManagementService.PublishEnvironmentDataMigrationNotification(
+                //     response: true,
+                //     messageCoRelationId: @event.TrackerId,
+                //     projectKey: @event.ProjectKey,
+                //     targetedProjectKey: @event.TargetedProjectKey);
+
+                
 
                 _logger.LogInformation("Environment data migration completed successfully from {ProjectKey} to {TargetedProjectKey}",
                     @event.ProjectKey, @event.TargetedProjectKey);
@@ -82,7 +87,7 @@ namespace Worker.Consumers
                             QueueName = Constants.EnvironmentDataMigrationQueue
                         };
 
-                        await _migrationRepository.UpdateMigrationTrackerAsync(@event.TrackerId, languageServiceErrorStatus);
+                        // await _migrationRepository.UpdateMigrationTrackerAsync(@event.TrackerId, languageServiceErrorStatus);
                         _logger.LogInformation("Updated migration tracker {TrackerId} with error status", @event.TrackerId);
                     }
                     catch (Exception trackerEx)
@@ -92,6 +97,7 @@ namespace Worker.Consumers
                 }
 
                 // Send notification for failed migration
+                await NotifyMigrationCompletion(@event.TrackerId, isSuccess: false, errorMessage: ex.Message);
                 await _keyManagementService.PublishEnvironmentDataMigrationNotification(
                     response: false,
                     messageCoRelationId: @event.TrackerId,
@@ -202,6 +208,23 @@ namespace Worker.Consumers
 
             _logger.LogInformation("BlocksLanguageKey migration completed from {ProjectKey} to {TargetedProjectKey}",
                 @event.ProjectKey, @event.TargetedProjectKey);
+        }
+
+        private async Task NotifyMigrationCompletion(string trackerId, bool isSuccess, string? errorMessage = null)
+        {
+            var completionEvent = new MigrationCompletionEvent
+            {
+                TrackerId = trackerId,
+                ServiceName = "Language",
+                IsSuccess = isSuccess,
+                ErrorMessage = errorMessage
+            };
+
+            await _messageClient.SendToConsumerAsync(new ConsumerMessage<MigrationCompletionEvent>
+            {
+                ConsumerName = "blocks_migration_completion_listener",
+                Payload = completionEvent
+            });
         }
     }
 }
