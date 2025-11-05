@@ -220,9 +220,9 @@ namespace Worker.Consumers
                 ErrorMessage = errorMessage
             };
 
-            await _messageClient.SendToConsumerAsync(new ConsumerMessage<MigrationCompletionEvent>
+            await _messageClient.SendToMassConsumerAsync(new ConsumerMessage<MigrationCompletionEvent>
             {
-                ConsumerName = "blocks_migration_completion_listener",
+                ConsumerName = "migration_topic",
                 Payload = completionEvent
             });
         }
