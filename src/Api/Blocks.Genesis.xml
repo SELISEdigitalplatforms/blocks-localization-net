@@ -4,6 +4,11 @@
         <name>Api</name>
     </assembly>
     <members>
+        <member name="T:Api.Controllers.ConfigController">
+            <summary>
+            Handles operations related to language configuration settings.
+            </summary>
+        </member>
         <member name="T:Api.Controllers.KeyController">
             <summary>
             API Controller for managing Key operations.
