@@ -38,15 +38,15 @@ namespace DomainService.Services.HelperService
                     {
                         IsSuccess = response,
                         title = "Uilm Export Completed",
-                        description = "Completed export"
-                    }
+                        description = "Completed export",
+						FileId = fileId
+					}
                 }),
                 SaveDenormalizedPayloadAsAnObject = false,
                 ConfiguratoinName = _configuration["BlocksAppNotificationReceiver"],
                 ContentAvailable = true,
                 ResponseKey = messageCoRelationId,
                 ResponseValue = response.ToString(),
-                FileId = fileId
 			};
 
             var blocksKey = _configuration["RootTenantId"];
