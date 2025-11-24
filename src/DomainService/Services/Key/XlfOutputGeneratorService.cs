@@ -23,6 +23,12 @@ namespace DomainService.Services
         public override Task<T> GenerateAsync<T>(List<BlocksLanguage> languageSettings, List<BlocksLanguageModule> applications,
             List<BlocksLanguageKey> resourceKeys, string defaultLanguage)
         {
+            return GenerateAsync<T>(languageSettings, applications, resourceKeys, defaultLanguage, null);
+        }
+
+        public override Task<T> GenerateAsync<T>(List<BlocksLanguage> languageSettings, List<BlocksLanguageModule> applications,
+            List<BlocksLanguageKey> resourceKeys, string defaultLanguage, Dictionary<string, Dictionary<string, string>> referenceTranslations)
+        {
             try
             {
                 _logger?.LogInformation("++ Started XlfOutputGeneratorService: GenerateAsync()...");
@@ -71,7 +77,14 @@ namespace DomainService.Services
                             var module = applications.FirstOrDefault(x => x.ItemId == moduleGroup.Key);
                             var moduleName = module?.ModuleName ?? "Unknown";
 
-                            var fileElement = CreateFileElement(ns, defaultLanguage, targetLanguage, moduleName, moduleGroup.ToList());
+                            // Get reference translations for this language if available
+                            Dictionary<string, string> languageReferenceTranslations = null;
+                            if (referenceTranslations != null && referenceTranslations.ContainsKey(targetLanguage))
+                            {
+                                languageReferenceTranslations = referenceTranslations[targetLanguage];
+                            }
+
+                            var fileElement = CreateFileElement(ns, defaultLanguage, targetLanguage, moduleName, moduleGroup.ToList(), languageReferenceTranslations);
                             xliff.Add(fileElement);
                         }
 
@@ -109,7 +122,7 @@ namespace DomainService.Services
         }
 
         private XElement CreateFileElement(XNamespace ns, string sourceLanguage, string targetLanguage,
-            string moduleName, List<BlocksLanguageKey> resourceKeys)
+            string moduleName, List<BlocksLanguageKey> resourceKeys, Dictionary<string, string>? referenceTranslations)
         {
             var fileElement = new XElement(ns + "file",
                 new XAttribute("source-language", sourceLanguage),
@@ -149,21 +162,32 @@ namespace DomainService.Services
                 // Add source
                 transUnit.Add(new XElement(ns + "source", sourceResource.Value));
 
-                // Add target if exists
+                // Determine target value: prefer database value, then reference translation, then empty
+                string? targetValue = null;
+                string targetState = "needs-translation";
+
                 if (targetResource != null && !string.IsNullOrEmpty(targetResource.Value))
                 {
-                    var targetElement = new XElement(ns + "target", targetResource.Value);
+                    // Use value from database
+                    targetValue = targetResource.Value;
+                    targetState = resourceKey.IsPartiallyTranslated ? "needs-translation" : "translated";
+                }
+                else if (referenceTranslations != null &&
+                         !string.IsNullOrEmpty(resourceKey.KeyName) &&
+                         referenceTranslations.TryGetValue(resourceKey.KeyName, out var refTranslation) &&
+                         !string.IsNullOrEmpty(refTranslation))
+                {
+                    // Use reference translation if no database value exists
+                    targetValue = refTranslation;
+                    targetState = "translated";
+                    _logger?.LogInformation("Using reference translation for key: {KeyName} in language: {Language}", resourceKey.KeyName, targetLanguage);
+                }
 
-                    // Add state attribute based on whether it's fully translated
-                    if (resourceKey.IsPartiallyTranslated)
-                    {
-                        targetElement.Add(new XAttribute("state", "needs-translation"));
-                    }
-                    else
-                    {
-                        targetElement.Add(new XAttribute("state", "translated"));
-                    }
-
+                // Add target element
+                if (!string.IsNullOrEmpty(targetValue))
+                {
+                    var targetElement = new XElement(ns + "target", targetValue);
+                    targetElement.Add(new XAttribute("state", targetState));
                     transUnit.Add(targetElement);
                 }
                 else
