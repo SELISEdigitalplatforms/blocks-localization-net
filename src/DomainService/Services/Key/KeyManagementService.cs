@@ -736,15 +736,13 @@ namespace DomainService.Services
 
         public async Task SendUilmExportEvent(UilmExportRequest request)
         {
-            var exportFileId = Guid.NewGuid().ToString();
-
             await _messageClient.SendToConsumerAsync(
                 new ConsumerMessage<UilmExportEvent>
                 {
                     ConsumerName = Utilities.Constants.UilmImportExportQueue,
                     Payload = new UilmExportEvent
                     {
-                        FileId = exportFileId,
+                        FileId = request.ReferenceFileId,
                         MessageCoRelationId = request.MessageCoRelationId,
                         ProjectKey = request.ProjectKey,
                         AppIds = request.AppIds,
@@ -752,8 +750,7 @@ namespace DomainService.Services
                         EndDate = request.EndDate,
                         StartDate = request.StartDate,
                         Languages = request.Languages,
-                        OutputType = request.OutputType,
-                        ReferenceFileId = request.ReferenceFileId
+                        OutputType = request.OutputType
                     }
                 }
             );
