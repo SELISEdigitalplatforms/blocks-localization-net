@@ -436,9 +436,7 @@ namespace DomainService.Services
 
         public static List<Resource> GetMissingResources(string keyName, List<Resource> resources, Resource defaultResource, string defaultLanguage)
         {
-            return resources.Where(x => x.Culture != defaultLanguage && (x.Value == keyName || x.Value == null || x.Value == ""
-                                                                || x.Value == $"{defaultResource?.Value} {x.Culture.ToUpper()}"
-                                                                || x.Value == $"{defaultResource?.Value}")).ToList();
+            return resources.Where(x => x.Culture != defaultLanguage && (x.Value == "" || x.Value == null)).ToList();
         }
 
         public void CompareAndAddResources(List<Resource> missingResources, IEnumerable<Resource> resources,
