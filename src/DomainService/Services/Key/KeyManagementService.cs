@@ -624,7 +624,7 @@ namespace DomainService.Services
 
                 string resourceValue = resource == null ? "[ KEY MISSING ]" : resource.Value;
 
-                AssignToDictionary(dictionary: dictionary, keyPath: reosurceKey.KeyName, value: resourceValue);
+                dictionary[reosurceKey.KeyName] = resourceValue;
             });
         }
         private void AssignResourceKeysToDictionaryForKeyMode(
