@@ -184,7 +184,7 @@ namespace Worker.Consumers
             }).ToList();
 
             // Bulk upsert keys using repository and get information about what was actually affected
-            var upsertResult = await _migrationRepository.BulkUpsertKeysAsync(targetKeys, @event.TargetedProjectKey, @event.ShouldOverWriteExistingData);
+            var upsertResult = await _migrationRepository.BulkUpsertKeysAsync(targetKeys, existingTargetKeys, @event.TargetedProjectKey, @event.ShouldOverWriteExistingData);
 
             var operationType = @event.ShouldOverWriteExistingData ? "upserted" : "inserted new";
             var affectedKeysCount = @event.ShouldOverWriteExistingData ? targetKeys.Count : upsertResult.InsertedKeys.Count;

@@ -10,7 +10,7 @@ namespace DomainService.Repositories
         Task<List<BlocksLanguageKey>> GetAllKeysAsync(string tenantId);
         Task<List<BlocksLanguageKey>> GetExistingKeysByItemIdsAsync(List<string> itemIds, string tenantId);
         Task BulkUpsertModulesAsync(List<BlocksLanguageModule> modules, string tenantId, bool shouldOverwrite);
-        Task<BulkUpsertResult> BulkUpsertKeysAsync(List<BlocksLanguageKey> keys, string tenantId, bool shouldOverwrite);
+        Task<BulkUpsertResult> BulkUpsertKeysAsync(List<BlocksLanguageKey> keys, List<BlocksLanguageKey> existingTargetKeys, string tenantId, bool shouldOverwrite);
         Task UpdateMigrationTrackerAsync(string trackerId, ServiceMigrationStatus LanguageServiceStatus);
     }
 

@@ -95,7 +95,7 @@ namespace DomainService.Repositories
             }
         }
 
-        public async Task<BulkUpsertResult> BulkUpsertKeysAsync(List<BlocksLanguageKey> keys, string tenantId, bool shouldOverwrite)
+        public async Task<BulkUpsertResult> BulkUpsertKeysAsync(List<BlocksLanguageKey> keys, List<BlocksLanguageKey> existingTargetKeys, string tenantId, bool shouldOverwrite)
         {
             var result = new BulkUpsertResult();
             if (!keys.Any()) return result;
@@ -103,10 +103,23 @@ namespace DomainService.Repositories
             var database = _dbContextProvider.GetDatabase(tenantId);
             var collection = database.GetCollection<BlocksLanguageKey>(_keysCollectionName);
 
+            // Create a dictionary for quick lookup of existing keys by ItemId
+            var existingKeysDict = existingTargetKeys?.ToDictionary(k => k.ItemId, k => k) ?? new Dictionary<string, BlocksLanguageKey>();
+
             if (shouldOverwrite)
             {
-                // Replace existing + insert new
-                var bulkOps = keys.Select(key =>
+                // Merge resources and replace existing + insert new
+                var keysToUpsert = keys.Select(key =>
+                {
+                    if (existingKeysDict.TryGetValue(key.ItemId, out var existingKey) && existingKey.Resources != null && key.Resources != null)
+                    {
+                        // Merge resources: new resources override existing ones by culture, remaining existing resources are kept
+                        key.Resources = MergeResources(existingKey.Resources, key.Resources);
+                    }
+                    return key;
+                }).ToList();
+
+                var bulkOps = keysToUpsert.Select(key =>
                 {
                     var filter = Builders<BlocksLanguageKey>.Filter.Eq(k => k.ItemId, key.ItemId);
                     return new ReplaceOneModel<BlocksLanguageKey>(filter, key) { IsUpsert = true };
@@ -115,9 +128,9 @@ namespace DomainService.Repositories
                 var bulkResult = await collection.BulkWriteAsync(bulkOps);
                 
                 // When shouldOverwrite is true, all keys are considered "upserted" for timeline purposes
-                result.UpsertedKeys = keys.ToList();
-                result.InsertedKeys = keys.Where(k => bulkResult.Upserts.Any(u => u.Id == k.ItemId)).ToList();
-                result.UpdatedKeys = keys.Except(result.InsertedKeys).ToList();
+                result.UpsertedKeys = keysToUpsert.ToList();
+                result.InsertedKeys = keysToUpsert.Where(k => bulkResult.Upserts.Any(u => u.Id == k.ItemId)).ToList();
+                result.UpdatedKeys = keysToUpsert.Except(result.InsertedKeys).ToList();
             }
             else
             {
@@ -161,6 +174,32 @@ namespace DomainService.Repositories
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Merges existing and new resources by culture.
+        /// - If a culture exists in both, the new resource replaces the existing one.
+        /// - If a culture only exists in new resources, it is added.
+        /// - All remaining existing resources (cultures not in new) are kept.
+        /// </summary>
+        private Resource[] MergeResources(Resource[] existingResources, Resource[] newResources)
+        {
+            var newResourcesByCulture = newResources.ToDictionary(r => r.Culture, r => r);
+            var mergedResources = new List<Resource>();
+
+            // First, add all existing resources that are NOT in new resources (keep them as-is)
+            foreach (var existingResource in existingResources)
+            {
+                if (!newResourcesByCulture.ContainsKey(existingResource.Culture))
+                {
+                    mergedResources.Add(existingResource);
+                }
+            }
+
+            // Then, add all new resources (they override existing ones with same culture)
+            mergedResources.AddRange(newResources);
+
+            return mergedResources.ToArray();
         }
     }
 }
