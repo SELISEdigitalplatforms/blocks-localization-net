@@ -372,5 +372,126 @@ namespace XUnitTest
             result.Worksheets.Should().NotBeEmpty();
         }
     }
+
+    public class XlfOutputGeneratorServiceTests
+    {
+        private readonly Mock<ILogger<XlfOutputGeneratorService>> _loggerMock;
+        private readonly XlfOutputGeneratorService _service;
+
+        public XlfOutputGeneratorServiceTests()
+        {
+            _loggerMock = new Mock<ILogger<XlfOutputGeneratorService>>();
+            _service = new XlfOutputGeneratorService(_loggerMock.Object);
+        }
+
+        [Fact]
+        public async Task GenerateAsync_WithTargetLanguages_ReturnsZipWithEntries()
+        {
+            var languages = new List<BlocksLanguage>
+            {
+                new BlocksLanguage { LanguageCode = "en-US", LanguageName = "English" },
+                new BlocksLanguage { LanguageCode = "fr-FR", LanguageName = "French" }
+            };
+
+            var modules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule { ItemId = "module-id", ModuleName = "auth" }
+            };
+
+            var keys = new List<BlocksLanguageKey>
+            {
+                new BlocksLanguageKey
+                {
+                    ItemId = "key-id",
+                    KeyName = "welcome.message",
+                    ModuleId = "module-id",
+                    Resources = new[]
+                    {
+                        new Resource { Culture = "en-US", Value = "Welcome" },
+                        new Resource { Culture = "fr-FR", Value = "Bienvenue" }
+                    }
+                }
+            };
+
+            var result = await _service.GenerateAsync<MemoryStream>(languages, modules, keys, "en-US");
+
+            result.Should().NotBeNull();
+            result.Length.Should().BeGreaterThan(0);
+
+            using var archive = new System.IO.Compression.ZipArchive(result, System.IO.Compression.ZipArchiveMode.Read, true);
+            var entry = archive.GetEntry("fr-FR.xlf");
+            entry.Should().NotBeNull();
+
+            using var reader = new StreamReader(entry!.Open());
+            var content = await reader.ReadToEndAsync();
+            content.Should().Contain("welcome.message");
+            content.Should().Contain("Bienvenue");
+        }
+
+        [Fact]
+        public async Task GenerateAsync_UsesReferenceTranslations_WhenTargetMissing()
+        {
+            var languages = new List<BlocksLanguage>
+            {
+                new BlocksLanguage { LanguageCode = "en-US", LanguageName = "English" },
+                new BlocksLanguage { LanguageCode = "de-DE", LanguageName = "German" }
+            };
+
+            var modules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule { ItemId = "module-id", ModuleName = "auth" }
+            };
+
+            var keys = new List<BlocksLanguageKey>
+            {
+                new BlocksLanguageKey
+                {
+                    ItemId = "key-id",
+                    KeyName = "welcome.message",
+                    ModuleId = "module-id",
+                    Resources = new[]
+                    {
+                        new Resource { Culture = "en-US", Value = "Welcome" }
+                    }
+                }
+            };
+
+            var referenceTranslations = new Dictionary<string, Dictionary<string, string>>
+            {
+                ["de-DE"] = new Dictionary<string, string>
+                {
+                    { "welcome.message", "Willkommen" }
+                }
+            };
+
+            var result = await _service.GenerateAsync<MemoryStream>(languages, modules, keys, "en-US", referenceTranslations);
+
+            result.Should().NotBeNull();
+            using var archive = new System.IO.Compression.ZipArchive(result, System.IO.Compression.ZipArchiveMode.Read, true);
+            var entry = archive.GetEntry("de-DE.xlf");
+            entry.Should().NotBeNull();
+
+            using var reader = new StreamReader(entry!.Open());
+            var content = await reader.ReadToEndAsync();
+            content.Should().Contain("Willkommen");
+            content.Should().Contain("state=\"translated\"");
+        }
+
+        [Fact]
+        public async Task GenerateAsync_NoTargetLanguages_ReturnsNull()
+        {
+            var languages = new List<BlocksLanguage>
+            {
+                new BlocksLanguage { LanguageCode = "en-US", LanguageName = "English" }
+            };
+
+            var modules = new List<BlocksLanguageModule>();
+            var keys = new List<BlocksLanguageKey>();
+
+            var result = await _service.GenerateAsync<MemoryStream>(languages, modules, keys, "en-US");
+
+            result.Should().BeNull();
+        }
+    }
 }
 

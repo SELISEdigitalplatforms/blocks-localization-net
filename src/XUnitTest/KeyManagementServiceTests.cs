@@ -4,6 +4,7 @@ using DomainService.Services;
 using DomainService.Services.HelperService;
 using DomainService.Shared;
 using DomainService.Shared.Events;
+using DomainService.Shared.Utilities;
 using FluentAssertions;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
@@ -98,6 +99,107 @@ namespace XUnitTest
             result.Should().NotBeNull();
             result.Success.Should().BeTrue();
             _keyRepositoryMock.Verify(r => r.SaveKeyAsync(It.IsAny<BlocksLanguageKey>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task GenerateAsync_WithModule_GeneratesFilesAndNotifies()
+        {
+            var languages = new List<Language>
+            {
+                new Language { LanguageCode = "en-US", LanguageName = "English" }
+            };
+            var modules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule { ItemId = "module-id", ModuleName = "auth" }
+            };
+            var keys = new List<Key>
+            {
+                new Key
+                {
+                    ItemId = "key-id",
+                    KeyName = "welcome",
+                    ModuleId = "module-id",
+                    Resources = new[] { new Resource { Culture = "en-US", Value = "Welcome" } }
+                }
+            };
+
+            _languageManagementServiceMock.Setup(m => m.GetLanguagesAsync())
+                .ReturnsAsync(languages);
+            _moduleManagementServiceMock.Setup(m => m.GetModulesAsync(It.IsAny<string>()))
+                .ReturnsAsync(modules);
+            _keyRepositoryMock.Setup(r => r.GetAllKeysByModuleAsync("module-id"))
+                .ReturnsAsync(keys);
+            _keyRepositoryMock.Setup(r => r.DeleteOldUilmFiles(It.IsAny<List<UilmFile>>()))
+                .ReturnsAsync(0L);
+            _keyRepositoryMock.Setup(r => r.SaveNewUilmFiles(It.IsAny<List<UilmFile>>()))
+                .ReturnsAsync(true);
+            _notificationServiceMock.Setup(n => n.NotifyExtensionEvent(true, It.IsAny<string>()))
+                .ReturnsAsync(true);
+
+            var command = new GenerateUilmFilesEvent
+            {
+                ModuleId = "module-id",
+                ProjectKey = "proj"
+            };
+
+            var result = await _service.GenerateAsync(command);
+
+            result.Should().BeTrue();
+            _keyRepositoryMock.Verify(r => r.SaveNewUilmFiles(It.IsAny<List<UilmFile>>()), Times.AtLeastOnce);
+            _notificationServiceMock.Verify(n => n.NotifyExtensionEvent(true, "proj"), Times.Once);
+        }
+
+        [Fact]
+        public async Task SendTranslateAllEvent_PublishesToQueue()
+        {
+            var request = new TranslateAllRequest
+            {
+                MessageCoRelationId = "corr",
+                ProjectKey = "proj",
+                DefaultLanguage = "en-US"
+            };
+
+            await _service.SendTranslateAllEvent(request);
+
+            _messageClientMock.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<TranslateAllEvent>>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task SendGenerateUilmFilesEvent_PublishesToQueue()
+        {
+            var request = new GenerateUilmFilesRequest
+            {
+                Guid = "guid",
+                ProjectKey = "proj",
+                ModuleId = "module"
+            };
+
+            await _service.SendGenerateUilmFilesEvent(request);
+
+            _messageClientMock.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<GenerateUilmFilesEvent>>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task SendUilmExportEvent_PublishesToQueueWithFileId()
+        {
+            ConsumerMessage<UilmExportEvent>? captured = null;
+            _messageClientMock.Setup(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<UilmExportEvent>>()))
+                .Callback<ConsumerMessage<UilmExportEvent>>(msg => captured = msg)
+                .Returns(Task.CompletedTask);
+
+            var request = new UilmExportRequest
+            {
+                ProjectKey = "proj",
+                AppIds = new List<string> { "module" },
+                Languages = new List<string> { "en-US" },
+                OutputType = OutputType.Json
+            };
+
+            await _service.SendUilmExportEvent(request);
+
+            captured.Should().NotBeNull();
+            captured!.Payload.FileId.Should().NotBeNullOrEmpty();
+            _messageClientMock.Verify(m => m.SendToConsumerAsync(It.IsAny<ConsumerMessage<UilmExportEvent>>()), Times.Once);
         }
 
         [Fact]
