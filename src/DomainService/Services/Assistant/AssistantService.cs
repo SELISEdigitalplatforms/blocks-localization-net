@@ -76,18 +76,13 @@ namespace DomainService.Services
 
         public string FormatAiTextForSuggestTranslation(string aiText)
         {
-            if (string.IsNullOrWhiteSpace(aiText))
-            {
-                return string.Empty;
-            }
-
             string output = null;
 
             var trimmedAiText = aiText?.Replace("\"", "").Replace("'", "");
-            if (!string.IsNullOrEmpty(trimmedAiText) && trimmedAiText.Contains(":"))
+            if (trimmedAiText.Contains(":"))
             {
                 string[] parts = trimmedAiText.Split(':');
-                output = parts.Length > 1 ? parts[1] : trimmedAiText;
+                output = parts[1];
             }
             else
             {
@@ -95,7 +90,7 @@ namespace DomainService.Services
             }
 
             char[] charsToTrim = { ' ', '\t', '\n' };
-            string trimmedOutput = output?.Trim(charsToTrim) ?? string.Empty;
+            string trimmedOutput = output.Trim(charsToTrim);
 
             return trimmedOutput;
         }
