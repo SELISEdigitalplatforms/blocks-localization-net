@@ -8,9 +8,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 ApplicationConfigurations.ConfigureApiEnv(builder, args);
 var services = builder.Services;
+var localizationSecret = await LocalizationSecret.ProcessBlocksSecret(VaultType.Azure);
+
 
 services.AddHealthChecks();
-builder.Services.RegisterApplicationServices();
+builder.Services.RegisterApplicationServices(localizationSecret);
 ApplicationConfigurations.ConfigureServices(services, Constants.GetMessageConfiguration());
 ApplicationConfigurations.ConfigureApi(services);
 
