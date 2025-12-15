@@ -33,7 +33,7 @@ namespace DomainService.Services
             _aiCompletionUrl = _configuration["AiCompletionUrl"];
             _chatGptTemperature = _configuration["ChatGptTemperature"];
             _httpClient = httpClient;
-            _key = _localizationSecret.ChatGptEncryptionKey;
+            _key = $"{_localizationSecret.ChatGptEncryptionKey}";
         }
 
 
@@ -156,26 +156,14 @@ namespace DomainService.Services
 
         private string GetDecryptedSecret(string encryptedText)
         {
-            try
+            var salt = GetSalt();
+            if (salt is null)
             {
-                _logger.LogInformation($"Attempting decryption. EncryptedText length: {encryptedText?.Length}, Key length: {_key?.Length}");
-
-                var salt = GetSalt();
-                if (salt is null)
-                {
-                    throw new ArgumentException("Salt is null");
-                }
-
-                _logger.LogInformation($"Salt length: {salt.Length}");
-
-                var decryptedValue = Decrypt(encryptedText, _key, salt);
-                return decryptedValue;
+                throw new ArgumentException("Salt is null");
             }
-            catch (CryptographicException ex)
-            {
-                _logger.LogError($"Decryption failed. This usually means the encrypted value was created with different key/salt. Error: {ex.Message}");
-                throw;
-            }
+
+            var decryptedValue = Decrypt(encryptedText, _key ?? _localizationSecret.ChatGptEncryptionKey, salt);
+            return decryptedValue;
         }
 
         public byte[] GetSalt()
@@ -184,9 +172,14 @@ namespace DomainService.Services
             _logger.LogInformation($"--$$--{salt}");
             _logger.LogInformation($"--$$--{_key}");
             _logger.LogInformation($"--$$--{_localizationSecret.ChatGptEncryptionKey}");
-            return JsonConvert.DeserializeObject<string[]>(salt)
+            var hexStrings = JsonConvert.DeserializeObject<string[]>(salt);
+            var bytes = hexStrings
                 .Select(hex => Convert.ToByte(hex, 16))
                 .ToArray();
+            byte[] byteArray = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+
+            return byteArray;
+
         }
 
         private static void TemperatureValidator(double temperature)
@@ -203,10 +196,9 @@ namespace DomainService.Services
 
             using (var aesAlg = Aes.Create())
             {
-                var keyDerivationFunction = new Rfc2898DeriveBytes(key, salt, 1000, HashAlgorithmName.SHA256);
+                var keyDerivationFunction = new Rfc2898DeriveBytes(key, salt);
                 aesAlg.Key = keyDerivationFunction.GetBytes(aesAlg.KeySize / 8);
                 aesAlg.IV = keyDerivationFunction.GetBytes(aesAlg.BlockSize / 8);
-                aesAlg.Padding = PaddingMode.PKCS7; // Explicitly set padding mode
 
                 var decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
 
