@@ -195,7 +195,7 @@
             A static class responsible for registering application services and validators.
             </summary>
         </member>
-        <member name="M:Api.ServiceRegistry.RegisterApplicationServices(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+        <member name="M:Api.ServiceRegistry.RegisterApplicationServices(Microsoft.Extensions.DependencyInjection.IServiceCollection,DomainService.Shared.Entities.ILocalizationSecret)">
             <summary>
             Registers services and validators related to modules, languages, and keys.
             </summary>

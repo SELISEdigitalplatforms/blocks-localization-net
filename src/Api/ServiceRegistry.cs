@@ -2,6 +2,7 @@
 using DomainService.Repositories;
 using DomainService.Services;
 using DomainService.Services.HelperService;
+using DomainService.Shared.Entities;
 using DomainService.Validation;
 using FluentValidation;
 using Storage.DomainService.Storage;
@@ -20,8 +21,10 @@ namespace Api
         /// </summary>
         /// <param name="services">The collection of services to which dependencies are registered.</param>
 
-        public static void RegisterApplicationServices(this IServiceCollection services)
+        public static void RegisterApplicationServices(this IServiceCollection services, ILocalizationSecret localizationSecret)
         {
+            services.AddSingleton<ILocalizationSecret>(localizationSecret);
+
             services.AddSingleton<IModuleManagementService, ModuleManagementService>();
             services.AddSingleton<IModuleRepository, ModuleRepository>();
             services.AddSingleton<IValidator<Module>, ModuleValidator>();

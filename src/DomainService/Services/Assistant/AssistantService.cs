@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using DomainService.Shared.Entities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Polly.CircuitBreaker;
@@ -17,18 +18,22 @@ namespace DomainService.Services
         private readonly string _aiCompletionUrl;
         private readonly string _chatGptTemperature;
         private readonly HttpClient _httpClient;
+        private readonly ILocalizationSecret _localizationSecret;
+
         public AssistantService(
             ILogger<AssistantService> logger,
             IConfiguration configuration,
-            HttpClient httpClient
+            HttpClient httpClient,
+            ILocalizationSecret localizationSecret
         )
         {
+            _localizationSecret = localizationSecret;
             _logger = logger;
             _configuration = configuration;
-            _key = _configuration["Key"];
             _aiCompletionUrl = _configuration["AiCompletionUrl"];
             _chatGptTemperature = _configuration["ChatGptTemperature"];
             _httpClient = httpClient;
+            _key = _localizationSecret.ChatGptEncryptionKey;
         }
 
 
@@ -62,7 +67,7 @@ namespace DomainService.Services
 
         public string GenerateSuggestTranslationContext(SuggestLanguageRequest request)
         {
-            var context = !string.IsNullOrWhiteSpace(request.ElementDetailContext) ? request.ElementDetailContext : 
+            var context = !string.IsNullOrWhiteSpace(request.ElementDetailContext) ? request.ElementDetailContext :
                 $"The requirement is to translate a user interface element of a webpage. Output only the translated text (no quotes, no explanation).";
             //var context = !string.IsNullOrWhiteSpace(request.ElementDetailContext) ? request.ElementDetailContext: $"The requirement is to translate a user interface element of a webpage. The output should include only the text of the specified element, without any additional text or quotes.";
             // context += request.MaxCharacterLength > 0 ? $"Ideally,it should not exceed {request.MaxCharacterLength} Characters." : "";
@@ -161,8 +166,13 @@ namespace DomainService.Services
             return decryptedValue;
         }
 
-        public byte[] GetSalt() =>
-            _configuration.GetSection("Salt").Get<byte[]>();
+        public byte[] GetSalt()
+        {
+            var salt = _localizationSecret.ChatGptEncryptionSalt;
+            return JsonConvert.DeserializeObject<string[]>(salt)
+                .Select(hex => Convert.ToByte(hex, 16))
+                .ToArray();
+        }
 
         private static void TemperatureValidator(double temperature)
         {

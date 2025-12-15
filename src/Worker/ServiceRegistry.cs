@@ -6,7 +6,6 @@ using DomainService.Services.HelperService;
 using DomainService.Shared.Events;
 using DomainService.Validation;
 using FluentValidation;
-using Microsoft.Extensions.DependencyInjection;
 using Storage.DomainService.Storage;
 using Storage.DomainService.Storage.Validators;
 using Worker.Consumers;
@@ -18,7 +17,6 @@ namespace Worker
     {
         public static void RegisterApplicationServices(this IServiceCollection services)
         {
-
             services.AddSingleton<IConsumer<GenerateUilmFilesEvent>, GenerateUilmFilesConsumer>();
             services.AddSingleton<IConsumer<TranslateAllEvent>, TranslateAllEventConsumer>();
             services.AddSingleton<IConsumer<TranslateBlocksLanguageKeyEvent>, TranslateBlocksLanguageKeyEventConsumer>();
