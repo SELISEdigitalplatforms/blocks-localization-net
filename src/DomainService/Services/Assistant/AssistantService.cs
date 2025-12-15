@@ -169,6 +169,9 @@ namespace DomainService.Services
         public byte[] GetSalt()
         {
             var salt = _localizationSecret.ChatGptEncryptionSalt;
+            _logger.LogInformation($"--$$--{salt}");
+            _logger.LogInformation($"--$$--{_key}");
+            _logger.LogInformation($"--$$--{_localizationSecret.ChatGptEncryptionKey}");
             return JsonConvert.DeserializeObject<string[]>(salt)
                 .Select(hex => Convert.ToByte(hex, 16))
                 .ToArray();
