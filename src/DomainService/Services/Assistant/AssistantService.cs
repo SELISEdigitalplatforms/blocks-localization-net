@@ -169,17 +169,24 @@ namespace DomainService.Services
         public byte[] GetSalt()
         {
             var salt = _localizationSecret.ChatGptEncryptionSalt;
-            _logger.LogInformation($"--$$--{salt}");
-            _logger.LogInformation($"--$$--{_key}");
-            _logger.LogInformation($"--$$--{_localizationSecret.ChatGptEncryptionKey}");
+
+            if (string.IsNullOrWhiteSpace(salt))
+            {
+                throw new InvalidOperationException("ChatGptEncryptionSalt is not configured in Azure Vault");
+            }
+
             var hexStrings = JsonConvert.DeserializeObject<string[]>(salt);
+
+            if (hexStrings is null || hexStrings.Length == 0)
+            {
+                throw new InvalidOperationException("Salt configuration is invalid or empty");
+            }
+
             var bytes = hexStrings
                 .Select(hex => Convert.ToByte(hex, 16))
                 .ToArray();
-            byte[] byteArray = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
-            return byteArray;
-
+            return bytes; 
         }
 
         private static void TemperatureValidator(double temperature)
