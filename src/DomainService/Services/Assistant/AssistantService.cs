@@ -166,7 +166,7 @@ namespace DomainService.Services
                 .Select(hex => Convert.ToByte(hex, 16))
                 .ToArray();
 
-            var decryptedValue = Decrypt(encryptedText, temp_key, temp_salt);
+            var decryptedValue = Decrypt(encryptedText, key, salt);
 
             var rawText = "ZAFbQz7AndWyzXGUY0Zr+APwf2+/2bU3jITch5B+3ALnTrpA4B1yrpKyFhlbsgDFIVLhNOG4K28XSJaLwWIjUw==";
             var secretsMatch = encryptedText == rawText;
