@@ -155,33 +155,13 @@ namespace DomainService.Services
         {
             var key = _localizationSecret.ChatGptEncryptionKey;
             var salt = GetSalt();
+            
             if (salt is null)
             {
                 throw new ArgumentException("Salt is null");
             }
 
-            var temp_key = "rzKr8T9oCMn$c&57";
-            List<string> saltStr = new List<string>(["0x01", "0x02", "0x03", "0x04", "0x05", "0x06", "0x07", "0x08"]);
-            var temp_salt = saltStr
-                .Select(hex => Convert.ToByte(hex, 16))
-                .ToArray();
-
             var decryptedValue = Decrypt(encryptedText, key, salt);
-
-            var rawText = "ZAFbQz7AndWyzXGUY0Zr+APwf2+/2bU3jITch5B+3ALnTrpA4B1yrpKyFhlbsgDFIVLhNOG4K28XSJaLwWIjUw==";
-            var secretsMatch = encryptedText == rawText;
-            _logger.LogInformation($"=========== encryptedSecret: {encryptedText}");
-            _logger.LogInformation($"=========== encryptedSecretRaw: {rawText}");
-            _logger.LogInformation($"=========== Salt: {BitConverter.ToString(salt).Replace("-", " ")}");
-            _logger.LogInformation($"=========== Salt: {BitConverter.ToString(temp_salt).Replace("-", " ")}");
-            _logger.LogInformation($"=========== Key: {key}");
-            _logger.LogInformation($"=========== Key: {temp_key}");
-            _logger.LogInformation($"=========== Original secret matches temp_key: {secretsMatch}");
-            var keysMatch = key == temp_key;
-            _logger.LogInformation($"=========== Original key matches temp_key: {keysMatch}");
-            var saltsMatch = salt.SequenceEqual(temp_salt);
-            _logger.LogInformation($"=========== Original salt matches temp_salt: {saltsMatch}");
-
             return decryptedValue;
         }
 
