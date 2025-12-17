@@ -48,8 +48,9 @@ jobs:
         run: |
           $trx = Get-ChildItem -Recurse ./src/XUnitTest/TestResults -Filter *.trx
           if (-not $trx) { Write-Error "No TRX file found to convert"; exit 1 }
+          New-Item -ItemType Directory -Force -Path ./src/XUnitTest/TestResults/junit | Out-Null
           foreach ($f in $trx) {
-            ./tools/trx2junit $f.FullName -o ./src/XUnitTest/TestResults/junit
+            ./tools/trx2junit $f.FullName --out ./src/XUnitTest/TestResults/junit
           }
           
       - name: Publish Test Results
