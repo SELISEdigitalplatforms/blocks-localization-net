@@ -14,7 +14,6 @@ namespace DomainService.Services
     {
         private readonly ILogger<AssistantService> _logger;
         private readonly IConfiguration _configuration;
-        private readonly string _key;
         private readonly string _aiCompletionUrl;
         private readonly string _chatGptTemperature;
         private readonly HttpClient _httpClient;
@@ -32,7 +31,6 @@ namespace DomainService.Services
             _aiCompletionUrl = _configuration["AiCompletionUrl"];
             _chatGptTemperature = _configuration["ChatGptTemperature"];
             _httpClient = httpClient;
-            _key = $"{_localizationSecret.ChatGptEncryptionKey}";
         }
 
 
@@ -155,19 +153,14 @@ namespace DomainService.Services
 
         private string GetDecryptedSecret(string encryptedText)
         {
-            //var salt = GetSalt();
-            //if (salt is null)
-            //{
-            //    throw new ArgumentException("Salt is null");
-            //}
+            var key = _localizationSecret.ChatGptEncryptionKey;
+            var salt = GetSalt();
+            if (salt is null)
+            {
+                throw new ArgumentException("Salt is null");
+            }
 
-            var key = "rzKr8T9oCMn$c&57";
-            List<string> saltStr = new List<string>(["0x01", "0x02", "0x03", "0x04", "0x05", "0x06", "0x07", "0x08"]);
-            var bytes = saltStr
-                .Select(hex => Convert.ToByte(hex, 16))
-                .ToArray();
-
-            var decryptedValue = Decrypt(encryptedText, key, bytes);
+            var decryptedValue = Decrypt(encryptedText, key, salt);
             return decryptedValue;
         }
 
