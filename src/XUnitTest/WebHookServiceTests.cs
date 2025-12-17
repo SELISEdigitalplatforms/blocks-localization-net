@@ -28,7 +28,7 @@ namespace XUnitTest
         public async Task CallWebhook_WhenNoWebhookConfigured_ReturnsTrueAndSkipsHttp()
         {
             // Arrange
-            _blocksWebhookRepository.Setup(r => r.GetAsync()).ReturnsAsync((BlocksWebhook?)null);
+            _blocksWebhookRepository.Setup(r => r.GetAsync()).ReturnsAsync((BlocksWebhook)null!);
 
             // Act
             var result = await _service.CallWebhook(new { ok = true });
