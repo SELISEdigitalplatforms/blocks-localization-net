@@ -19,7 +19,6 @@ namespace DomainService.Services
         private readonly string _chatGptTemperature;
         private readonly HttpClient _httpClient;
         private readonly ILocalizationSecret _localizationSecret;
-
         public AssistantService(
             ILogger<AssistantService> logger,
             IConfiguration configuration,
@@ -156,20 +155,26 @@ namespace DomainService.Services
 
         private string GetDecryptedSecret(string encryptedText)
         {
-            var salt = GetSalt();
-            if (salt is null)
-            {
-                throw new ArgumentException("Salt is null");
-            }
+            //var salt = GetSalt();
+            //if (salt is null)
+            //{
+            //    throw new ArgumentException("Salt is null");
+            //}
 
-            var decryptedValue = Decrypt(encryptedText, _key ?? _localizationSecret.ChatGptEncryptionKey, salt);
+            var key = "rzKr8T9oCMn$c&57";
+            List<string> saltStr = new List<string>(["0x01", "0x02", "0x03", "0x04", "0x05", "0x06", "0x07", "0x08"]);
+            var bytes = saltStr
+                .Select(hex => Convert.ToByte(hex, 16))
+                .ToArray();
+
+            var decryptedValue = Decrypt(encryptedText, key, bytes);
             return decryptedValue;
         }
 
         public byte[] GetSalt()
         {
             var salt = _localizationSecret.ChatGptEncryptionSalt;
-
+            
             if (string.IsNullOrWhiteSpace(salt))
             {
                 throw new InvalidOperationException("ChatGptEncryptionSalt is not configured in Azure Vault");
