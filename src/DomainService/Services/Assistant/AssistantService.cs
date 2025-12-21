@@ -79,6 +79,11 @@ namespace DomainService.Services
 
         public string FormatAiTextForSuggestTranslation(string aiText)
         {
+            if (aiText == null)
+            {
+                _logger.LogError("FormatAiTextForSuggestTranslation -> aiText is null");
+                return String.Empty;
+            }
             string output = null;
 
             var trimmedAiText = aiText?.Replace("\"", "").Replace("'", "");
