@@ -5,7 +5,7 @@ namespace Blocks.Genesis
 {
     public sealed class LocalizationSecret : ILocalizationSecret
     {
-        public string ChatGptEncryptionSalt { get; set; }
+        public string ChatGptEncryptedSecret{ get; set; }
         public string ChatGptEncryptionKey { get; set; }
 
 
