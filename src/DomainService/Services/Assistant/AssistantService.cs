@@ -109,18 +109,13 @@ namespace DomainService.Services
                 double.TryParse(_chatGptTemperature, out var temperature);
                 TemperatureValidator(temperature);
 
-                var encryptedSecret = await GetEncryptedSecretFromMicroServiceConfig();
+                var encryptedSecret = await GetEncryptedSecret();
                 if (string.IsNullOrEmpty(encryptedSecret))
                 {
                     throw new ArgumentException("Get null value from MicroserviceConfig");
                 }
 
                 var secret = GetDecryptedSecret(encryptedSecret);
-                //var identityTokenResponse = new IdentityTokenResponse
-                //{
-                //    TokenType = "Bearer",
-                //    AccessToken = secret
-                //};
 
                 var model = new AiCompletionModel();
                 var payload = model.ConstructCommand(request.Message, request.Temperature);
@@ -144,13 +139,11 @@ namespace DomainService.Services
             return null;
         }
 
-        private async Task<string> GetEncryptedSecretFromMicroServiceConfig()
+        private async Task<string> GetEncryptedSecret()
         {
-            //var config = await _blocksAssistant.GetMicroServiceConfig(x => true);
-            //return config?.ChatGptSecretKey;
-            return "ZAFbQz7AndWyzXGUY0Zr+APwf2+/2bU3jITch5B+3ALnTrpA4B1yrpKyFhlbsgDFIVLhNOG4K28XSJaLwWIjUw==";
+            return _localizationSecret.ChatGptEncryptedSecret;
         }
-
+ 
         private string GetDecryptedSecret(string encryptedText)
         {
             var key = _localizationSecret.ChatGptEncryptionKey;
@@ -165,28 +158,8 @@ namespace DomainService.Services
             return decryptedValue;
         }
 
-        public byte[] GetSalt()
-        {
-            var salt = _localizationSecret.ChatGptEncryptionSalt;
-            
-            if (string.IsNullOrWhiteSpace(salt))
-            {
-                throw new InvalidOperationException("ChatGptEncryptionSalt is not configured in Azure Vault");
-            }
-
-            var hexStrings = JsonConvert.DeserializeObject<string[]>(salt);
-
-            if (hexStrings is null || hexStrings.Length == 0)
-            {
-                throw new InvalidOperationException("Salt configuration is invalid or empty");
-            }
-
-            var bytes = hexStrings
-                .Select(hex => Convert.ToByte(hex, 16))
-                .ToArray();
-
-            return bytes; 
-        }
+        public byte[] GetSalt() =>
+            _configuration.GetSection("Salt").Get<byte[]>();
 
         private static void TemperatureValidator(double temperature)
         {
