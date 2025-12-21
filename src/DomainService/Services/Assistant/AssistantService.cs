@@ -112,18 +112,13 @@ namespace DomainService.Services
                 double.TryParse(_chatGptTemperature, out var temperature);
                 TemperatureValidator(temperature);
 
-                var encryptedSecret = await GetEncryptedSecretFromMicroServiceConfig();
+                var encryptedSecret = await GetEncryptedSecret();
                 if (string.IsNullOrEmpty(encryptedSecret))
                 {
                     throw new ArgumentException("Get null value from MicroserviceConfig");
                 }
 
                 var secret = GetDecryptedSecret(encryptedSecret);
-                //var identityTokenResponse = new IdentityTokenResponse
-                //{
-                //    TokenType = "Bearer",
-                //    AccessToken = secret
-                //};
 
                 var model = new AiCompletionModel();
                 var payload = model.ConstructCommand(request.Message, request.Temperature);
@@ -147,13 +142,11 @@ namespace DomainService.Services
             return null;
         }
 
-        private async Task<string> GetEncryptedSecretFromMicroServiceConfig()
+        private async Task<string> GetEncryptedSecret()
         {
-            //var config = await _blocksAssistant.GetMicroServiceConfig(x => true);
-            //return config?.ChatGptSecretKey;
-            return "ZAFbQz7AndWyzXGUY0Zr+APwf2+/2bU3jITch5B+3ALnTrpA4B1yrpKyFhlbsgDFIVLhNOG4K28XSJaLwWIjUw==";
+            return _localizationSecret.ChatGptEncryptedSecret;
         }
-
+ 
         private string GetDecryptedSecret(string encryptedText)
         {
             var salt = GetSalt();
@@ -166,13 +159,8 @@ namespace DomainService.Services
             return decryptedValue;
         }
 
-        public byte[] GetSalt()
-        {
-            var salt = _localizationSecret.ChatGptEncryptionSalt;
-            return JsonConvert.DeserializeObject<string[]>(salt)
-                .Select(hex => Convert.ToByte(hex, 16))
-                .ToArray();
-        }
+        public byte[] GetSalt() =>
+            _configuration.GetSection("Salt").Get<byte[]>();
 
         private static void TemperatureValidator(double temperature)
         {
