@@ -41,7 +41,7 @@ namespace Api.Controllers
         /// <returns>An <see cref="ApiResponse"/> indicating the result of the save operation.</returns>
         
         [HttpPost]
-        [ProtectedEndPoint]
+        [Authorize]
         public async Task<ApiResponse> Save([FromBody] SaveModuleRequest module)
         {
             if (module == null) BadRequest(new BaseMutationResponse());
