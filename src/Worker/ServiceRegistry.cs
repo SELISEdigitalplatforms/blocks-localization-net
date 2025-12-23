@@ -3,6 +3,7 @@ using Blocks.Genesis;
 using DomainService.Repositories;
 using DomainService.Services;
 using DomainService.Services.HelperService;
+using DomainService.Shared.Entities;
 using DomainService.Shared.Events;
 using DomainService.Validation;
 using FluentValidation;
@@ -15,8 +16,9 @@ namespace Worker
 {
     public static class ServiceRegistry
     {
-        public static void RegisterApplicationServices(this IServiceCollection services)
+        public static void RegisterApplicationServices(this IServiceCollection services, ILocalizationSecret localizationSecret)
         {
+            services.AddSingleton<ILocalizationSecret>(localizationSecret);
             services.AddSingleton<IConsumer<GenerateUilmFilesEvent>, GenerateUilmFilesConsumer>();
             services.AddSingleton<IConsumer<TranslateAllEvent>, TranslateAllEventConsumer>();
             services.AddSingleton<IConsumer<TranslateBlocksLanguageKeyEvent>, TranslateBlocksLanguageKeyEventConsumer>();
