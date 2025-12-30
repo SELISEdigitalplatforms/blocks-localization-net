@@ -28,7 +28,7 @@ namespace Api.Controllers
         }
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint]
         //[ApiExplorerSettings(IgnoreApi = true)]
         public async Task<ApiResponse> SaveWebHook([FromBody] BlocksWebhook webhook)
         {

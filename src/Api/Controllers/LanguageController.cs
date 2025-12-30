@@ -39,7 +39,7 @@ namespace Api.Controllers
         
 
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint]
         public async Task<ApiResponse> Save(Language language)
         {
             if (language == null) BadRequest(new BaseMutationResponse());
@@ -66,7 +66,7 @@ namespace Api.Controllers
         /// <param name="request">The request containing the language name to delete.</param>
         /// <returns>An <see cref="IActionResult"/> indicating the success or failure of the delete operation.</returns>
         [HttpDelete]
-        [Authorize]
+        [ProtectedEndPoint]
         public async Task<IActionResult> Delete([FromQuery] DeleteLanguageRequest request)
         {
             if (request == null) BadRequest(new BaseMutationResponse());
@@ -94,7 +94,7 @@ namespace Api.Controllers
         /// <param name="request">The request containing the language name to set as default.</param>
         /// <returns>An <see cref="IActionResult"/> indicating the success or failure of the operation.</returns>
         [HttpPost]
-        [Authorize]
+        [ProtectedEndPoint]
         public async Task<IActionResult> SetDefault(SetDefaultLanguageRequest request)
         {
             if (request == null) BadRequest(new BaseMutationResponse());
