@@ -18,7 +18,6 @@ namespace DomainService.Services
         private readonly string _chatGptTemperature;
         private readonly HttpClient _httpClient;
         private readonly ILocalizationSecret _localizationSecret;
-
         public AssistantService(
             ILogger<AssistantService> logger,
             IConfiguration configuration,
@@ -147,16 +146,15 @@ namespace DomainService.Services
  
         private string GetDecryptedSecret(string encryptedText)
         {
+            var key = _localizationSecret.ChatGptEncryptionKey;
             var salt = GetSalt();
+            
             if (salt is null)
             {
                 throw new ArgumentException("Salt is null");
             }
 
-            var key = _localizationSecret.ChatGptEncryptionKey;
-
             var decryptedValue = Decrypt(encryptedText, key, salt);
-            
             return decryptedValue;
         }
 
