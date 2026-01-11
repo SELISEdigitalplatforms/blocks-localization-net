@@ -4,7 +4,6 @@ using DomainService.Utilities;
 
 const string _serviceName = "blocks-localization-api";
 var blocksSecret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName, VaultType.Azure);
-var localizationSecret = await LocalizationSecret.ProcessBlocksSecret(VaultType.Azure);
 var builder = WebApplication.CreateBuilder(args);
 
 ApplicationConfigurations.ConfigureApiEnv(builder, args);
