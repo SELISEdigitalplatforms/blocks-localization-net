@@ -5,8 +5,8 @@ on:
       - main
 
 env:
-  RUN_UNIT_TEST: 'false'
-  RUN_SONARQUBE: 'false'
+  RUN_UNIT_TEST: 'true'
+  RUN_SONARQUBE: 'true'
 
 jobs:
   initialization:
