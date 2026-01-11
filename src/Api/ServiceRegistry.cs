@@ -49,6 +49,8 @@ namespace Api
 
             services.AddSingleton<INotificationService, NotificationService>();
             services.AddSingleton<IHttpHelperServices, HttpHelperServices>();
+            services.AddSingleton<IWebHookService, WebHookService>();
+            services.AddSingleton<IBlocksWebhookRepository, BlocksWebhookRepository>();
 
         }
     }
