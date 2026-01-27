@@ -664,10 +664,3 @@ docker build -t blocks-localization-api --build-arg git_branch=stg .
 - Ensure all tests pass before submitting PR
 - Use meaningful commit messages
 
-## 📝 License
-
-Proprietary - SELISE Digital Platforms
-
----
-
-**Built with ❤️ by SELISE Digital Platforms**
