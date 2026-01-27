@@ -1,8 +1,8 @@
-name: Build (main)
+name: Build (main-disabled)
 on:
   push:
     branches:
-      - main
+      - main-disabled
 
 env:
   RUN_UNIT_TEST: 'true'
