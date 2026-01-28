@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 env:
-  SERVICE_TYPE: web
+  SERVICE_TYPE: api
 
 jobs:
   build-tag-pr:
@@ -31,52 +31,23 @@ jobs:
       - name: Determine next version
         id: determine-version
         run: |
-          LATEST_TAG=$(git tag | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
-          if [[ -z "$LATEST_TAG" ]]; then
-            LATEST_TAG="v1.0.0"
+          DATE_PREFIX="$(date +'%y.%m')"
+          LAST_RELEASE=$(git tag | grep -E "^${DATE_PREFIX}\\.[0-9]+$" | sort -V | tail -1)
+          if [[ -z "$LAST_RELEASE" ]]; then
+            RELEASE=1
+          else
+            RELEASE="${LAST_RELEASE##*.}"
+            RELEASE=$((RELEASE + 1))
           fi
 
-          VERSION=${LATEST_TAG#v}
-          IFS='.' read -r -a VERSION_PARTS <<< "$VERSION"
-          MAJOR=${VERSION_PARTS[0]}
-          MINOR=${VERSION_PARTS[1]}
-          PATCH=${VERSION_PARTS[2]}
-
-          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-          COMMITS=$(git log $LATEST_TAG..origin/$BRANCH_NAME --oneline)
-
-          BUMP="minor"
-          for COMMIT in $COMMITS; do
-            if echo "$COMMIT" | grep -i "breaking:" > /dev/null; then
-              BUMP="major"
-              break
-            elif echo "$COMMIT" | grep -i "feat:" > /dev/null; then
-              BUMP="minor"
-              break
-            elif echo "$COMMIT" | grep -i "fix:" > /dev/null; then
-              BUMP="patch"
-            fi
-          done
-
-          if [[ $BUMP == "major" ]]; then
-            MAJOR=$((MAJOR + 1))
-            MINOR=0
-            PATCH=0
-          elif [[ $BUMP == "minor" ]]; then
-            MINOR=$((MINOR + 1))
-            PATCH=0
-          elif [[ $BUMP == "patch" ]]; then
-            PATCH=$((PATCH + 1))
-          fi
-
-          NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
+          NEW_VERSION="${DATE_PREFIX}.${RELEASE}"
           echo "semantic_version=$NEW_VERSION" >> $GITHUB_ENV
 
       - name: Set image tag
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
           IMAGE_TAG="${SHORT_SHA}-${{ github.event.pull_request.number }}-${semantic_version}"
-          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/${SERVICE_NAME}-${SERVICE_TYPE}"
+          IMAGE_NAME="${{ secrets.BLOCKSOS_REPO }}/${SERVICE_NAME}-${SERVICE_TYPE}"
           echo "image_name=${IMAGE_NAME}" >> $GITHUB_ENV
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_ENV
 
