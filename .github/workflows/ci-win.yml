@@ -72,15 +72,15 @@ jobs:
       - name: Checkout inventory repo
         uses: actions/checkout@v4
         with:
-          repository: SELISEdigitalplatforms/blockscloud-inventory
+          repository: SELISEdigitalplatforms/blocks-inventory
           token: ${{ secrets.SELISE_GITHUB_PAT }}
-          path: blockscloud-inventory
+          path: blocks-inventory
 
       - name: Update inventory and open PR
         env:
           GH_TOKEN: ${{ secrets.SELISE_GITHUB_PAT }}
         run: |
-          cd blockscloud-inventory
+          cd blocks-inventory
           git checkout main
           git pull origin main
 
@@ -88,7 +88,7 @@ jobs:
           PR_NUM="${{ github.event.number }}"
 
           for TARGET_ENV in stg prod; do
-            BRANCH_NAME="${SERVICE_NAME}-${PR_NUM}-${TARGET_ENV}"
+            BRANCH_NAME="${SERVICE_NAME}-${SERVICE_TYPE}-${PR_NUM}-${TARGET_ENV}"
             TARGET_FILE="${SERVICE_NAME}/${SERVICE_TYPE}/${TARGET_ENV}.txt"
 
             git checkout -B "${BRANCH_NAME}" main
@@ -104,6 +104,6 @@ jobs:
             curl -s -o /tmp/pr.json -w "%{http_code}" \
               -H "Authorization: Bearer ${GH_TOKEN}" \
               -H "Accept: application/vnd.github+json" \
-              -X POST "https://api.github.com/repos/SELISEdigitalplatforms/blockscloud-inventory/pulls" \
+              -X POST "https://api.github.com/repos/SELISEdigitalplatforms/blocks-inventory/pulls" \
               -d "{\"title\":\"${SERVICE_NAME}-${SERVICE_TYPE} ${semantic_version} (${TARGET_ENV})\",\"body\":\"Auto-created from ${BRANCH_NAME}\",\"head\":\"${BRANCH_NAME}\",\"base\":\"main\"}"
           done
