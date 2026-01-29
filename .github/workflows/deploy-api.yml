@@ -1,4 +1,4 @@
-name: Web-Deploy
+name: Api-Deploy
 
 on:
   workflow_call:
@@ -31,7 +31,7 @@ on:
         required: true
 
 env:
-  SERVICE_TYPE: "webservice"
+  SERVICE_TYPE: "api"
 
 jobs:
   deploy:
@@ -40,7 +40,7 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
 
       - name: Set Environment Variables
         uses: ./.github/actions/setvars
@@ -53,24 +53,24 @@ jobs:
           varFilePath: ./.github/variables/versions.env
 
       - name: Azure login
-        uses: azure/login@v1.4.3
+        uses: azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: pull helm repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: SELISEdigitalplatforms/l0-yml-infrastructure-helm
           token: ${{ secrets.SELISE_GITHUB_PAT }}
 
       - name: Get K8s context
-        uses: azure/aks-set-context@v2.0
+        uses: azure/aks-set-context@90b8d62a4dcbc10dee5e91f9950cf5ea3d8617ca # v2.0
         with:
           resource-group: ${{ secrets.ClUSTER_RESOURCE_GROUP }}
           cluster-name: ${{ secrets.CLUSTER_NAME }}
 
       - name: Add kubelogin
-        uses: azure/use-kubelogin@v1
+        uses: azure/use-kubelogin@76597ae0fcbaace21b05e13a2cbf8daee2c6e820 # v1
         with:
           kubelogin-version: "v0.0.24"
 
@@ -78,7 +78,7 @@ jobs:
         run: |
           kubelogin convert-kubeconfig -l azurecli
       - name: Setup Helm Installer
-        uses: Azure/setup-helm@v3
+        uses: Azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # v3
 
       - name: Deploy To Kubernetes
         run: |

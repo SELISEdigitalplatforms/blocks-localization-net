@@ -4,10 +4,14 @@ on:
   push:
     branches:
       - dev
+permissions:
+  contents: read
 
 env:
   RUN_UNIT_TEST: 'true'
-  RUN_SONARQUBE: 'false'
+  RUN_SAST: 'true'
+  RUN_SCA: 'true'
+  RUN_DAST: 'true'
 
 jobs:
   initialization:
@@ -15,28 +19,51 @@ jobs:
     outputs:
       envvalue1: ${{ steps.setvar.outputs.envvar1 }}
       envvalue2: ${{ steps.setvar.outputs.envvar2 }}
+      envvalue3: ${{ steps.setvar.outputs.envvar3 }}
+      envvalue4: ${{ steps.setvar.outputs.envvar4 }}
     steps:
       - name: set value
         id: setvar
         run: |
-          echo "::set-output name=envvar1::$RUN_UNIT_TEST" 
-          echo "::set-output name=envvar2::$RUN_SONARQUBE"
+          echo "envvar1=$RUN_UNIT_TEST" >> "$GITHUB_OUTPUT"
+          echo "envvar2=$RUN_SAST" >> "$GITHUB_OUTPUT"
+          echo "envvar3=$RUN_SCA" >> "$GITHUB_OUTPUT"
+          echo "envvar4=$RUN_DAST" >> "$GITHUB_OUTPUT"
           
   test-job:
     if: ${{ needs.initialization.outputs.envvalue1=='true' }}
-    uses: ./.github/workflows/1_test.yml
+    uses: ./.github/workflows/1_unit_test.yml
+    permissions:
+      contents: read
+      checks: write
     needs: [initialization]
 
-  sonarqube-job:
+  sast-job:
     if: ${{ success() && needs.initialization.outputs.envvalue2=='true' }}
-    uses: ./.github/workflows/2_sonar.yml
+    uses: ./.github/workflows/2_sast.yml
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: read
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_GLOBAL }}
     needs: [initialization]
 
+  sca-job:
+    if: ${{ success() && needs.initialization.outputs.envvalue3=='true' }}
+    uses: ./.github/workflows/3_sca.yml
+    permissions:
+      contents: read
+    secrets:
+      DEPENDENCY_TRACK_API_KEY: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
+    needs: [initialization]
+
   cd-job-build:
-    if: ${{ github.event_name == 'push' && (success() || (needs.initialization.outputs.envvalue1=='false' && needs.initialization.outputs.envvalue2=='false')) }}
-    uses: ./.github/workflows/build-web.yml
+    if: ${{ github.event_name == 'push' && (needs.test-job.result == 'success' || needs.test-job.result == 'skipped') && (needs.sast-job.result == 'success' || needs.sast-job.result == 'skipped') && (needs.sca-job.result == 'success' || needs.sca-job.result == 'skipped') }}
+    uses: ./.github/workflows/build-api.yml
+    permissions:
+      contents: read
+      id-token: write
     with:
       VERSION: $DEV_VERSION
       CONTAINER_NAME: "dev-blocks-$SERVICE_NAME"
@@ -47,7 +74,10 @@ jobs:
     needs: [initialization]
 
   prod-deploy:
-    uses: ./.github/workflows/deploy-web.yml
+    uses: ./.github/workflows/deploy-api.yml
+    permissions:
+      contents: read
+      id-token: write
     with:
       VERSION: $DEV_VERSION
       CONTAINER_NAME: "dev-blocks-$SERVICE_NAME"
@@ -63,7 +93,10 @@ jobs:
     needs: [cd-job-build]
 
   non-prod-deploy:
-    uses: ./.github/workflows/deploy-web.yml
+    uses: ./.github/workflows/deploy-api.yml
+    permissions:
+      contents: read
+      id-token: write
     with:
       VERSION: $DEV_VERSION
       CONTAINER_NAME: "dev-blocks-$SERVICE_NAME"
@@ -78,21 +111,27 @@ jobs:
       CLUSTER_NAME: ${{ secrets.AKS_BLOCKS_DEV_NONPROD_CLUSTER }}
     needs: [cd-job-build]
 
-  cd-job-win-build:
-    if: ${{ github.event_name == 'push' && (success() || (needs.initialization.outputs.envvalue1=='false' && needs.initialization.outputs.envvalue2=='false')) }}
-    uses: ./.github/workflows/build-win.yml
+  cd-job-worker-build:
+    if: ${{ github.event_name == 'push' && (needs.test-job.result == 'success' || needs.test-job.result == 'skipped') && (needs.sast-job.result == 'success' || needs.sast-job.result == 'skipped') && (needs.sca-job.result == 'success' || needs.sca-job.result == 'skipped') }}
+    uses: ./.github/workflows/build-worker.yml
+    permissions:
+      contents: read
+      id-token: write
     with:
-      CONTAINER_NAME: "dev-blocks-$SERVICE_NAME-win"
+      CONTAINER_NAME: "dev-blocks-$SERVICE_NAME-worker"
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_AKS_BLOCKS_CREDENTIALS }}
       AZURE_CONTAINER_REGISTRY: ${{ secrets.AZURE_BLOCKS_CONTAINER_REGISTRY }}
       ACR_RESOURCE_GROUP: ${{ secrets.ClUSTER_AKS_BLOCKS_RESOURCE_GROUP }}
     needs: [initialization]
 
-  prod-deploy-win:
-    uses: ./.github/workflows/deploy-win.yml
+  prod-deploy-worker:
+    uses: ./.github/workflows/deploy-worker.yml
+    permissions:
+      contents: read
+      id-token: write
     with:
-      CONTAINER_NAME: "dev-blocks-$SERVICE_NAME-win"
+      CONTAINER_NAME: "dev-blocks-$SERVICE_NAME-worker"
       NAMESPACE: "dev-$REPO_NAME"
       SERVICE_NAME: $SERVICE_NAME
       CLUSTER_VALUES: "aks-blocks-dev"
@@ -102,12 +141,15 @@ jobs:
       ClUSTER_RESOURCE_GROUP: ${{ secrets.ClUSTER_AKS_BLOCKS_RESOURCE_GROUP }}
       AZURE_CONTAINER_REGISTRY: ${{ secrets.AZURE_BLOCKS_CONTAINER_REGISTRY }}
       CLUSTER_NAME: ${{ secrets.AKS_BLOCKS_DEV_CLUSTER }}
-    needs: [cd-job-win-build]
+    needs: [cd-job-worker-build]
 
-  non-prod-deploy-win:
-    uses: ./.github/workflows/deploy-win.yml
+  non-prod-deploy-worker:
+    uses: ./.github/workflows/deploy-worker.yml
+    permissions:
+      contents: read
+      id-token: write
     with:
-      CONTAINER_NAME: "dev-blocks-$SERVICE_NAME-win"
+      CONTAINER_NAME: "dev-blocks-$SERVICE_NAME-worker"
       NAMESPACE: "dev-$REPO_NAME"
       SERVICE_NAME: $SERVICE_NAME
       CLUSTER_VALUES: "aks-blocks-dev-nonprod"
@@ -117,4 +159,4 @@ jobs:
       ClUSTER_RESOURCE_GROUP: ${{ secrets.ClUSTER_AKS_BLOCKS_RESOURCE_GROUP }}
       AZURE_CONTAINER_REGISTRY: ${{ secrets.AZURE_BLOCKS_CONTAINER_REGISTRY }}
       CLUSTER_NAME: ${{ secrets.AKS_BLOCKS_DEV_NONPROD_CLUSTER }}
-    needs: [cd-job-win-build]
+    needs: [cd-job-worker-build]

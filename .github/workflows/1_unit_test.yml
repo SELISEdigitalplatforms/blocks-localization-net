@@ -1,5 +1,8 @@
 name: Run Tests
 on: workflow_call
+permissions:
+  contents: read
+  checks: write
 jobs:
   build:
     name: Test Execution
@@ -7,7 +10,7 @@ jobs:
 
     steps:
       
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
         with:
           fetch-depth: 0  
 
@@ -40,7 +43,7 @@ jobs:
           Get-Content coverage-report/Summary.txt
 
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
+        uses: EnricoMi/publish-unit-test-result-action@4a2f0813705cbec5ca60db5218954b492bd80168 # v1
         id: test-results
         if: always()
         with:

@@ -1,0 +1,55 @@
+name: Perform SCA Scan
+
+on:
+  workflow_call:
+    secrets:
+      DEPENDENCY_TRACK_API_KEY:
+        required: true
+permissions:
+  contents: read
+
+jobs:
+  sca-scan:
+    name: Generate SBOM and Upload to Dependency-Track
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Environment Variables
+        uses: ./.github/actions/setvars
+        with:
+          varFilePath: ./.github/variables/vars.env
+
+      - name: Restore Dependencies
+        working-directory: ./src
+        run: | 
+          # dotnet restore "./${{ env.SOLUTION_NAME }}" -s https://api.nuget.org/v3/index.json -s https://nuget.selise.biz/nuget
+          dotnet restore "./${{ env.SOLUTION_NAME }}" --configfile ../config/NuGetPackageSource.Config
+
+      - name: Generate CycloneDX SBOM (JSON) for .NET
+        uses: CycloneDX/gh-dotnet-generate-sbom@697f83d4a29dcc3fb5d78ecb1843d1ee4532a390 # v1
+        with:
+          path: ./src/${{ env.SOLUTION_NAME }}                     
+          json: true                             
+
+      - name: Upload SBOM as a workflow artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom-cyclonedx-json
+          path: bom.json
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload SBOM to Dependency-Track (action)
+        uses: DependencyTrack/gh-upload-sbom@48feab3080ff9e8f51f4d21861d9fc914eb744f5 # v3.1.0
+        with:
+          serverHostname: 'api-dt.seliseblocks.com'
+          apiKey: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
+          projectName: ${{ github.event.repository.name }}
+          projectVersion: ${{ github.ref_name }}
+          bomFilename: bom.json
+          autoCreate: true

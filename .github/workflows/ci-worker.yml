@@ -1,22 +1,26 @@
-name: CI (win)
+name: CI (worker)
 
 on:
   pull_request:
     types: [closed]
     branches: [main]
+  push:
+    branches: [dev]
+permissions:
+  contents: read
 
 env:
   SERVICE_TYPE: worker
 
 jobs:
   build-tag-pr:
-    if: ${{ github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
@@ -52,14 +56,14 @@ jobs:
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_ENV
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push image
         run: |
-          docker build -t "${image_name}:${image_tag}" --file "${WIN_DOCKERFILE}" --build-arg build_version="${semantic_version}" .
+          docker build -t "${image_name}:${image_tag}" --file "${WORKER_DOCKERFILE}" --build-arg build_version="${semantic_version}" .
           docker push "${image_name}:${image_tag}"
 
       - name: Create and push tag
@@ -70,7 +74,7 @@ jobs:
           git push origin "${semantic_version}"
 
       - name: Checkout inventory repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: SELISEdigitalplatforms/blocks-inventory
           token: ${{ secrets.SELISE_GITHUB_PAT }}
@@ -87,7 +91,7 @@ jobs:
           IMAGE_REF="${image_name}:${image_tag}"
           PR_NUM="${{ github.event.number }}"
 
-          for TARGET_ENV in stg prod; do
+          for TARGET_ENV in prod; do
             BRANCH_NAME="${SERVICE_NAME}-${SERVICE_TYPE}-${PR_NUM}-${TARGET_ENV}"
             TARGET_FILE="${SERVICE_NAME}/${SERVICE_TYPE}/${TARGET_ENV}.txt"
 
@@ -107,3 +111,62 @@ jobs:
               -X POST "https://api.github.com/repos/SELISEdigitalplatforms/blocks-inventory/pulls" \
               -d "{\"title\":\"${SERVICE_NAME}-${SERVICE_TYPE} ${semantic_version} (${TARGET_ENV})\",\"body\":\"Auto-created from ${BRANCH_NAME}\",\"head\":\"${BRANCH_NAME}\",\"base\":\"main\"}"
           done
+
+  build-tag-dev:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Environment Variables
+        uses: ./.github/actions/setvars
+        with:
+          varFilePath: ./.github/variables/vars.env
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: Determine next version
+        id: determine-version
+        run: |
+          DATE_PREFIX="$(date +'%y.%m')"
+          LAST_RELEASE=$(git tag | grep -E "^${DATE_PREFIX}\\.[0-9]+$" | sort -V | tail -1)
+          if [[ -z "$LAST_RELEASE" ]]; then
+            RELEASE=1
+          else
+            RELEASE="${LAST_RELEASE##*.}"
+            RELEASE=$((RELEASE + 1))
+          fi
+
+          NEW_VERSION="${DATE_PREFIX}.${RELEASE}"
+          echo "semantic_version=$NEW_VERSION" >> $GITHUB_ENV
+
+      - name: Set image tag
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          IMAGE_TAG="${SHORT_SHA}-${semantic_version}"
+          IMAGE_NAME="${{ secrets.BLOCKSOS_REPO }}/dev-${SERVICE_NAME}-${SERVICE_TYPE}"
+          echo "image_name=${IMAGE_NAME}" >> $GITHUB_ENV
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_ENV
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        run: |
+          docker build -t "${image_name}:${image_tag}" --file "${WORKER_DOCKERFILE}" --build-arg build_version="${semantic_version}" .
+          docker push "${image_name}:${image_tag}"
+
+      - name: Create and push tag
+        run: |
+          git config --local user.name "devops-selise"
+          git config --local user.email "devops@selisegroup.com"
+          git tag "${semantic_version}"
+          git push origin "${semantic_version}"
