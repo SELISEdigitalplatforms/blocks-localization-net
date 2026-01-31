@@ -15,7 +15,7 @@ jobs:
     env:
       ZAP_API: "https://zapscan.seliselocal.com"
       ZAP_KEY: ${{ secrets.ZAP_API_KEY }}
-      TARGET: "https://clm.seliselocal.com"
+      TARGET: "https://dev-api.seliseblocks.com"
       REPORT_FILE: "zap-report.xml"
 
     steps:
