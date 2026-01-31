@@ -54,6 +54,49 @@ jobs:
           bomFilename: bom.json
           autoCreate: true
 
+      # - name: Fetch Dependency-Track findings summary
+      #   if: always()
+      #   shell: bash
+      #   env:
+      #     DTRACK_API_KEY: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
+      #   run: |
+      #     DTRACK_BASE="https://api-dt.seliseblocks.com"
+      #     PROJECT_NAME="${{ github.event.repository.name }}"
+      #     PROJECT_VERSION="${{ github.ref_name }}"
+
+      #     PROJECT_FILE="dtrack-project.json"
+      #     FINDINGS_FILE="dtrack-findings.json"
+      #     METRICS_FILE="dtrack-metrics.json"
+
+      #     if curl -sS -H "X-Api-Key: ${DTRACK_API_KEY}" \
+      #       "${DTRACK_BASE}/api/v1/project/lookup?name=${PROJECT_NAME}&version=${PROJECT_VERSION}" \
+      #       -o "${PROJECT_FILE}"; then
+      #       PROJECT_UUID="$(jq -r '.uuid // empty' "${PROJECT_FILE}")"
+      #     else
+      #       PROJECT_UUID=""
+      #     fi
+
+      #     if [ -n "${PROJECT_UUID}" ]; then
+      #       for i in 1 2 3 4 5; do
+      #         if curl -sS -H "X-Api-Key: ${DTRACK_API_KEY}" \
+      #           "${DTRACK_BASE}/api/v1/metrics/project/${PROJECT_UUID}/current" \
+      #           -o "${METRICS_FILE}"; then
+      #           CRIT="$(jq -r '.critical // empty' "${METRICS_FILE}")"
+      #           if [ -n "${CRIT}" ] || [ "${i}" -eq 5 ]; then
+      #             echo "dtrack_metrics_file=${METRICS_FILE}" >> "$GITHUB_ENV"
+      #             break
+      #           fi
+      #         fi
+      #         sleep 10
+      #       done
+      #       if [ ! -f "${METRICS_FILE}" ]; then
+      #         if curl -sS -H "X-Api-Key: ${DTRACK_API_KEY}" \
+      #           "${DTRACK_BASE}/api/v1/finding/project/${PROJECT_UUID}/export" \
+      #           -o "${FINDINGS_FILE}"; then
+      #           echo "dtrack_findings_file=${FINDINGS_FILE}" >> "$GITHUB_ENV"
+      #         fi
+      #       fi
+      #     fi
       - name: Fetch Dependency-Track findings summary
         if: always()
         shell: bash
@@ -64,87 +107,125 @@ jobs:
           PROJECT_NAME="${{ github.event.repository.name }}"
           PROJECT_VERSION="${{ github.ref_name }}"
 
-          PROJECT_FILE="dtrack-project.json"
-          FINDINGS_FILE="dtrack-findings.json"
-          METRICS_FILE="dtrack-metrics.json"
+          # Get Project UUID
+          PROJECT_JSON=$(curl -sS -H "X-Api-Key: ${DTRACK_API_KEY}" \
+            "${DTRACK_BASE}/api/v1/project/lookup?name=${PROJECT_NAME}&version=${PROJECT_VERSION}")
+          
+          PROJECT_UUID=$(echo "$PROJECT_JSON" | jq -r '.uuid // empty')
 
-          if curl -sS -H "X-Api-Key: ${DTRACK_API_KEY}" \
-            "${DTRACK_BASE}/api/v1/project/lookup?name=${PROJECT_NAME}&version=${PROJECT_VERSION}" \
-            -o "${PROJECT_FILE}"; then
-            PROJECT_UUID="$(jq -r '.uuid // empty' "${PROJECT_FILE}")"
-          else
-            PROJECT_UUID=""
+          if [ -z "$PROJECT_UUID" ]; then
+            echo "Error: Could not find project UUID in Dependency-Track"
+            exit 0
           fi
 
-          if [ -n "${PROJECT_UUID}" ]; then
-            for i in 1 2 3 4 5; do
-              if curl -sS -H "X-Api-Key: ${DTRACK_API_KEY}" \
-                "${DTRACK_BASE}/api/v1/metrics/project/${PROJECT_UUID}/current" \
-                -o "${METRICS_FILE}"; then
-                CRIT="$(jq -r '.critical // empty' "${METRICS_FILE}")"
-                if [ -n "${CRIT}" ] || [ "${i}" -eq 5 ]; then
-                  echo "dtrack_metrics_file=${METRICS_FILE}" >> "$GITHUB_ENV"
-                  break
-                fi
-              fi
-              sleep 10
-            done
-            if [ ! -f "${METRICS_FILE}" ]; then
-              if curl -sS -H "X-Api-Key: ${DTRACK_API_KEY}" \
-                "${DTRACK_BASE}/api/v1/finding/project/${PROJECT_UUID}/export" \
-                -o "${FINDINGS_FILE}"; then
-                echo "dtrack_findings_file=${FINDINGS_FILE}" >> "$GITHUB_ENV"
-              fi
+          echo "Project UUID: $PROJECT_UUID"
+
+          # Polling for metrics (Dependency-Track takes time to process the SBOM)
+          # We check if 'lastOccurrence' exists and is not null
+          for i in {1..10}; do
+            echo "Checking metrics (Attempt $i/10)..."
+            METRICS_JSON=$(curl -sS -H "X-Api-Key: ${DTRACK_API_KEY}" "${DTRACK_BASE}/api/v1/metrics/project/${PROJECT_UUID}/current")
+            
+            # Check if metrics are actually populated (critical is a good indicator)
+            HAS_METRICS=$(echo "$METRICS_JSON" | jq -r 'if .critical != null then "true" else "false" end')
+            
+            if [ "$HAS_METRICS" == "true" ]; then
+              echo "$METRICS_JSON" > dtrack-metrics.json
+              echo "METRICS_FOUND=true" >> "$GITHUB_ENV"
+              break
             fi
-          fi
+            sleep 15
+          done
+
+      # - name: SCA Summary
+      #   if: always()
+      #   shell: bash
+      #   run: |
+      #     METRICS_FILE="${dtrack_metrics_file:-}"
+      #     FINDINGS_FILE="${dtrack_findings_file:-}"
+      #     CRITICAL="n/a"
+      #     HIGH="n/a"
+      #     MEDIUM="n/a"
+      #     LOW="n/a"
+      #     UNASSIGNED="n/a"
+      #     TOTAL="n/a"
+      #     if [ -n "$METRICS_FILE" ] && [ -f "$METRICS_FILE" ]; then
+      #       CRITICAL="$(jq -r '.critical // "n/a"' "$METRICS_FILE")"
+      #       HIGH="$(jq -r '.high // "n/a"' "$METRICS_FILE")"
+      #       MEDIUM="$(jq -r '.medium // "n/a"' "$METRICS_FILE")"
+      #       LOW="$(jq -r '.low // "n/a"' "$METRICS_FILE")"
+      #       UNASSIGNED="$(jq -r '.unassigned // "n/a"' "$METRICS_FILE")"
+      #       TOTAL="$(jq -r '.findingsTotal // "n/a"' "$METRICS_FILE")"
+      #     elif [ -n "$FINDINGS_FILE" ] && [ -f "$FINDINGS_FILE" ]; then
+      #       CRITICAL=0
+      #       HIGH=0
+      #       MEDIUM=0
+      #       LOW=0
+      #       UNASSIGNED=0
+      #       TOTAL="$(jq -r '.findings | length' "$FINDINGS_FILE" 2>/dev/null || echo 0)"
+      #       while read -r sev; do
+      #         case "$sev" in
+      #           CRITICAL) CRITICAL=$((CRITICAL+1)) ;;
+      #           HIGH) HIGH=$((HIGH+1)) ;;
+      #           MEDIUM) MEDIUM=$((MEDIUM+1)) ;;
+      #           LOW) LOW=$((LOW+1)) ;;
+      #           UNASSIGNED|UNKNOWN|"") UNASSIGNED=$((UNASSIGNED+1)) ;;
+      #         esac
+      #       done < <(jq -r '.findings[]? | (.severity // .vulnerability.severity // .analysis.severity // empty) | ascii_upcase' "$FINDINGS_FILE")
+      #     fi
+      #     {
+      #       echo "### SCA Summary"
+      #       echo ""
+      #       echo "- SBOM: \`bom.json\` (CycloneDX JSON)"
+      #       echo "- Artifact: \`sbom-cyclonedx-json\`"
+      #       echo "- Dependency-Track project: \`${{ github.event.repository.name }}\`"
+      #       echo "- Project version: \`${{ github.ref_name }}\`"
+      #       if [ -f "bom.json" ]; then
+      #         echo "- SBOM size: \`$(wc -c < bom.json) bytes\`"
+      #       else
+      #         echo "- SBOM size: \`not found\`"
+      #       fi
+      #       echo "- Vulnerabilities: critical \`${CRITICAL}\`, high \`${HIGH}\`, medium \`${MEDIUM}\`, low \`${LOW}\`, unassigned \`${UNASSIGNED}\` (total \`${TOTAL}\`)"
+      #     } >> "$GITHUB_STEP_SUMMARY"
 
       - name: SCA Summary
         if: always()
         shell: bash
         run: |
-          METRICS_FILE="${dtrack_metrics_file:-}"
-          FINDINGS_FILE="${dtrack_findings_file:-}"
-          CRITICAL="n/a"
-          HIGH="n/a"
-          MEDIUM="n/a"
-          LOW="n/a"
-          UNASSIGNED="n/a"
-          TOTAL="n/a"
-          if [ -n "$METRICS_FILE" ] && [ -f "$METRICS_FILE" ]; then
-            CRITICAL="$(jq -r '.critical // "n/a"' "$METRICS_FILE")"
-            HIGH="$(jq -r '.high // "n/a"' "$METRICS_FILE")"
-            MEDIUM="$(jq -r '.medium // "n/a"' "$METRICS_FILE")"
-            LOW="$(jq -r '.low // "n/a"' "$METRICS_FILE")"
-            UNASSIGNED="$(jq -r '.unassigned // "n/a"' "$METRICS_FILE")"
-            TOTAL="$(jq -r '.findingsTotal // "n/a"' "$METRICS_FILE")"
-          elif [ -n "$FINDINGS_FILE" ] && [ -f "$FINDINGS_FILE" ]; then
-            CRITICAL=0
-            HIGH=0
-            MEDIUM=0
-            LOW=0
-            UNASSIGNED=0
-            TOTAL="$(jq -r '.findings | length' "$FINDINGS_FILE" 2>/dev/null || echo 0)"
-            while read -r sev; do
-              case "$sev" in
-                CRITICAL) CRITICAL=$((CRITICAL+1)) ;;
-                HIGH) HIGH=$((HIGH+1)) ;;
-                MEDIUM) MEDIUM=$((MEDIUM+1)) ;;
-                LOW) LOW=$((LOW+1)) ;;
-                UNASSIGNED|UNKNOWN|"") UNASSIGNED=$((UNASSIGNED+1)) ;;
-              esac
-            done < <(jq -r '.findings[]? | (.severity // .vulnerability.severity // .analysis.severity // empty) | ascii_upcase' "$FINDINGS_FILE")
+          # Initialize variables with 0 or N/A
+          CRITICAL="0"; HIGH="0"; MEDIUM="0"; LOW="0"; UNASSIGNED="0"; TOTAL="0"
+          
+          if [ "$METRICS_FOUND" == "true" ] && [ -f "dtrack-metrics.json" ]; then
+            # Using 'or 0' in jq to ensure we never get an empty string
+            CRITICAL=$(jq -r '.critical // 0' dtrack-metrics.json)
+            HIGH=$(jq -r '.high // 0' dtrack-metrics.json)
+            MEDIUM=$(jq -r '.medium // 0' dtrack-metrics.json)
+            LOW=$(jq -r '.low // 0' dtrack-metrics.json)
+            UNASSIGNED=$(jq -r '.unassigned // 0' dtrack-metrics.json)
+            TOTAL=$(jq -r '.findingsTotal // 0' dtrack-metrics.json)
+          else
+            CRITICAL="N/A"; HIGH="N/A"; MEDIUM="N/A"; LOW="N/A"; UNASSIGNED="N/A"; TOTAL="N/A"
           fi
+
           {
             echo "### SCA Summary"
             echo ""
-            echo "- SBOM: \`bom.json\` (CycloneDX JSON)"
-            echo "- Artifact: \`sbom-cyclonedx-json\`"
-            echo "- Dependency-Track project: \`${{ github.event.repository.name }}\`"
-            echo "- Project version: \`${{ github.ref_name }}\`"
+            echo "- **SBOM:** \`bom.json\` (CycloneDX JSON)"
+            echo "- **Artifact:** \`sbom-cyclonedx-json\`"
+            echo "- **Dependency-Track project:** [${{ github.event.repository.name }}](https://api-dt.seliseblocks.com/projects/$PROJECT_UUID)"
+            echo "- **Project version:** \`${{ github.ref_name }}\`"
+            
             if [ -f "bom.json" ]; then
-              echo "- SBOM size: \`$(wc -c < bom.json) bytes\`"
-            else
-              echo "- SBOM size: \`not found\`"
+              echo "- **SBOM size:** \`$(wc -c < bom.json | xargs) bytes\`"
             fi
-            echo "- Vulnerabilities: critical \`${CRITICAL}\`, high \`${HIGH}\`, medium \`${MEDIUM}\`, low \`${LOW}\`, unassigned \`${UNASSIGNED}\` (total \`${TOTAL}\`)"
+            
+            echo ""
+            echo "| Severity | Count |"
+            echo "| :--- | :--- |"
+            echo "| 🔴 Critical | **${CRITICAL}** |"
+            echo "| 🟠 High | **${HIGH}** |"
+            echo "| 🟡 Medium | **${MEDIUM}** |"
+            echo "| 🔵 Low | **${LOW}** |"
+            echo "| ⚪ Unassigned | **${UNASSIGNED}** |"
+            echo "| **Total** | **${TOTAL}** |"
           } >> "$GITHUB_STEP_SUMMARY"
