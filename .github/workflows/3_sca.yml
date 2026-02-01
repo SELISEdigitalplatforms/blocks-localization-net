@@ -122,9 +122,11 @@ jobs:
 
           # Polling for metrics (Dependency-Track takes time to process the SBOM)
           # We check if 'lastOccurrence' exists and is not null
-          for i in {1..40}; do
-            echo "Checking metrics (Attempt $i/40)..."
+          for i in {1..25}; do
+            echo "Checking metrics (Attempt $i/25)..."
             METRICS_JSON=$(curl -sS -H "X-Api-Key: ${DTRACK_API_KEY}" "${DTRACK_BASE}/api/v1/metrics/project/${PROJECT_UUID}/current")
+            FINDING_JSON=$(curl -sS -H "X-Api-Key: ${DTRACK_API_KEY}" "${DTRACK_BASE}/api/v1/finding/project/${PROJECT_UUID}?suppressed=false")
+            echo "Number of findings retrieved: $(echo "$FINDING_JSON" )"
             
             # Check if metrics are actually populated (critical is a good indicator)
             HAS_METRICS=$(echo "$METRICS_JSON" | jq -r 'if .critical != null then "true" else "false" end')
@@ -134,7 +136,7 @@ jobs:
               echo "METRICS_FOUND=true" >> "$GITHUB_ENV"
               break
             fi
-            sleep 30
+            sleep 15
           done
 
       # - name: SCA Summary
