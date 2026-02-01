@@ -148,7 +148,7 @@ jobs:
         if: always()
         shell: bash
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_GET: ${{ secrets.SONAR_GET }}
         run: |
           SONAR_BASE="${SONARQUBE_HOST%/}"
           REPORT_TASK="src/.sonarqube/out/.sonar/report-task.txt"
@@ -159,7 +159,7 @@ jobs:
             echo "Waiting for SonarQube task: $CE_TASK_URL"
             
             for i in {1..10}; do
-              TASK_STATUS=$(curl -sS -u "${SONAR_TOKEN}:" "$CE_TASK_URL" | jq -r '.task.status')
+              TASK_STATUS=$(curl -sS -u "${SONAR_GET}:" "$CE_TASK_URL" | jq -r '.task.status')
               echo "Task status: $TASK_STATUS"
               if [ "$TASK_STATUS" = "SUCCESS" ]; then
                 sleep 5 # Give SonarQube a moment to index the results
