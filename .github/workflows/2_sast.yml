@@ -183,7 +183,7 @@ jobs:
           URL="${SONAR_BASE}/api/measures/component?component=${SONAR_KEY}&metricKeys=${METRICS}&${QUERY_PARAM}"
           
           echo "Fetching metrics from: $URL"
-          RESPONSE=$(curl -sS -u "${SONAR_TOKEN}:" "$URL")
+          RESPONSE=$(curl -sS -u "${SONAR_GET}:" "$URL")
           
           # Save response for the next step
           echo "$RESPONSE" > sonar-metrics.json
