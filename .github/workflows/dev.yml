@@ -8,10 +8,10 @@ permissions:
   contents: read
 
 env:
-  RUN_UNIT_TEST: 'true'
-  RUN_SAST: 'true'
-  RUN_SCA: 'true'
-  RUN_DAST: 'true'
+  RUN_UNIT_TEST: "true"
+  RUN_SAST: "true"
+  RUN_SCA: "true"
+  RUN_DAST: "true"
 
 jobs:
   initialization:
@@ -29,7 +29,7 @@ jobs:
           echo "envvar2=$RUN_SAST" >> "$GITHUB_OUTPUT"
           echo "envvar3=$RUN_SCA" >> "$GITHUB_OUTPUT"
           echo "envvar4=$RUN_DAST" >> "$GITHUB_OUTPUT"
-          
+
   test-job:
     if: ${{ needs.initialization.outputs.envvalue1=='true' }}
     uses: ./.github/workflows/1_unit_test.yml
@@ -88,6 +88,66 @@ jobs:
       BLOCKSOS_REPO: ${{ secrets.BLOCKSOS_REPO }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
     needs: [initialization]
+
+  gitops-api-dev:
+    uses: ./.github/workflows/update-gitops.yml
+    permissions:
+      contents: write
+    with:
+      SERVICE_NAME: blocks-localization-net
+      SERVICE_TYPE: webservice
+      ENVIRONMENT: dev
+      IMAGE_TAG: ${{ needs.cd-job-build.outputs.image_tag }}
+      IMAGE_REPOSITORY: ${{ needs.cd-job-build.outputs.image_name }}
+      CLUSTER_NAME: aks-blocks-dev
+    secrets:
+      SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
+    needs: [cd-job-build]
+
+  gitops-api-nonprod:
+    uses: ./.github/workflows/update-gitops.yml
+    permissions:
+      contents: write
+    with:
+      SERVICE_NAME: blocks-localization-net
+      SERVICE_TYPE: webservice
+      ENVIRONMENT: dev
+      IMAGE_TAG: ${{ needs.cd-job-build.outputs.image_tag }}
+      IMAGE_REPOSITORY: ${{ needs.cd-job-build.outputs.image_name }}
+      CLUSTER_NAME: aks-blocks-dev-nonprod
+    secrets:
+      SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
+    needs: [cd-job-build]
+
+  gitops-worker-dev:
+    uses: ./.github/workflows/update-gitops.yml
+    permissions:
+      contents: write
+    with:
+      SERVICE_NAME: blocks-localization-net
+      SERVICE_TYPE: worker
+      ENVIRONMENT: dev
+      IMAGE_TAG: ${{ needs.cd-job-worker-build.outputs.image_tag }}
+      IMAGE_REPOSITORY: ${{ needs.cd-job-worker-build.outputs.image_name }}
+      CLUSTER_NAME: aks-blocks-dev
+    secrets:
+      SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
+    needs: [cd-job-worker-build]
+
+  gitops-worker-nonprod:
+    uses: ./.github/workflows/update-gitops.yml
+    permissions:
+      contents: write
+    with:
+      SERVICE_NAME: blocks-localization-net
+      SERVICE_TYPE: worker
+      ENVIRONMENT: dev
+      IMAGE_TAG: ${{ needs.cd-job-worker-build.outputs.image_tag }}
+      IMAGE_REPOSITORY: ${{ needs.cd-job-worker-build.outputs.image_name }}
+      CLUSTER_NAME: aks-blocks-dev-nonprod
+    secrets:
+      SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
+    needs: [cd-job-worker-build]
 
   dast-job:
     if: ${{ github.event_name == 'push' && (success() || needs.initialization.outputs.envvalue4=='true') }}
