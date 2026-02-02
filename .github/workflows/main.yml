@@ -35,7 +35,7 @@ jobs:
     permissions:
       contents: write
     with:
-      MODE: main
+      # MODE: main
       PR_NUMBER: ${{ github.event.pull_request.number }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -50,7 +50,7 @@ jobs:
     permissions:
       contents: write
     with:
-      MODE: main
+      # MODE: main
       PR_NUMBER: ${{ github.event.pull_request.number }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}

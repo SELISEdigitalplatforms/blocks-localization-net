@@ -3,10 +3,10 @@ name: CI (api)
 on:
   workflow_call:
     inputs:
-      MODE:
-        description: "dev or main"
-        required: true
-        type: string
+      # MODE:
+      #   description: "dev or main"
+      #   required: true
+      #   type: string
       PR_NUMBER:
         description: "PR number for main flow"
         required: false
@@ -63,13 +63,17 @@ jobs:
       - name: Set image tag
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
-          if [ "${{ inputs.MODE }}" = "main" ]; then
-            IMAGE_TAG="${SHORT_SHA}-${{ inputs.PR_NUMBER }}-${semantic_version}"
-            IMAGE_NAME="${{ secrets.BLOCKSOS_REPO }}/${SERVICE_NAME}-${SERVICE_TYPE}"
-          else
-            IMAGE_TAG="${SHORT_SHA}-${semantic_version}"
-            IMAGE_NAME="${{ secrets.BLOCKSOS_REPO }}/dev-${SERVICE_NAME}-${SERVICE_TYPE}"
-          fi
+          # if [ "${{ inputs.MODE }}" = "main" ]; then
+          #   IMAGE_TAG="${SHORT_SHA}-${{ inputs.PR_NUMBER }}-${semantic_version}"
+          #   IMAGE_NAME="${{ secrets.BLOCKSOS_REPO }}/${SERVICE_NAME}-${SERVICE_TYPE}"
+          # else
+          #   IMAGE_TAG="${SHORT_SHA}-${semantic_version}"
+          #   IMAGE_NAME="${{ secrets.BLOCKSOS_REPO }}/dev-${SERVICE_NAME}-${SERVICE_TYPE}"
+          # fi
+          
+          IMAGE_TAG="${SHORT_SHA}-${{ inputs.PR_NUMBER }}-${semantic_version}"
+          IMAGE_NAME="${{ secrets.BLOCKSOS_REPO }}/${SERVICE_NAME}-${SERVICE_TYPE}"
+
           echo "image_name=${IMAGE_NAME}" >> $GITHUB_ENV
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_ENV
 
@@ -189,7 +193,7 @@ jobs:
           git push origin "${semantic_version}"
 
       - name: Checkout inventory repo
-        if: ${{ inputs.MODE == 'main' }}
+        # if: ${{ inputs.MODE == 'main' }}
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: SELISEdigitalplatforms/blocks-inventory
@@ -197,7 +201,7 @@ jobs:
           path: blocks-inventory
 
       - name: Update inventory and open PR
-        if: ${{ inputs.MODE == 'main' }}
+        # if: ${{ inputs.MODE == 'main' }}
         env:
           GH_TOKEN: ${{ secrets.SELISE_GITHUB_PAT }}
         run: |
