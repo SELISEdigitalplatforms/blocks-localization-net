@@ -21,7 +21,12 @@ jobs:
       envvalue2: ${{ steps.setvar.outputs.envvar2 }}
       envvalue3: ${{ steps.setvar.outputs.envvar3 }}
       envvalue4: ${{ steps.setvar.outputs.envvar4 }}
+      dev_version: ${{ steps.versions.outputs.dev_version }}
     steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          sparse-checkout: .github/variables
+          sparse-checkout-cone-mode: false
       - name: set value
         id: setvar
         run: |
@@ -29,6 +34,11 @@ jobs:
           echo "envvar2=$RUN_SAST" >> "$GITHUB_OUTPUT"
           echo "envvar3=$RUN_SCA" >> "$GITHUB_OUTPUT"
           echo "envvar4=$RUN_DAST" >> "$GITHUB_OUTPUT"
+      - name: Load versions
+        id: versions
+        run: |
+          source .github/variables/versions.env
+          echo "dev_version=${DEV_VERSION}" >> "$GITHUB_OUTPUT"
 
   test-job:
     if: ${{ needs.initialization.outputs.envvalue1=='true' }}
@@ -95,14 +105,15 @@ jobs:
       contents: write
     with:
       SERVICE_NAME: blocks-localization-net
-      SERVICE_TYPE: webservice
+      SERVICE_TYPE: api
       ENVIRONMENT: dev
       IMAGE_TAG: ${{ needs.cd-job-build.outputs.image_tag }}
       IMAGE_REPOSITORY: ${{ needs.cd-job-build.outputs.image_name }}
+      VERSION: ${{ needs.initialization.outputs.dev_version }}
       CLUSTER_NAME: aks-blocks-dev
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-    needs: [cd-job-build]
+    needs: [initialization, cd-job-build]
 
   gitops-api-nonprod:
     uses: ./.github/workflows/update-gitops.yml
@@ -110,14 +121,15 @@ jobs:
       contents: write
     with:
       SERVICE_NAME: blocks-localization-net
-      SERVICE_TYPE: webservice
+      SERVICE_TYPE: api
       ENVIRONMENT: dev
       IMAGE_TAG: ${{ needs.cd-job-build.outputs.image_tag }}
       IMAGE_REPOSITORY: ${{ needs.cd-job-build.outputs.image_name }}
+      VERSION: ${{ needs.initialization.outputs.dev_version }}
       CLUSTER_NAME: aks-blocks-dev-nonprod
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-    needs: [cd-job-build]
+    needs: [initialization, cd-job-build]
 
   gitops-worker-dev:
     uses: ./.github/workflows/update-gitops.yml
@@ -129,10 +141,11 @@ jobs:
       ENVIRONMENT: dev
       IMAGE_TAG: ${{ needs.cd-job-worker-build.outputs.image_tag }}
       IMAGE_REPOSITORY: ${{ needs.cd-job-worker-build.outputs.image_name }}
+      VERSION: ${{ needs.initialization.outputs.dev_version }}
       CLUSTER_NAME: aks-blocks-dev
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-    needs: [cd-job-worker-build]
+    needs: [initialization, cd-job-worker-build]
 
   gitops-worker-nonprod:
     uses: ./.github/workflows/update-gitops.yml
@@ -144,10 +157,11 @@ jobs:
       ENVIRONMENT: dev
       IMAGE_TAG: ${{ needs.cd-job-worker-build.outputs.image_tag }}
       IMAGE_REPOSITORY: ${{ needs.cd-job-worker-build.outputs.image_name }}
+      VERSION: ${{ needs.initialization.outputs.dev_version }}
       CLUSTER_NAME: aks-blocks-dev-nonprod
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-    needs: [cd-job-worker-build]
+    needs: [initialization, cd-job-worker-build]
 
   dast-job:
     if: ${{ github.event_name == 'push' && (success() || needs.initialization.outputs.envvalue4=='true') }}

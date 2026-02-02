@@ -7,10 +7,10 @@ permissions:
   contents: read
 
 env:
-  RUN_UNIT_TEST: 'false'
-  RUN_SAST: 'false'
-  RUN_SCA: 'false'
-  RUN_DAST: 'false'
+  RUN_UNIT_TEST: "false"
+  RUN_SAST: "false"
+  RUN_SCA: "false"
+  RUN_DAST: "false"
 
 jobs:
   initialization:
@@ -28,14 +28,14 @@ jobs:
           echo "envvar2=$RUN_SAST" >> "$GITHUB_OUTPUT"
           echo "envvar3=$RUN_SCA" >> "$GITHUB_OUTPUT"
           echo "envvar4=$RUN_DAST" >> "$GITHUB_OUTPUT"
-          
+
   cd-job-api-build:
     if: ${{ github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
     uses: ./.github/workflows/api.yml
     permissions:
       contents: write
     with:
-      # MODE: main
+      MODE: main
       PR_NUMBER: ${{ github.event.pull_request.number }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -50,7 +50,7 @@ jobs:
     permissions:
       contents: write
     with:
-      # MODE: main
+      MODE: main
       PR_NUMBER: ${{ github.event.pull_request.number }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
