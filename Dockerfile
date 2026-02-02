@@ -33,4 +33,10 @@ ARG git_branch
 ENV ASPNETCORE_ENVIRONMENT=$git_branch
 ENV ASPNETCORE_URLS=http://+:$port
 
+RUN groupadd -g 10001 appgroup \
+    && useradd -u 10001 -g appgroup -s /usr/sbin/nologin -m appuser \
+    && chown -R appuser:appgroup /app
+
+USER appuser
+
 ENTRYPOINT ["dotnet", "Api.dll"]

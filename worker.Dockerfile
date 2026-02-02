@@ -24,8 +24,15 @@ WORKDIR /app
 COPY --from=build-env /publish .
 ARG git_branch
 
-RUN apt-get update && apt-get install -y gss-ntlmssp
+RUN apt-get update && apt-get install -y gss-ntlmssp \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV ASPNETCORE_ENVIRONMENT=$git_branch
+
+RUN groupadd -g 10001 appgroup \
+    && useradd -u 10001 -g appgroup -s /usr/sbin/nologin -m appuser \
+    && chown -R appuser:appgroup /app
+
+USER appuser
 
 ENTRYPOINT ["dotnet", "Worker.dll"]
