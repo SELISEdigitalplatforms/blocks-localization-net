@@ -19,7 +19,7 @@ on:
       BLOCKSOS_REPO:
         required: true
       SELISE_GITHUB_PAT:
-        required: false
+        required: true
 permissions:
   contents: read
 
