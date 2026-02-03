@@ -50,7 +50,7 @@ jobs:
       - name: Set Environment Variables
         uses: ./.github/actions/setvars
         with:
-          varFilePath: ./.github/variables/*.env
+          varFilePath: ./.github/variables/vars.env
 
       - name: Fetch tags
         run: git fetch --tags --force
@@ -237,30 +237,20 @@ jobs:
               git pull --rebase origin main
             fi
 
-            case "${TARGET_ENV}" in
-              dev) VERSION="${DEV_VERSION}" ;;
-              stg) VERSION="${STAGE_VERSION}" ;;
-              prod) VERSION="${PROD_VERSION}" ;;
-              *) VERSION="1" ;;
-            esac
-
-            VERSION_DIR="v${VERSION}"
-            TARGET_FILE="${SERVICE_NAME}/${SERVICE_TYPE}/${VERSION_DIR}/${TARGET_ENV}.txt"
-            mkdir -p "${SERVICE_NAME}/${SERVICE_TYPE}/${VERSION_DIR}"
+            TARGET_FILE="${SERVICE_NAME}/${SERVICE_TYPE}/${TARGET_ENV}.txt"
+            mkdir -p "${SERVICE_NAME}/${SERVICE_TYPE}"
             echo "${IMAGE_REF}" >> "${TARGET_FILE}"
 
             git config --local user.name "devops-selise"
             git config --local user.email "devops@selisegroup.com"
-            git add "${TARGET_FILE}"
 
             if [ "${TARGET_ENV}" = "stg" ]; then
+              git add "${TARGET_FILE}"
               git commit -m "Update ${SERVICE_NAME}-${SERVICE_TYPE} ${TARGET_ENV} to ${semantic_version}" || true
               git pull --rebase origin stg
               git push origin stg
             elif [ "${TARGET_ENV}" = "dev" ]; then
-              git commit -m "Update ${SERVICE_NAME}-${SERVICE_TYPE} ${TARGET_ENV} to ${semantic_version}" || true
-              git pull --rebase origin main
-              git push origin main
+              echo "Skipping push for dev inventory update."
             else
               if [ -z "${PR_NUM}" ]; then
                 echo "PR_NUMBER is required for prod updates; skipping." >&2
@@ -269,6 +259,7 @@ jobs:
 
               BRANCH_NAME="${SERVICE_NAME}-${SERVICE_TYPE}-${PR_NUM}-${TARGET_ENV}"
               git checkout -B "${BRANCH_NAME}" main
+              git add "${TARGET_FILE}"
               git commit -m "Update ${SERVICE_NAME}-${SERVICE_TYPE} ${TARGET_ENV} to ${semantic_version}" || true
               git pull --rebase origin "${BRANCH_NAME}" || true
               git push origin "${BRANCH_NAME}"
