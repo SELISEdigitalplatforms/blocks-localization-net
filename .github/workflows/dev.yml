@@ -141,7 +141,6 @@ jobs:
       ENVIRONMENT: dev
       IMAGE_TAG: ${{ needs.cd-job-worker-build.outputs.image_tag }}
       IMAGE_REPOSITORY: ${{ needs.cd-job-worker-build.outputs.image_name }}
-      VERSION: ${{ needs.initialization.outputs.dev_version }}
       CLUSTER_NAME: aks-blocks-dev
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
@@ -157,7 +156,6 @@ jobs:
       ENVIRONMENT: dev
       IMAGE_TAG: ${{ needs.cd-job-worker-build.outputs.image_tag }}
       IMAGE_REPOSITORY: ${{ needs.cd-job-worker-build.outputs.image_name }}
-      VERSION: ${{ needs.initialization.outputs.dev_version }}
       CLUSTER_NAME: aks-blocks-dev-nonprod
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
