@@ -50,7 +50,7 @@ jobs:
       - name: Set Environment Variables
         uses: ./.github/actions/setvars
         with:
-          varFilePath: ./.github/variables/vars.env
+          varFilePath: ./.github/variables/*.env
 
       - name: Fetch tags
         run: git fetch --tags --force
@@ -216,7 +216,6 @@ jobs:
           GH_TOKEN: ${{ secrets.SELISE_GITHUB_PAT }}
         run: |
           cd blocks-inventory
-          IMAGE_REF="${image_name}:${image_tag}"
           PR_NUM="${{ inputs.PR_NUMBER }}"
 
           if [ "${{ inputs.MODE }}" = "dev" ]; then
@@ -237,9 +236,17 @@ jobs:
               git pull --rebase origin main
             fi
 
-            TARGET_FILE="${SERVICE_NAME}/${SERVICE_TYPE}/${TARGET_ENV}.txt"
-            mkdir -p "${SERVICE_NAME}/${SERVICE_TYPE}"
-            echo "${IMAGE_REF}" >> "${TARGET_FILE}"
+            case "${TARGET_ENV}" in
+              dev) VERSION="${DEV_VERSION}" ;;
+              stg) VERSION="${STAGE_VERSION}" ;;
+              prod) VERSION="${PROD_VERSION}" ;;
+              *) VERSION="1" ;;
+            esac
+
+            VERSION_DIR="v${VERSION}"
+            TARGET_FILE="${SERVICE_NAME}/${SERVICE_TYPE}/${VERSION_DIR}/${TARGET_ENV}.txt"
+            mkdir -p "${SERVICE_NAME}/${SERVICE_TYPE}/${VERSION_DIR}"
+            echo "${image_tag}" >> "${TARGET_FILE}"
 
             git config --local user.name "devops-selise"
             git config --local user.email "devops@selisegroup.com"
