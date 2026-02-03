@@ -1,6 +1,6 @@
 # .NET build artifacts
 bin/
-obj/
+obj/ 
 .DS_Store
 # Visual Studio files 
 .vs/
