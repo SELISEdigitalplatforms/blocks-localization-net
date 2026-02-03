@@ -11,6 +11,8 @@ on:
 jobs:
   zap_scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     env:
       ZAP_API: "https://zapscan.seliselocal.com"
