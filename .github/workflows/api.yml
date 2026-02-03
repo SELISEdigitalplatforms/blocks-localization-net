@@ -210,7 +210,14 @@ jobs:
           fi
 
           git tag "${semantic_version}"
-          git push origin "${semantic_version}"
+          if ! git push origin "${semantic_version}"; then
+            if git ls-remote --tags origin "refs/tags/${semantic_version}" | grep -q .; then
+              echo "Remote tag ${semantic_version} appeared during push; skipping."
+              exit 0
+            fi
+            echo "Failed to push tag ${semantic_version}" >&2
+            exit 1
+          fi
 
       - name: Checkout inventory repo
         # if: ${{ inputs.MODE == 'main' }}
