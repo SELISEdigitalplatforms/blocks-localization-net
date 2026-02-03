@@ -61,6 +61,9 @@ on:
         required: true
       AZURE_CONTAINER_REGISTRY:
         required: false
+      BLOCKSOS_REPO:
+        required: false
+        description: "DockerHub repository prefix (e.g., blocksos)"
 
 jobs:
   update-gitops:
@@ -199,11 +202,25 @@ jobs:
           # Update image repository and tag using yq (proper YAML handling)
           IMAGE_TAG="${{ steps.determine-config.outputs.final_tag }}"
 
-          # Determine image repository: use IMAGE_REPOSITORY input if provided, otherwise construct from ACR
-          INPUT_IMAGE_REPO="${{ inputs.IMAGE_REPOSITORY }}"
-          if [ -n "${INPUT_IMAGE_REPO}" ]; then
-            IMAGE_REPO="${INPUT_IMAGE_REPO}"
+          # Determine image repository using same logic as build workflows
+          SERVICE_NAME="${{ inputs.SERVICE_NAME }}"
+          SERVICE_TYPE="${{ inputs.SERVICE_TYPE }}"
+          ENVIRONMENT="${{ inputs.ENVIRONMENT }}"
+          BLOCKSOS_REPO="${{ secrets.BLOCKSOS_REPO }}"
+
+          # Construct image name same as api.yml/worker.yml
+          # For dev: ${BLOCKSOS_REPO}/dev-${SERVICE_NAME}-${SERVICE_TYPE}
+          # For main: ${BLOCKSOS_REPO}/${SERVICE_NAME}-${SERVICE_TYPE}
+          if [ -n "${BLOCKSOS_REPO}" ]; then
+            if [ "${ENVIRONMENT}" = "dev" ]; then
+              IMAGE_REPO="${BLOCKSOS_REPO}/dev-${SERVICE_NAME}-${SERVICE_TYPE}"
+            else
+              IMAGE_REPO="${BLOCKSOS_REPO}/${SERVICE_NAME}-${SERVICE_TYPE}"
+            fi
+          elif [ -n "${{ inputs.IMAGE_REPOSITORY }}" ]; then
+            IMAGE_REPO="${{ inputs.IMAGE_REPOSITORY }}"
           else
+            # Fallback to ACR construction
             REGISTRY="${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io"
             CONTAINER_NAME="${{ steps.determine-config.outputs.container_name }}"
             IMAGE_REPO="${REGISTRY}/${CONTAINER_NAME}"
