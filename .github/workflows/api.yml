@@ -141,7 +141,7 @@ jobs:
 
       - name: Install cosign
         id: install-cosign
-        uses: sigstore/cosign-installer@v4.0.0
+        uses: sigstore/cosign-installer@v3
 
       - name: Sign image by digest
         id: sign-image
@@ -167,7 +167,8 @@ jobs:
             --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/.*" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             "${image_digest_ref}" > "${VERIFY_LOG}" 2>&1; then
-            echo "cosign verify failed; output suppressed" >&2
+            echo "cosign verify failed; output below" >&2
+            cat "${VERIFY_LOG}" >&2
             exit 1
           fi
 
