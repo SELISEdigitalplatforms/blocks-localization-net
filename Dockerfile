@@ -27,7 +27,7 @@ ARG git_branch
 
 WORKDIR /app
 COPY --from=build-env /publish .
-ENV port=80
+ENV port=8080
 ARG git_branch
 
 ENV ASPNETCORE_ENVIRONMENT=$git_branch
