@@ -7,11 +7,10 @@ permissions:
   contents: read
 
 env:
-  RUN_SAST: "false"
-  RUN_SCA: "false"
-  RUN_DAST: "false"
-  RUN_UNIT_TEST: "false"
-  RUN_SONARQUBE: "false"
+  RUN_UNIT_TEST: "true"
+  RUN_SAST: "true"
+  RUN_SCA: "true"
+  RUN_DAST: "true"
 
 jobs:
   initialization:
@@ -30,6 +29,39 @@ jobs:
           echo "envvar3=$RUN_SCA" >> "$GITHUB_OUTPUT"
           echo "envvar4=$RUN_DAST" >> "$GITHUB_OUTPUT"
 
+  test-job:
+    if: ${{ needs.initialization.outputs.envvalue1=='true' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
+    uses: ./.github/workflows/1_unit_test.yml
+    permissions:
+      contents: read
+      checks: write
+      issues: write
+      pull-requests: write
+    with:
+      COMMENT_RESULTS: true
+    needs: [initialization]
+
+  sast-job:
+    if: ${{ success() && needs.initialization.outputs.envvalue2=='true' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
+    uses: ./.github/workflows/2_sast.yml
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: read
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_GLOBAL }}
+      SONAR_GET: ${{ secrets.SONAR_GET }}
+    needs: [initialization]
+
+  sca-job:
+    if: ${{ success() && needs.initialization.outputs.envvalue3=='true' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
+    uses: ./.github/workflows/3_sca.yml
+    permissions:
+      contents: read
+    secrets:
+      DEPENDENCY_TRACK_API_KEY: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
+    needs: [initialization]
+
   cd-job-api-build:
     if: ${{ github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
     uses: ./.github/workflows/api.yml
@@ -44,7 +76,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       BLOCKSOS_REPO: ${{ secrets.BLOCKSOS_REPO }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-    needs: [initialization]
+    needs: [initialization, test-job, sast-job, sca-job]
 
   cd-job-worker-build:
     if: ${{ github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
@@ -60,4 +92,12 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       BLOCKSOS_REPO: ${{ secrets.BLOCKSOS_REPO }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-    needs: [initialization]
+    needs: [initialization, test-job, sast-job, sca-job]
+
+  dast-job:
+    if: ${{ needs.initialization.outputs.envvalue4=='true' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
+    uses: ./.github/workflows/4_dast.yml
+    secrets:
+      ZAP_API_KEY: ${{ secrets.ZAP_KEY }}
+      ZAP_DASHBOARD_TOKEN: ${{ secrets.ZAP_DASHBOARD_TOKEN }}
+    needs: [cd-job-api-build]
