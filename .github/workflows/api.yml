@@ -141,7 +141,7 @@ jobs:
 
       - name: Install cosign
         id: install-cosign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@v4.0.0
 
       - name: Sign image by digest
         id: sign-image
