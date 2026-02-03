@@ -4,11 +4,11 @@ WORKDIR /src
 RUN mkdir -p /root/.nuget/NuGet
 COPY ./config/NuGetPackageSource.Config /root/.nuget/NuGet/NuGet.Config
 
-COPY ./src/Worker/*.csproj ./worker/
-RUN dotnet restore ./worker/
+COPY ./src/Worker/*.csproj ./Worker/
+RUN dotnet restore ./Worker/
 
 COPY ./src .
-RUN dotnet publish ./worker/ -o /publish --configuration Release
+RUN dotnet publish ./Worker/ -o /publish --configuration Release
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app

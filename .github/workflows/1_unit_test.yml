@@ -1,5 +1,12 @@
 name: Run Tests
-on: workflow_call
+on:
+  workflow_call:
+    inputs:
+      COMMENT_RESULTS:
+        description: "Whether to post PR comments with test results"
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
   checks: write
@@ -48,3 +55,4 @@ jobs:
         if: always()
         with:
           files: "./src/XUnitTest/test-results/*.xml"
+          comment_mode: ${{ inputs.COMMENT_RESULTS && 'always' || 'off' }}

@@ -46,6 +46,10 @@ jobs:
     permissions:
       contents: read
       checks: write
+      issues: write
+      pull-requests: write
+    with:
+      COMMENT_RESULTS: false
     needs: [initialization]
 
   sast-job:
