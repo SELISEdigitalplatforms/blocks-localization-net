@@ -1,5 +1,15 @@
 name: Run Tests
-on: workflow_call
+on:
+  workflow_call:
+    inputs:
+      COMMENT_RESULTS:
+        description: "Whether to post PR comments with test results"
+        required: false
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  checks: write
 jobs:
   build:
     name: Test Execution
@@ -7,7 +17,7 @@ jobs:
 
     steps:
       
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0  
 
@@ -40,8 +50,9 @@ jobs:
           Get-Content coverage-report/Summary.txt
 
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
+        uses: EnricoMi/publish-unit-test-result-action@4a2f0813705cbec5ca60db5218954b492bd80168 # v1
         id: test-results
         if: always()
         with:
           files: "./src/XUnitTest/test-results/*.xml"
+          comment_mode: ${{ inputs.COMMENT_RESULTS && 'always' || 'off' }}
