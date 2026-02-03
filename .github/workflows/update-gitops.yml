@@ -200,13 +200,16 @@ jobs:
           IMAGE_TAG="${{ steps.determine-config.outputs.final_tag }}"
 
           # Determine image repository: use IMAGE_REPOSITORY input if provided, otherwise construct from ACR
-          if [ -n "${{ inputs.IMAGE_REPOSITORY }}" ]; then
-            IMAGE_REPO="${{ inputs.IMAGE_REPOSITORY }}"
+          INPUT_IMAGE_REPO="${{ inputs.IMAGE_REPOSITORY }}"
+          if [ -n "${INPUT_IMAGE_REPO}" ]; then
+            IMAGE_REPO="${INPUT_IMAGE_REPO}"
           else
             REGISTRY="${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io"
             CONTAINER_NAME="${{ steps.determine-config.outputs.container_name }}"
             IMAGE_REPO="${REGISTRY}/${CONTAINER_NAME}"
           fi
+
+          echo "Using image repository: ${IMAGE_REPO}"
 
           # Use yq to update YAML fields (preserves formatting and indentation)
           yq eval ".image.repository = \"${IMAGE_REPO}\"" -i "$VALUES_FILE"
