@@ -171,4 +171,4 @@ jobs:
     secrets:
       ZAP_API_KEY: ${{ secrets.ZAP_KEY }}
       ZAP_DASHBOARD_TOKEN: ${{ secrets.ZAP_DASHBOARD_TOKEN }}
-    needs: [cd-job-build]l
+    needs: [cd-job-build]
