@@ -1,5 +1,5 @@
 name: Build (dev)
-
+ 
 on:
   push:
     branches:
@@ -23,7 +23,7 @@ jobs:
       envvalue4: ${{ steps.setvar.outputs.envvar4 }}
       dev_version: ${{ steps.versions.outputs.dev_version }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           sparse-checkout: .github/variables
           sparse-checkout-cone-mode: false
@@ -42,7 +42,7 @@ jobs:
 
   test-job:
     if: ${{ needs.initialization.outputs.envvalue1=='true' }}
-    uses: ./.github/workflows/1_unit_test.yml
+    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/1_unit_test.yml@main
     permissions:
       contents: read
       checks: write
@@ -54,7 +54,7 @@ jobs:
 
   sast-job:
     if: ${{ success() && needs.initialization.outputs.envvalue2=='true' }}
-    uses: ./.github/workflows/2_sast.yml
+    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/2_sast.yml@main
     permissions:
       contents: read
       checks: write
@@ -66,7 +66,7 @@ jobs:
 
   sca-job:
     if: ${{ success() && needs.initialization.outputs.envvalue3=='true' }}
-    uses: ./.github/workflows/3_sca.yml
+    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/3_sca.yml@main
     permissions:
       contents: read
     secrets:
@@ -75,7 +75,7 @@ jobs:
 
   cd-job-build:
     # if: ${{ github.event_name == 'push' && (needs.test-job.result == 'success' || needs.test-job.result == 'skipped') && (needs.sast-job.result == 'success' || needs.sast-job.result == 'skipped') && (needs.sca-job.result == 'success' || needs.sca-job.result == 'skipped') }}
-    uses: ./.github/workflows/api.yml
+    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/api.yml@main
     permissions:
       contents: write
       id-token: write
@@ -90,7 +90,7 @@ jobs:
 
   cd-job-worker-build:
     # if: ${{ github.event_name == 'push' && (needs.test-job.result == 'success' || needs.test-job.result == 'skipped') && (needs.sast-job.result == 'success' || needs.sast-job.result == 'skipped') && (needs.sca-job.result == 'success' || needs.sca-job.result == 'skipped') }}
-    uses: ./.github/workflows/worker.yml
+    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/worker.yml@main
     permissions:
       contents: write
       id-token: write
@@ -167,8 +167,7 @@ jobs:
 
   dast-job:
     if: ${{ github.event_name == 'push' && (success() || needs.initialization.outputs.envvalue4=='true') }}
-    uses: ./.github/workflows/4_dast.yml
+    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/4_dast.yml@main
     secrets:
       ZAP_API_KEY: ${{ secrets.ZAP_KEY }}
-      ZAP_DASHBOARD_TOKEN: ${{ secrets.ZAP_DASHBOARD_TOKEN }}
     needs: [cd-job-build]
