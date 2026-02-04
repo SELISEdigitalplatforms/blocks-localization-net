@@ -170,5 +170,4 @@ jobs:
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/4_dast.yml@main
     secrets:
       ZAP_API_KEY: ${{ secrets.ZAP_KEY }}
-      ZAP_DASHBOARD_TOKEN: ${{ secrets.ZAP_DASHBOARD_TOKEN }}
     needs: [cd-job-build]
