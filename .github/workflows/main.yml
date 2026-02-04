@@ -92,7 +92,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       BLOCKSOS_REPO: ${{ secrets.BLOCKSOS_REPO }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-    needs: [initialization, test-job, sast-job, sca-job]
+    needs: [initialization, test-job, sast-job, sca-job] 
 
   dast-job:
     if: ${{ needs.initialization.outputs.envvalue4=='true' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
