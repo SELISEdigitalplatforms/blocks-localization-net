@@ -23,7 +23,7 @@ jobs:
       envvalue4: ${{ steps.setvar.outputs.envvar4 }}
       dev_version: ${{ steps.versions.outputs.dev_version }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4 
         with:
           sparse-checkout: .github/variables
           sparse-checkout-cone-mode: false
