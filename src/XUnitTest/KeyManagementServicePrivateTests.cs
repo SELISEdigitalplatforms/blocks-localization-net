@@ -23,6 +23,7 @@ namespace XUnitTest
         {
             var keyRepositoryMock = new Mock<IKeyRepository>();
             var keyTimelineRepositoryMock = new Mock<IKeyTimelineRepository>();
+            var languageFileGenerationHistoryRepositoryMock = new Mock<ILanguageFileGenerationHistoryRepository>();
             var validatorMock = new Mock<FluentValidation.IValidator<Key>>();
             var loggerMock = new Mock<ILogger<KeyManagementService>>();
             var languageServiceMock = new Mock<ILanguageManagementService>();
@@ -41,6 +42,7 @@ namespace XUnitTest
             _service = new KeyManagementService(
                 keyRepositoryMock.Object,
                 keyTimelineRepositoryMock.Object,
+                languageFileGenerationHistoryRepositoryMock.Object,
                 validatorMock.Object,
                 loggerMock.Object,
                 languageServiceMock.Object,

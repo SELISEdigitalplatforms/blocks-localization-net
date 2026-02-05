@@ -25,6 +25,7 @@ namespace DomainService.Services
     {
         private readonly IKeyRepository _keyRepository;
         private readonly IKeyTimelineRepository _keyTimelineRepository;
+        private readonly ILanguageFileGenerationHistoryRepository _languageFileGenerationHistoryRepository;
         private readonly IValidator<Key> _validator;
         private readonly ILogger<KeyManagementService> _logger;
         private readonly ILanguageManagementService _languageManagementService;
@@ -43,6 +44,7 @@ namespace DomainService.Services
         public KeyManagementService(
             IKeyRepository keyRepository,
             IKeyTimelineRepository keyTimelineRepository,
+            ILanguageFileGenerationHistoryRepository languageFileGenerationHistoryRepository,
             IValidator<Key> validator,
             ILogger<KeyManagementService> logger,
             ILanguageManagementService languageManagementService,
@@ -57,6 +59,7 @@ namespace DomainService.Services
         {
             _keyRepository = keyRepository;
             _keyTimelineRepository = keyTimelineRepository;
+            _languageFileGenerationHistoryRepository = languageFileGenerationHistoryRepository;
             _validator = validator;
             _logger = logger;
             _languageManagementService = languageManagementService;
@@ -565,8 +568,24 @@ namespace DomainService.Services
 
                 _logger.LogInformation("++Saving {UilmfilesCount} UilmFiles for UilmApplication={ApplicationName}", uilmfiles.Count, application.ModuleName);
                 await SaveUniqeFiles(uilmfiles);
+
+               
             }
-            ;
+             // Create history entry for this generation
+            var latestHistory = await _languageFileGenerationHistoryRepository.GetLatestLanguageFileGenerationHistory(command.ProjectKey ?? "");
+            var newVersion = (latestHistory?.Version ?? 0) + 1;
+
+            var historyEntry = new LanguageFileGenerationHistory
+            {
+                    ItemId = Guid.NewGuid().ToString(),
+                    CreateDate = DateTime.UtcNow,
+                    Version = newVersion,
+                    ModuleId = command.ModuleId,
+                    ProjectKey = command.ProjectKey ?? ""
+            };
+
+            await _languageFileGenerationHistoryRepository.SaveAsync(historyEntry);
+            _logger.LogInformation("++Created LanguageFileGenerationHistory entry with Version={Version} for ProjectKey={ProjectKey}", newVersion, command.ProjectKey);
 
             _logger.LogInformation("++JsonOutputGeneratorService: GenerateAsync execution successful!");
 
@@ -2370,6 +2389,11 @@ namespace DomainService.Services
                 CreateDate = key.CreateDate,
                 TenantId = _tenantId
             };
+        }
+
+        public async Task<GetLanguageFileGenerationHistoryResponse> GetLanguageFileGenerationHistoryAsync(GetLanguageFileGenerationHistoryRequest request)
+        {
+            return await _languageFileGenerationHistoryRepository.GetPaginatedAsync(request);
         }
     }
 }

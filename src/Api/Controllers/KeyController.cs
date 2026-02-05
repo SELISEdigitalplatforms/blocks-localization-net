@@ -368,6 +368,34 @@ namespace Api.Controllers
         }
 
         /// <summary>
+        /// Gets a paginated list of language file generation history entries.
+        /// </summary>
+        /// <param name="request">The request containing pagination parameters.</param>
+        /// <returns>A paginated list of language file generation history entries.</returns>
+        [HttpGet]
+        [ProtectedEndPoint]
+        public async Task<IActionResult> GetLanguageFileGenerationHistory([FromQuery] GetLanguageFileGenerationHistoryRequest request)
+        {
+            if (request == null) return BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(request);
+
+            if (request.PageSize <= 0 || request.PageNumber < 0)
+            {
+                return BadRequest(new BaseMutationResponse
+                {
+                    IsSuccess = false,
+                    Errors = new Dictionary<string, string>
+                    {
+                        { "Pagination", "PageSize must be greater than 0 and PageNumber must be 0 or greater" }
+                    }
+                });
+            }
+
+            var result = await _keyManagementService.GetLanguageFileGenerationHistoryAsync(request);
+            return Ok(result);
+        }
+
+        /// <summary>
         /// Reverts keys to a previous state.
         /// </summary>
         /// <param name="request">The request containing the item ID and rollback parameters.</param>

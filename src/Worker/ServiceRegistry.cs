@@ -44,6 +44,7 @@ namespace Worker
             services.AddSingleton<IKeyManagementService, KeyManagementService>();
             services.AddSingleton<IKeyRepository, KeyRepository>();
             services.AddSingleton<IKeyTimelineRepository, KeyTimelineRepository>();
+            services.AddSingleton<ILanguageFileGenerationHistoryRepository, LanguageFileGenerationHistoryRepository>();
             services.AddSingleton<IValidator<Key>, KeyValidator>();
             services.AddSingleton<IValidator<TranslateBlocksLanguageKeyRequest>, TranslateBlocksLanguageKeyRequestValidator>();
             services.AddSingleton<IEnvironmentDataMigrationRepository, EnvironmentDataMigrationRepository>();
