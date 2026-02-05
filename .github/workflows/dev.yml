@@ -1,5 +1,5 @@
 name: Build (dev)
- 
+
 on:
   push:
     branches:
@@ -22,6 +22,7 @@ jobs:
       envvalue3: ${{ steps.setvar.outputs.envvar3 }}
       envvalue4: ${{ steps.setvar.outputs.envvar4 }}
       dev_version: ${{ steps.versions.outputs.dev_version }}
+      service_name: ${{ steps.loadvars.outputs.service_name }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
@@ -39,6 +40,11 @@ jobs:
         run: |
           source .github/variables/versions.env
           echo "dev_version=${DEV_VERSION}" >> "$GITHUB_OUTPUT"
+      - name: Load vars
+        id: loadvars
+        run: |
+          source .github/variables/vars.env
+          echo "service_name=${SERVICE_NAME}" >> "$GITHUB_OUTPUT"
 
   test-job:
     if: ${{ needs.initialization.outputs.envvalue1=='true' }}
@@ -104,11 +110,11 @@ jobs:
     needs: [initialization]
 
   gitops-api-dev:
-    uses: ./.github/workflows/update-gitops.yml
+    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/update-gitops-dev.yml@main
     permissions:
       contents: write
     with:
-      SERVICE_NAME: blocks-localization-net
+      SERVICE_NAME: ${{ needs.initialization.outputs.service_name }}
       SERVICE_TYPE: api
       ENVIRONMENT: dev
       IMAGE_TAG: ${{ needs.cd-job-build.outputs.image_tag }}
@@ -120,11 +126,11 @@ jobs:
     needs: [initialization, cd-job-build]
 
   gitops-api-nonprod:
-    uses: ./.github/workflows/update-gitops.yml
+    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/update-gitops-dev.yml@main
     permissions:
       contents: write
     with:
-      SERVICE_NAME: blocks-localization-net
+      SERVICE_NAME: ${{ needs.initialization.outputs.service_name }}
       SERVICE_TYPE: api
       ENVIRONMENT: dev
       IMAGE_TAG: ${{ needs.cd-job-build.outputs.image_tag }}
@@ -136,11 +142,11 @@ jobs:
     needs: [initialization, cd-job-build]
 
   gitops-worker-dev:
-    uses: ./.github/workflows/update-gitops.yml
+    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/update-gitops-dev.yml@main
     permissions:
       contents: write
     with:
-      SERVICE_NAME: blocks-localization-net
+      SERVICE_NAME: ${{ needs.initialization.outputs.service_name }}
       SERVICE_TYPE: worker
       ENVIRONMENT: dev
       IMAGE_TAG: ${{ needs.cd-job-worker-build.outputs.image_tag }}
@@ -151,11 +157,11 @@ jobs:
     needs: [cd-job-worker-build]
 
   gitops-worker-nonprod:
-    uses: ./.github/workflows/update-gitops.yml
+    uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/update-gitops-dev.yml@main
     permissions:
       contents: write
     with:
-      SERVICE_NAME: blocks-localization-net
+      SERVICE_NAME: ${{ needs.initialization.outputs.service_name }}
       SERVICE_TYPE: worker
       ENVIRONMENT: dev
       IMAGE_TAG: ${{ needs.cd-job-worker-build.outputs.image_tag }}
