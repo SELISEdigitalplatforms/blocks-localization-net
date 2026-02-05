@@ -18,6 +18,7 @@ namespace XUnitTest
     {
         private readonly Mock<IKeyRepository> _keyRepositoryMock;
         private readonly Mock<IKeyTimelineRepository> _keyTimelineRepositoryMock;
+        private readonly Mock<ILanguageFileGenerationHistoryRepository> _languageFileGenerationHistoryRepositoryMock;
         private readonly Mock<IAssistantService> _assistantServiceMock;
         private readonly Mock<ILanguageManagementService> _languageServiceMock;
         private readonly Mock<IModuleManagementService> _moduleServiceMock;
@@ -27,6 +28,7 @@ namespace XUnitTest
         {
             _keyRepositoryMock = new Mock<IKeyRepository>();
             _keyTimelineRepositoryMock = new Mock<IKeyTimelineRepository>();
+            _languageFileGenerationHistoryRepositoryMock = new Mock<ILanguageFileGenerationHistoryRepository>();
             var validatorMock = new Mock<IValidator<Key>>();
             var loggerMock = new Mock<ILogger<KeyManagementService>>();
             _languageServiceMock = new Mock<ILanguageManagementService>();
@@ -44,6 +46,7 @@ namespace XUnitTest
             _service = new KeyManagementService(
                 _keyRepositoryMock.Object,
                 _keyTimelineRepositoryMock.Object,
+                _languageFileGenerationHistoryRepositoryMock.Object,
                 validatorMock.Object,
                 loggerMock.Object,
                 _languageServiceMock.Object,
