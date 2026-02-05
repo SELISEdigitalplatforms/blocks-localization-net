@@ -154,7 +154,7 @@ jobs:
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
       BLOCKSOS_REPO: ${{ secrets.BLOCKSOS_REPO }}
-    needs: [cd-job-worker-build]
+    needs: [initialization, cd-job-worker-build]
 
   gitops-worker-nonprod:
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/update-gitops-dev.yml@main
@@ -169,7 +169,7 @@ jobs:
     secrets:
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
       BLOCKSOS_REPO: ${{ secrets.BLOCKSOS_REPO }}
-    needs: [cd-job-worker-build]
+    needs: [initialization, cd-job-worker-build]
 
   dast-job:
     if: ${{ github.event_name == 'push' && (success() || needs.initialization.outputs.envvalue4=='true') }}
