@@ -559,6 +559,218 @@ namespace XUnitTest
             result.Should().NotBeNull();
             _keyTimelineRepositoryMock.Verify(r => r.GetKeyTimelineAsync(request), Times.Once);
         }
+
+        #region GetLanguageFileGenerationHistoryAsync Tests
+
+        [Fact]
+        public async Task GetLanguageFileGenerationHistoryAsync_WithValidRequest_ReturnsExpectedResponse()
+        {
+            // Arrange
+            var request = new GetLanguageFileGenerationHistoryRequest
+            {
+                ProjectKey = "test-project",
+                PageNumber = 0,
+                PageSize = 10
+            };
+
+            var expectedResponse = new GetLanguageFileGenerationHistoryResponse
+            {
+                TotalCount = 3,
+                Items = new List<LanguageFileGenerationHistory>
+                {
+                    new LanguageFileGenerationHistory
+                    {
+                        ItemId = "history-1",
+                        CreateDate = DateTime.UtcNow,
+                        Version = 1,
+                        ModuleId = "module-1",
+                        ProjectKey = "test-project"
+                    },
+                    new LanguageFileGenerationHistory
+                    {
+                        ItemId = "history-2",
+                        CreateDate = DateTime.UtcNow.AddHours(-1),
+                        Version = 2,
+                        ModuleId = "module-2",
+                        ProjectKey = "test-project"
+                    },
+                    new LanguageFileGenerationHistory
+                    {
+                        ItemId = "history-3",
+                        CreateDate = DateTime.UtcNow.AddHours(-2),
+                        Version = 3,
+                        ModuleId = null,
+                        ProjectKey = "test-project"
+                    }
+                }
+            };
+
+            _languageFileGenerationHistoryRepositoryMock.Setup(r => r.GetPaginatedAsync(request))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _service.GetLanguageFileGenerationHistoryAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.TotalCount.Should().Be(3);
+            result.Items.Should().HaveCount(3);
+            result.Items[0].ItemId.Should().Be("history-1");
+            result.Items[0].Version.Should().Be(1);
+            result.Items[1].ModuleId.Should().Be("module-2");
+            result.Items[2].ModuleId.Should().BeNull();
+            _languageFileGenerationHistoryRepositoryMock.Verify(r => r.GetPaginatedAsync(request), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetLanguageFileGenerationHistoryAsync_WithEmptyHistory_ReturnsEmptyResponse()
+        {
+            // Arrange
+            var request = new GetLanguageFileGenerationHistoryRequest
+            {
+                ProjectKey = "empty-project",
+                PageNumber = 0,
+                PageSize = 10
+            };
+
+            var expectedResponse = new GetLanguageFileGenerationHistoryResponse
+            {
+                TotalCount = 0,
+                Items = new List<LanguageFileGenerationHistory>()
+            };
+
+            _languageFileGenerationHistoryRepositoryMock.Setup(r => r.GetPaginatedAsync(request))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _service.GetLanguageFileGenerationHistoryAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.TotalCount.Should().Be(0);
+            result.Items.Should().BeEmpty();
+            _languageFileGenerationHistoryRepositoryMock.Verify(r => r.GetPaginatedAsync(request), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetLanguageFileGenerationHistoryAsync_WithPagination_ReturnsCorrectPage()
+        {
+            // Arrange
+            var request = new GetLanguageFileGenerationHistoryRequest
+            {
+                ProjectKey = "test-project",
+                PageNumber = 2,
+                PageSize = 5
+            };
+
+            var expectedResponse = new GetLanguageFileGenerationHistoryResponse
+            {
+                TotalCount = 20,
+                Items = new List<LanguageFileGenerationHistory>
+                {
+                    new LanguageFileGenerationHistory
+                    {
+                        ItemId = "history-11",
+                        CreateDate = DateTime.UtcNow.AddDays(-11),
+                        Version = 11,
+                        ModuleId = "module-1",
+                        ProjectKey = "test-project"
+                    }
+                }
+            };
+
+            _languageFileGenerationHistoryRepositoryMock.Setup(r => r.GetPaginatedAsync(request))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _service.GetLanguageFileGenerationHistoryAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.TotalCount.Should().Be(20);
+            result.Items.Should().HaveCount(1);
+            _languageFileGenerationHistoryRepositoryMock.Verify(r => r.GetPaginatedAsync(request), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetLanguageFileGenerationHistoryAsync_WithCustomPageSize_ReturnsCorrectNumberOfItems()
+        {
+            // Arrange
+            var request = new GetLanguageFileGenerationHistoryRequest
+            {
+                ProjectKey = "test-project",
+                PageNumber = 0,
+                PageSize = 25
+            };
+
+            var items = new List<LanguageFileGenerationHistory>();
+            for (int i = 0; i < 25; i++)
+            {
+                items.Add(new LanguageFileGenerationHistory
+                {
+                    ItemId = $"history-{i}",
+                    CreateDate = DateTime.UtcNow.AddHours(-i),
+                    Version = i + 1,
+                    ModuleId = $"module-{i % 3}",
+                    ProjectKey = "test-project"
+                });
+            }
+
+            var expectedResponse = new GetLanguageFileGenerationHistoryResponse
+            {
+                TotalCount = 100,
+                Items = items
+            };
+
+            _languageFileGenerationHistoryRepositoryMock.Setup(r => r.GetPaginatedAsync(request))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _service.GetLanguageFileGenerationHistoryAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.TotalCount.Should().Be(100);
+            result.Items.Should().HaveCount(25);
+            _languageFileGenerationHistoryRepositoryMock.Verify(r => r.GetPaginatedAsync(request), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetLanguageFileGenerationHistoryAsync_CallsRepositoryWithSameRequest()
+        {
+            // Arrange
+            var request = new GetLanguageFileGenerationHistoryRequest
+            {
+                ProjectKey = "validation-project",
+                PageNumber = 1,
+                PageSize = 15
+            };
+
+            var expectedResponse = new GetLanguageFileGenerationHistoryResponse
+            {
+                TotalCount = 0,
+                Items = new List<LanguageFileGenerationHistory>()
+            };
+
+            _languageFileGenerationHistoryRepositoryMock.Setup(r => r.GetPaginatedAsync(request))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _service.GetLanguageFileGenerationHistoryAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            _languageFileGenerationHistoryRepositoryMock.Verify(
+                r => r.GetPaginatedAsync(It.Is<GetLanguageFileGenerationHistoryRequest>(
+                    req => req.ProjectKey == request.ProjectKey 
+                        && req.PageNumber == request.PageNumber 
+                        && req.PageSize == request.PageSize
+                )), 
+                Times.Once
+            );
+        }
+
+        #endregion
     }
 }
 
