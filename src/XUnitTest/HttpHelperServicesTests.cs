@@ -24,6 +24,7 @@ namespace XUnitTest
             _httpClientFactoryMock = new Mock<IHttpClientFactory>();
             _loggerMock = new Mock<ILogger<HttpHelperServices>>();
         }
+        
 
         [Fact]
         public async Task MakeHttpGetRequest_ReturnsData()
