@@ -33,5 +33,6 @@ namespace DomainService.Services
         Task CreateBulkKeyTimelineEntriesAsync(List<BlocksLanguageKey> keys, List<BlocksLanguageKey> previousKeys, string logFrom, string targetedProjectKey);
         Task<BaseMutationResponse> DeleteCollectionsAsync(DeleteCollectionsRequest request);
         Task<BaseMutationResponse> RollbackAsync(RollbackRequest request);
+        Task<GetLanguageFileGenerationHistoryResponse> GetLanguageFileGenerationHistoryAsync(GetLanguageFileGenerationHistoryRequest request);
     }
 }

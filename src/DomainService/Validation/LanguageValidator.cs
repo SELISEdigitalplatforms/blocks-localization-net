@@ -14,7 +14,8 @@ namespace DomainService.Services
             // Validation for LanguageCode
             RuleFor(language => language.LanguageCode)
                 .NotEmpty().WithMessage("Language code is required.")
-                .Matches(@"^[a-z]{2}-[A-Z]{2}$").WithMessage("Language code must follow the format 'xx-XX' (e.g., 'en-US').");
+                .Matches(@"^[a-z]{2,3}-[A-Z]{2}$").WithMessage("Language code must follow the format 'xx-XX' or 'xxx-XX' (e.g., 'en-US', 'zho-CN').");
+
 
             // Validation for IsDefault (no need for validation, it's a boolean)
         }

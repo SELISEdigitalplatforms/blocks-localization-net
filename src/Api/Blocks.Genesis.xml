@@ -121,6 +121,13 @@
             <param name="request">The request containing pagination parameters.</param>
             <returns>A paginated list of exported UILM files.</returns>
         </member>
+        <member name="M:Api.Controllers.KeyController.GetLanguageFileGenerationHistory(DomainService.Services.GetLanguageFileGenerationHistoryRequest)">
+            <summary>
+            Gets a paginated list of language file generation history entries.
+            </summary>
+            <param name="request">The request containing pagination parameters.</param>
+            <returns>A paginated list of language file generation history entries.</returns>
+        </member>
         <member name="M:Api.Controllers.KeyController.RollBack(DomainService.Services.RollbackRequest)">
             <summary>
             Reverts keys to a previous state.
