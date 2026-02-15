@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - dev
+  pull_request:
+    branches:
+      - dev
+    types: [opened, synchronize, reopened]
+
 permissions:
   contents: read
 
@@ -23,31 +28,48 @@ jobs:
       envvalue4: ${{ steps.setvar.outputs.envvar4 }}
       dev_version: ${{ steps.versions.outputs.dev_version }}
       service_name: ${{ steps.loadvars.outputs.service_name }}
+      pr_number: ${{ steps.determine-pr.outputs.pr_number }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           sparse-checkout: .github/variables
           sparse-checkout-cone-mode: false
-      - name: set value
+
+      - name: Set value
         id: setvar
         run: |
           echo "envvar1=$RUN_UNIT_TEST" >> "$GITHUB_OUTPUT"
           echo "envvar2=$RUN_SAST" >> "$GITHUB_OUTPUT"
           echo "envvar3=$RUN_SCA" >> "$GITHUB_OUTPUT"
           echo "envvar4=$RUN_DAST" >> "$GITHUB_OUTPUT"
+
       - name: Load versions
         id: versions
         run: |
           source .github/variables/versions.env
           echo "dev_version=${DEV_VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Load vars
         id: loadvars
         run: |
           source .github/variables/vars.env
           echo "service_name=${SERVICE_NAME}" >> "$GITHUB_OUTPUT"
 
+      - name: Determine PR Number
+        id: determine-pr
+        run: |
+          PR_NUMBER=""
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          else
+            PR_NUMBER=$(curl -s -H "Authorization: token ${{ secrets.SELISE_GITHUB_PAT }}" \
+              https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls | jq -r '.[0].number // empty')
+          fi
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Determined PR Number: $PR_NUMBER"
+
   test-job:
-    if: ${{ needs.initialization.outputs.envvalue1=='true' }}
+    if: ${{ needs.initialization.outputs.envvalue1=='true' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/1_unit_test.yml@main
     permissions:
       contents: read
@@ -59,7 +81,7 @@ jobs:
     needs: [initialization]
 
   sast-job:
-    if: ${{ success() && needs.initialization.outputs.envvalue2=='true' }}
+    if: ${{ needs.initialization.outputs.envvalue2=='true' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/2_sast.yml@main
     permissions:
       contents: read
@@ -71,7 +93,7 @@ jobs:
     needs: [initialization]
 
   sca-job:
-    if: ${{ success() && needs.initialization.outputs.envvalue3=='true' }}
+    if: ${{ needs.initialization.outputs.envvalue3=='true' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/3_sca.yml@main
     permissions:
       contents: read
@@ -80,13 +102,14 @@ jobs:
     needs: [initialization]
 
   cd-job-build:
-    # if: ${{ github.event_name == 'push' && (needs.test-job.result == 'success' || needs.test-job.result == 'skipped') && (needs.sast-job.result == 'success' || needs.sast-job.result == 'skipped') && (needs.sca-job.result == 'success' || needs.sca-job.result == 'skipped') }}
+    if: ${{ github.event_name == 'push' }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/api.yml@main
     permissions:
       contents: write
       id-token: write
     with:
       MODE: dev
+      PR_NUMBER: ${{ needs.initialization.outputs.pr_number }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -95,13 +118,14 @@ jobs:
     needs: [initialization]
 
   cd-job-worker-build:
-    # if: ${{ github.event_name == 'push' && (needs.test-job.result == 'success' || needs.test-job.result == 'skipped') && (needs.sast-job.result == 'success' || needs.sast-job.result == 'skipped') && (needs.sca-job.result == 'success' || needs.sca-job.result == 'skipped') }}
+    if: ${{ github.event_name == 'push' }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/worker.yml@main
     permissions:
       contents: write
       id-token: write
     with:
       MODE: dev
+      PR_NUMBER: ${{ needs.initialization.outputs.pr_number }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -172,8 +196,10 @@ jobs:
     needs: [initialization, cd-job-worker-build]
 
   dast-job:
-    if: ${{ github.event_name == 'push' && (success() || needs.initialization.outputs.envvalue4=='true') }}
+    if: ${{ github.event_name == 'push' && needs.initialization.outputs.envvalue4 == 'true' }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/4_dast.yml@main
     secrets:
       ZAP_API_KEY: ${{ secrets.ZAP_KEY }}
-    needs: [cd-job-build]
+    needs:
+      - cd-job-build
+      - cd-job-worker-build
