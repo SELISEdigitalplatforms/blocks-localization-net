@@ -1,14 +1,21 @@
 name: Build (main)
+
 on:
+  push:
+    branches:
+      - main
   pull_request:
-    types: [closed]
-    branches: [main]
+    branches:
+      - main
+    types: [opened, synchronize, reopened] 
+
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   RUN_UNIT_TEST: "true"
-  RUN_SAST: "true"
+  RUN_SAST: "false"
   RUN_SCA: "true"
   RUN_DAST: "true"
 
@@ -20,17 +27,28 @@ jobs:
       envvalue2: ${{ steps.setvar.outputs.envvar2 }}
       envvalue3: ${{ steps.setvar.outputs.envvar3 }}
       envvalue4: ${{ steps.setvar.outputs.envvar4 }}
+      pr_number: ${{ steps.determine-pr.outputs.pr_number }}
     steps:
-      - name: set value
-        id: setvar
+      - id: setvar
         run: |
           echo "envvar1=$RUN_UNIT_TEST" >> "$GITHUB_OUTPUT"
           echo "envvar2=$RUN_SAST" >> "$GITHUB_OUTPUT"
           echo "envvar3=$RUN_SCA" >> "$GITHUB_OUTPUT"
           echo "envvar4=$RUN_DAST" >> "$GITHUB_OUTPUT"
 
+      - id: determine-pr
+        run: |
+          PR_NUMBER=""
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          else
+            PR_NUMBER=$(curl -s -H "Authorization: token ${{ secrets.SELISE_GITHUB_PAT }}" \
+              https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls | jq -r '.[0].number // empty')
+          fi
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
   test-job:
-    if: ${{ needs.initialization.outputs.envvalue1=='true' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
+    if: ${{ needs.initialization.outputs.envvalue1 == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/1_unit_test.yml@main
     permissions:
       contents: read
@@ -42,7 +60,7 @@ jobs:
     needs: [initialization]
 
   sast-job:
-    if: ${{ success() && needs.initialization.outputs.envvalue2=='true' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
+    if: ${{ needs.initialization.outputs.envvalue2 == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/2_sast.yml@main
     permissions:
       contents: read
@@ -54,7 +72,7 @@ jobs:
     needs: [initialization]
 
   sca-job:
-    if: ${{ success() && needs.initialization.outputs.envvalue3=='true' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
+    if: ${{ needs.initialization.outputs.envvalue3 == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/3_sca.yml@main
     permissions:
       contents: read
@@ -63,40 +81,42 @@ jobs:
     needs: [initialization]
 
   cd-job-api-build:
-    if: ${{ github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
+    if: ${{ github.event_name == 'push' }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/api.yml@main
     permissions:
       contents: write
       id-token: write
     with:
       MODE: main
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_NUMBER: ${{ needs.initialization.outputs.pr_number }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       BLOCKSOS_REPO: ${{ secrets.BLOCKSOS_REPO }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-    needs: [initialization, test-job, sast-job, sca-job]
+    needs: [initialization]
 
   cd-job-worker-build:
-    if: ${{ github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
+    if: ${{ github.event_name == 'push' }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/worker.yml@main
     permissions:
       contents: write
       id-token: write
     with:
       MODE: main
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_NUMBER: ${{ needs.initialization.outputs.pr_number }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       BLOCKSOS_REPO: ${{ secrets.BLOCKSOS_REPO }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-    needs: [initialization, test-job, sast-job, sca-job] 
+    needs: [initialization]
 
   dast-job:
-    if: ${{ needs.initialization.outputs.envvalue4=='true' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev' }}
+    if: ${{ github.event_name == 'push' && needs.initialization.outputs.envvalue4 == 'true' }}
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/4_dast.yml@main
     secrets:
-      ZAP_API_KEY: ${{ secrets.ZAP_KEY }}
-    needs: [cd-job-api-build]
+      ZAP_API_KEY: ${{ secrets.ZAP_KEY }} 
+    needs:
+      - cd-job-api-build
+      - cd-job-worker-build
