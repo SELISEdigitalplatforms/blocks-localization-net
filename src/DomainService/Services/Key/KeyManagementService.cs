@@ -229,6 +229,25 @@ namespace DomainService.Services
             return await _keyRepository.GetAllKeysAsync(query);
         }
 
+        public async Task<GetKeysByKeyNamesResponse> GetKeysByKeyNamesAsync(GetKeysByKeyNamesRequest request)
+        {
+            if (request.KeyNames == null || request.KeyNames.Length == 0)
+            {
+                return new GetKeysByKeyNamesResponse { ErrorMessage = "KeyNames must not be empty." };
+            }
+
+            try
+            {
+                var keys = await _keyRepository.GetKeysByKeyNamesAsync(request.KeyNames, request.ProjectKey, request.ModuleId);
+                return new GetKeysByKeyNamesResponse { Keys = keys };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving keys by key names.");
+                return new GetKeysByKeyNamesResponse { ErrorMessage = "An error occurred while retrieving keys." };
+            }
+        }
+
         public async Task<GetUilmExportedFilesQueryResponse> GetUilmExportedFilesAsync(GetUilmExportedFilesRequest request)
         {
             return await _keyRepository.GetUilmExportedFilesAsync(request);
