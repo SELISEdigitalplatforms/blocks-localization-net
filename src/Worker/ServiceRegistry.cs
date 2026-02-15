@@ -58,6 +58,8 @@ namespace Worker
             services.AddSingleton<IHttpHelperServices, HttpHelperServices>();
             services.AddSingleton<IWebHookService, WebHookService>();
             services.AddSingleton<IBlocksWebhookRepository, BlocksWebhookRepository>();
+
+            services.AddHostedService<PeriodicPingBackgroundService>();
         }
     }
 }
