@@ -10,6 +10,7 @@ namespace DomainService.Services
         Task<ApiResponse> SaveKeyAsync(Key key);
         Task<ApiResponse> SaveKeysAsync(List<Key> keys);
         Task<GetKeysQueryResponse> GetKeysAsync(GetKeysRequest query);
+        Task<GetKeysByKeyNamesResponse> GetKeysByKeyNamesAsync(GetKeysByKeyNamesRequest request);
         Task<GetUilmExportedFilesQueryResponse> GetUilmExportedFilesAsync(GetUilmExportedFilesRequest request);
         Task<GetKeyTimelineQueryResponse> GetKeyTimelineAsync(GetKeyTimelineRequest query);
         Task<bool> GenerateAsync(GenerateUilmFilesEvent command);

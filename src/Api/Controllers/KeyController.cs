@@ -92,6 +92,22 @@ namespace Api.Controllers
         }
 
         /// <summary>
+        /// Retrieves keys by an array of key names without pagination or filtering.
+        /// </summary>
+        /// <param name="request">The request containing an array of key names.</param>
+        /// <returns>A <see cref="GetKeysByKeyNamesResponse"/> containing the matched keys and optional error.</returns>
+        [HttpPost]
+        [ProtectedEndPoint]
+        public async Task<GetKeysByKeyNamesResponse> GetsByKeyNames([FromBody] GetKeysByKeyNamesRequest request)
+        {
+            if (request == null)
+                return new GetKeysByKeyNamesResponse { ErrorMessage = "Request cannot be null." };
+
+            _changeControllerContext.ChangeContext(request);
+            return await _keyManagementService.GetKeysByKeyNamesAsync(request);
+        }
+
+        /// <summary>
         /// Retrieves Key timeline with pagination.
         /// </summary>
         /// <param name="query">The query parameters for filtering and pagination.</param>
