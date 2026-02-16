@@ -238,7 +238,7 @@ namespace DomainService.Services
 
             try
             {
-                var keys = await _keyRepository.GetKeysByKeyNamesAsync(request.KeyNames, request.ProjectKey, request.ModuleId);
+                var keys = await _keyRepository.GetKeysByKeyNamesAsync(request.KeyNames, request.ModuleId);
                 return new GetKeysByKeyNamesResponse { Keys = keys };
             }
             catch (Exception ex)

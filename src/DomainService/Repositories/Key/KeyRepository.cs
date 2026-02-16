@@ -41,9 +41,9 @@ namespace DomainService.Repositories
             return result.AsQueryable();
         }
 
-        public async Task<List<Key>> GetKeysByKeyNamesAsync(string[] keyNames, string projectKey, string? moduleId = null)
+        public async Task<List<Key>> GetKeysByKeyNamesAsync(string[] keyNames, string? moduleId = null)
         {
-            var dataBase = _dbContextProvider.GetDatabase(projectKey ?? "");
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
             var collection = dataBase.GetCollection<Key>(_collectionName);
             var filter = Builders<Key>.Filter.In(k => k.KeyName, keyNames);
 
