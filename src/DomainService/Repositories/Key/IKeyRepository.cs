@@ -33,5 +33,6 @@ namespace DomainService.Repositories
         Task<Dictionary<string, long>> DeleteCollectionsAsync(List<string> collections);
         Task SaveUilmExportedFileAsync(UilmExportedFile exportedFile);
         Task<GetUilmExportedFilesQueryResponse> GetUilmExportedFilesAsync(GetUilmExportedFilesRequest request);
+        Task<List<Key>> GetKeysByKeyNamesAsync(string[] keyNames, string? moduleId = null);
     }
 }

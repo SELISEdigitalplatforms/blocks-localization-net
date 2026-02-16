@@ -44,6 +44,13 @@
             <param name="query">The query parameters containing filters for key retrieval.</param>
             <returns>A <see cref="T:DomainService.Services.GetKeysQueryResponse"/> containing the filtered list of keys.</returns>
         </member>
+        <member name="M:Api.Controllers.KeyController.GetsByKeyNames(DomainService.Services.GetKeysByKeyNamesRequest)">
+            <summary>
+            Retrieves keys by an array of key names without pagination or filtering.
+            </summary>
+            <param name="request">The request containing an array of key names.</param>
+            <returns>A <see cref="T:DomainService.Services.GetKeysByKeyNamesResponse"/> containing the matched keys and optional error.</returns>
+        </member>
         <member name="M:Api.Controllers.KeyController.GetTimeline(DomainService.Services.GetKeyTimelineRequest)">
             <summary>
             Retrieves Key timeline with pagination.

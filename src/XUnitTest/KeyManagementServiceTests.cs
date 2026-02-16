@@ -771,6 +771,118 @@ namespace XUnitTest
         }
 
         #endregion
+
+        #region GetKeysByKeyNamesAsync Tests
+
+        [Fact]
+        public async Task GetKeysByKeyNamesAsync_ValidKeyNames_ReturnsMatchingKeys()
+        {
+            // Arrange
+            var keyNames = new[] { "welcome.message", "login.title" };
+            var expectedKeys = new List<Key>
+            {
+                new Key { KeyName = "welcome.message", ModuleId = "auth-module", Resources = new[] { new Resource { Culture = "en-US", Value = "Welcome" } } },
+                new Key { KeyName = "login.title", ModuleId = "auth-module", Resources = new[] { new Resource { Culture = "en-US", Value = "Login" } } }
+            };
+
+            _keyRepositoryMock
+                .Setup(r => r.GetKeysByKeyNamesAsync(keyNames, null))
+                .ReturnsAsync(expectedKeys);
+
+            var request = new GetKeysByKeyNamesRequest { KeyNames = keyNames, ProjectKey = "test-project" };
+
+            // Act
+            var result = await _service.GetKeysByKeyNamesAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Keys.Should().HaveCount(2);
+            result.Keys[0].KeyName.Should().Be("welcome.message");
+            result.Keys[1].KeyName.Should().Be("login.title");
+            result.ErrorMessage.Should().BeNull();
+            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(keyNames, null), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetKeysByKeyNamesAsync_EmptyKeyNames_ReturnsErrorMessage()
+        {
+            // Arrange
+            var request = new GetKeysByKeyNamesRequest { KeyNames = Array.Empty<string>(), ProjectKey = "test-project" };
+
+            // Act
+            var result = await _service.GetKeysByKeyNamesAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Keys.Should().BeEmpty();
+            result.ErrorMessage.Should().Be("KeyNames must not be empty.");
+            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(It.IsAny<string[]>(), It.IsAny<string?>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetKeysByKeyNamesAsync_NullKeyNames_ReturnsErrorMessage()
+        {
+            // Arrange
+            var request = new GetKeysByKeyNamesRequest { KeyNames = null, ProjectKey = "test-project" };
+
+            // Act
+            var result = await _service.GetKeysByKeyNamesAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Keys.Should().BeEmpty();
+            result.ErrorMessage.Should().Be("KeyNames must not be empty.");
+            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(It.IsAny<string[]>(), It.IsAny<string?>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetKeysByKeyNamesAsync_RepositoryThrowsException_ReturnsErrorMessage()
+        {
+            // Arrange
+            var keyNames = new[] { "some.key" };
+            _keyRepositoryMock
+                .Setup(r => r.GetKeysByKeyNamesAsync(keyNames, null))
+                .ThrowsAsync(new Exception("Database connection failed"));
+
+            var request = new GetKeysByKeyNamesRequest { KeyNames = keyNames, ProjectKey = "test-project" };
+
+            // Act
+            var result = await _service.GetKeysByKeyNamesAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Keys.Should().BeEmpty();
+            result.ErrorMessage.Should().Be("An error occurred while retrieving keys.");
+        }
+
+        [Fact]
+        public async Task GetKeysByKeyNamesAsync_WithModuleId_PassesModuleIdToRepository()
+        {
+            // Arrange
+            var keyNames = new[] { "welcome.message" };
+            var expectedKeys = new List<Key>
+            {
+                new Key { KeyName = "welcome.message", ModuleId = "auth-module", Resources = new[] { new Resource { Culture = "en-US", Value = "Welcome" } } }
+            };
+
+            _keyRepositoryMock
+                .Setup(r => r.GetKeysByKeyNamesAsync(keyNames, "auth-module"))
+                .ReturnsAsync(expectedKeys);
+
+            var request = new GetKeysByKeyNamesRequest { KeyNames = keyNames, ModuleId = "auth-module", ProjectKey = "test-project" };
+
+            // Act
+            var result = await _service.GetKeysByKeyNamesAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Keys.Should().HaveCount(1);
+            result.Keys[0].ModuleId.Should().Be("auth-module");
+            result.ErrorMessage.Should().BeNull();
+            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(keyNames, "auth-module"), Times.Once);
+        }
+
+        #endregion
     }
 }
 
