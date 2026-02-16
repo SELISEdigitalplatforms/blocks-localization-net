@@ -786,7 +786,7 @@ namespace XUnitTest
             };
 
             _keyRepositoryMock
-                .Setup(r => r.GetKeysByKeyNamesAsync(keyNames, "test-project", null))
+                .Setup(r => r.GetKeysByKeyNamesAsync(keyNames, null))
                 .ReturnsAsync(expectedKeys);
 
             var request = new GetKeysByKeyNamesRequest { KeyNames = keyNames, ProjectKey = "test-project" };
@@ -800,7 +800,7 @@ namespace XUnitTest
             result.Keys[0].KeyName.Should().Be("welcome.message");
             result.Keys[1].KeyName.Should().Be("login.title");
             result.ErrorMessage.Should().BeNull();
-            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(keyNames, "test-project", null), Times.Once);
+            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(keyNames, null), Times.Once);
         }
 
         [Fact]
@@ -816,7 +816,7 @@ namespace XUnitTest
             result.Should().NotBeNull();
             result.Keys.Should().BeEmpty();
             result.ErrorMessage.Should().Be("KeyNames must not be empty.");
-            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
+            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(It.IsAny<string[]>(), It.IsAny<string?>()), Times.Never);
         }
 
         [Fact]
@@ -832,7 +832,7 @@ namespace XUnitTest
             result.Should().NotBeNull();
             result.Keys.Should().BeEmpty();
             result.ErrorMessage.Should().Be("KeyNames must not be empty.");
-            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
+            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(It.IsAny<string[]>(), It.IsAny<string?>()), Times.Never);
         }
 
         [Fact]
@@ -841,7 +841,7 @@ namespace XUnitTest
             // Arrange
             var keyNames = new[] { "some.key" };
             _keyRepositoryMock
-                .Setup(r => r.GetKeysByKeyNamesAsync(keyNames, "test-project", null))
+                .Setup(r => r.GetKeysByKeyNamesAsync(keyNames, null))
                 .ThrowsAsync(new Exception("Database connection failed"));
 
             var request = new GetKeysByKeyNamesRequest { KeyNames = keyNames, ProjectKey = "test-project" };
@@ -866,7 +866,7 @@ namespace XUnitTest
             };
 
             _keyRepositoryMock
-                .Setup(r => r.GetKeysByKeyNamesAsync(keyNames, "test-project", "auth-module"))
+                .Setup(r => r.GetKeysByKeyNamesAsync(keyNames, "auth-module"))
                 .ReturnsAsync(expectedKeys);
 
             var request = new GetKeysByKeyNamesRequest { KeyNames = keyNames, ModuleId = "auth-module", ProjectKey = "test-project" };
@@ -879,7 +879,7 @@ namespace XUnitTest
             result.Keys.Should().HaveCount(1);
             result.Keys[0].ModuleId.Should().Be("auth-module");
             result.ErrorMessage.Should().BeNull();
-            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(keyNames, "test-project", "auth-module"), Times.Once);
+            _keyRepositoryMock.Verify(r => r.GetKeysByKeyNamesAsync(keyNames, "auth-module"), Times.Once);
         }
 
         #endregion
