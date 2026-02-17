@@ -202,4 +202,4 @@ jobs:
       ZAP_API_KEY: ${{ secrets.ZAP_KEY }}
     needs:
       - cd-job-build
-      - cd-job-worker-build
+      - cd-job-worker-build 
