@@ -41,6 +41,20 @@ namespace DomainService.Repositories
             return result.AsQueryable();
         }
 
+        public async Task<List<Key>> GetKeysByKeyNamesAsync(string[] keyNames, string? moduleId = null)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<Key>(_collectionName);
+            var filter = Builders<Key>.Filter.In(k => k.KeyName, keyNames);
+
+            if (!string.IsNullOrWhiteSpace(moduleId))
+            {
+                filter &= Builders<Key>.Filter.Eq(k => k.ModuleId, moduleId);
+            }
+
+            return await collection.Find(filter).ToListAsync();
+        }
+
         public async Task<GetKeysQueryResponse> GetAllKeysAsync(GetKeysRequest request)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
