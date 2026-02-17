@@ -39,13 +39,35 @@ jobs:
       - id: determine-pr
         run: |
           PR_NUMBER=""
+      
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             PR_NUMBER="${{ github.event.pull_request.number }}"
+            echo "Event is pull_request. PR_NUMBER=$PR_NUMBER"
           else
-            PR_NUMBER=$(curl -s -H "Authorization: token ${{ secrets.SELISE_GITHUB_PAT }}" \
-              https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls | jq -r '.[0].number // empty')
+            echo "Event is ${{ github.event_name }}. Fetching PR from commit..."
+      
+            RESPONSE_FILE=$(mktemp)
+      
+            HTTP_STATUS=$(curl -sS -w "%{http_code}" \
+              -o "$RESPONSE_FILE" \
+              -H "Authorization: token ${{ secrets.SELISE_GITHUB_PAT }}" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls)
+      
+            echo "HTTP Status: $HTTP_STATUS"
+            echo "Raw Response:"
+            cat "$RESPONSE_FILE"
+      
+            if [[ "$HTTP_STATUS" == "200" ]]; then
+              PR_NUMBER=$(jq -r 'if type=="array" and length>0 then .[0].number else empty end' "$RESPONSE_FILE")
+            else
+              echo "GitHub API call failed."
+            fi
           fi
+      
+          echo "Final PR_NUMBER=$PR_NUMBER"
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
 
   test-job:
     if: ${{ needs.initialization.outputs.envvalue1 == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
