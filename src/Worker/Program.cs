@@ -4,7 +4,7 @@ using Worker;
 
 const string _serviceName = "blocks-localization-worker";
 
-await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName, VaultType.Azure);
+var secret = await ApplicationConfigurations.ConfigureLogAndSecretsAsync(_serviceName, VaultType.Azure);
 
 var localizationSecret = await LocalizationSecret.ProcessBlocksSecret(VaultType.Azure);
 
@@ -20,5 +20,5 @@ IHostBuilder CreateHostBuilder(string[] args) =>
         {
             services.AddHttpClient();
             services.RegisterApplicationServices(localizationSecret);
-            ApplicationConfigurations.ConfigureWorker(services, Constants.GetMessageConfiguration());
+            ApplicationConfigurations.ConfigureWorker(services, Constants.GetMessageConfiguration(secret.MessageConnectionString));
         });
