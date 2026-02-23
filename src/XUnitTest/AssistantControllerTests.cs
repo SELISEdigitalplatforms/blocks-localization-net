@@ -23,7 +23,7 @@ namespace XUnitTest
 
             // Create a loose mock that allows any method calls without throwing
             var changeControllerContextMock = new Mock<ChangeControllerContext>(MockBehavior.Loose, null, null, null);
-            changeControllerContextMock.Setup(x => x.ChangeContext(It.IsAny<object>()));
+            changeControllerContextMock.Setup(x => x.ChangeContext(It.IsAny<IProjectKey>()));
             
             _controller = new AssistantController(
                 changeControllerContextMock.Object,

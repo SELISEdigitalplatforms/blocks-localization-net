@@ -21,7 +21,7 @@ namespace XUnitTest
             _moduleManagementServiceMock = new Mock<IModuleManagementService>();
 
             var changeControllerContextMock = new Mock<ChangeControllerContext>(MockBehavior.Loose, null, null, null);
-            changeControllerContextMock.Setup(x => x.ChangeContext(It.IsAny<object>()));
+            changeControllerContextMock.Setup(x => x.ChangeContext(It.IsAny<IProjectKey>()));
             
             _controller = new ModuleController(
                 _moduleManagementServiceMock.Object,
