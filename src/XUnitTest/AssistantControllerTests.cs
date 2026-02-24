@@ -23,7 +23,6 @@ namespace XUnitTest
 
             // Create a loose mock that allows any method calls without throwing
             var changeControllerContextMock = new Mock<ChangeControllerContext>(MockBehavior.Loose, null, null, null);
-            changeControllerContextMock.Setup(x => x.ChangeContext(It.IsAny<IProjectKey>()));
             
             _controller = new AssistantController(
                 changeControllerContextMock.Object,
@@ -56,9 +55,9 @@ namespace XUnitTest
 
             // Assert
             result.Should().NotBeNull();
-            var okResult = result as OkObjectResult;
-            okResult.Should().NotBeNull();
-            okResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            var objectResult = result as ObjectResult;
+            objectResult.Should().NotBeNull();
+            objectResult!.StatusCode.Should().Be((int)HttpStatusCode.OK);
             
             _assistantServiceMock.Verify(x => x.SuggestTranslation(request), Times.Once);
         }
@@ -83,8 +82,9 @@ namespace XUnitTest
 
             // Assert
             result.Should().NotBeNull();
-            var okResult = result as OkObjectResult;
-            okResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            var objectResult = result as ObjectResult;
+            objectResult.Should().NotBeNull();
+            objectResult!.StatusCode.Should().Be((int)HttpStatusCode.OK);
         }
 
         [Fact]
