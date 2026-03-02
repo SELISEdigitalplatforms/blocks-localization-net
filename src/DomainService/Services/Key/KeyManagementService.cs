@@ -1289,8 +1289,7 @@ namespace DomainService.Services
                 foreach (var transUnit in transUnits)
                 {
                     var transUnitId = transUnit.Attribute("id")?.Value;
-                    var keyName = transUnit.Attribute("resname")?.Value;
-
+                    var keyName = transUnit.Element(ns + "source")?.Value;
                     if (string.IsNullOrEmpty(keyName)) continue;
 
                     // Extract ItemId from trans-unit id (format: ItemId_Culture)
