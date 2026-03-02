@@ -2164,15 +2164,19 @@ namespace DomainService.Services
         {
             try
             {
-                XNamespace ns = "urn:oasis:names:tc:xliff:document:1.2";
                 var document = XDocument.Load(templateStream);
 
-                var fileElements = document.Root?.Elements(ns + "file");
-                if (fileElements == null)
+                // Detect the namespace from the document root instead of hardcoding it
+                XNamespace ns = document.Root?.GetDefaultNamespace() ?? "urn:oasis:names:tc:xliff:document:1.2";
+
+                var fileElements = document.Root?.Descendants(ns + "file");
+                if (fileElements == null || !fileElements.Any())
                 {
                     _logger.LogWarning("WriteToXlf: No file elements found in XLF template");
                     return new MemoryStream();
                 }
+
+                int matchedCount = 0;
 
                 // Update the target language attribute
                 foreach (var fileElement in fileElements)
@@ -2182,7 +2186,8 @@ namespace DomainService.Services
                     var body = fileElement.Element(ns + "body");
                     if (body == null) continue;
 
-                    var transUnits = body.Elements(ns + "trans-unit");
+                    // Use Descendants to find trans-unit elements that may be nested inside <group> elements
+                    var transUnits = body.Descendants(ns + "trans-unit");
                     foreach (var transUnit in transUnits)
                     {
                         var keyName = transUnit.Element(ns + "source")?.Value;
@@ -2196,15 +2201,14 @@ namespace DomainService.Services
                             if (targetElement != null)
                             {
                                 targetElement.Value = value;
-                                targetElement.SetAttributeValue("state", "translated");
                             }
                             else
                             {
                                 // Create target element if it doesn't exist
-                                transUnit.Add(new XElement(ns + "target",
-                                    new XAttribute("state", "translated"),
-                                    value));
+                                var sourceElement = transUnit.Element(ns + "source");
+                                sourceElement?.AddAfterSelf(new XElement(ns + "target",value));
                             }
+                            matchedCount++;
                         }
                     }
                 }
@@ -2214,7 +2218,7 @@ namespace DomainService.Services
                 document.Save(outputStream);
                 outputStream.Position = 0;
 
-                _logger.LogInformation("WriteToXlf: Successfully updated XLF for language: {Language} with {Count} keys", targetLanguage, resourceKeyValueMap.Count);
+                _logger.LogInformation("WriteToXlf: Successfully updated XLF for language: {Language} with {Count} matched keys out of {Total} available", targetLanguage, matchedCount, resourceKeyValueMap.Count);
 
                 return outputStream;
             }
