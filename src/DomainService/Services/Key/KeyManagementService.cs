@@ -2000,6 +2000,8 @@ namespace DomainService.Services
                     var transUnits = body.Elements(ns + "trans-unit");
                     foreach (var transUnit in transUnits)
                     {
+                        var keyName = transUnit.Element(ns + "source")?.Value;
+
                         if (string.IsNullOrEmpty(keyName)) continue;
 
                         // If we have a value from database, update the target element
