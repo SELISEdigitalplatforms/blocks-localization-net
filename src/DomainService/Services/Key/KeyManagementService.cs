@@ -1293,7 +1293,6 @@ namespace DomainService.Services
                     if (string.IsNullOrEmpty(keyName)) continue;
 
                     // Extract ItemId from trans-unit id (format: ItemId_Culture)
-                    var itemId = transUnitId?.Split('_')[0];
 
                     var sourceElement = transUnit.Element(ns + "source");
                     var targetElement = transUnit.Element(ns + "target");
@@ -1332,7 +1331,7 @@ namespace DomainService.Services
                     {
                         languageJsonModels[keyName] = new LanguageJsonModel
                         {
-                            _id = itemId,
+                            _id = transUnitId,
                             Module = moduleName,
                             KeyName = keyName,
                             Resources = new List<Resource>().ToArray(),
@@ -2001,7 +2000,6 @@ namespace DomainService.Services
                     var transUnits = body.Elements(ns + "trans-unit");
                     foreach (var transUnit in transUnits)
                     {
-                        var keyName = transUnit.Attribute("resname")?.Value;
                         if (string.IsNullOrEmpty(keyName)) continue;
 
                         // If we have a value from database, update the target element
