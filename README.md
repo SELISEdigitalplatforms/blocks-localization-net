@@ -1,4 +1,4 @@
-# L2 Net Blocks Localization
+# blocks-localization-net
 
 A comprehensive .NET 9.0 localization management system for SELISE Blocks applications. This solution provides a robust API and background worker services for managing translation keys, languages, modules, and facilitating multi-language support across applications.
 
@@ -23,7 +23,7 @@ A comprehensive .NET 9.0 localization management system for SELISE Blocks applic
 
 ## 🎯 Overview
 
-L2 Net Blocks Localization is a production-ready localization management platform that enables:
+blocks-localization-net is a production-ready localization management platform that enables:
 
 - **Centralized Translation Management**: Manage translation keys, languages, and modules through RESTful APIs
 - **Multi-Format Import/Export**: Support for JSON, CSV, and Excel (XLSX) formats
