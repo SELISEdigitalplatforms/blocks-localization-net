@@ -90,7 +90,7 @@ jobs:
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_GLOBAL }}
       SONAR_GET: ${{ secrets.SONAR_GET }}
-    needs: [initialization]
+    needs: [test-job]
 
   sca-job:
     if: ${{ needs.initialization.outputs.envvalue3=='true' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
@@ -115,7 +115,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       BLOCKSOS_REPO: ${{ secrets.BLOCKSOS_REPO }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-    needs: [initialization]
+    needs: [sast-job]
 
   cd-job-worker-build:
     if: ${{ github.event_name == 'push' }}
@@ -131,7 +131,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       BLOCKSOS_REPO: ${{ secrets.BLOCKSOS_REPO }}
       SELISE_GITHUB_PAT: ${{ secrets.SELISE_GITHUB_PAT }}
-    needs: [initialization]
+    needs: [sast-job]
 
   gitops-api-dev:
     uses: SELISEdigitalplatforms/blocks-inventory/.github/workflows/update-gitops-dev.yml@main
