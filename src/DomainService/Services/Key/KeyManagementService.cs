@@ -1489,23 +1489,8 @@ namespace DomainService.Services
                     }
                     else
                     {
-                        // Non-base file: import translations for the target language
-                        // Add source language resource if not exists
-                        if (!string.IsNullOrEmpty(sourceLanguage) && !string.IsNullOrEmpty(sourceValue))
-                        {
-                            var sourceResource = resourceList.FirstOrDefault(r => r.Culture == sourceLanguage);
-                            if (sourceResource == null)
-                            {
-                                resourceList.Add(new Resource
-                                {
-                                    Culture = sourceLanguage,
-                                    Value = sourceValue,
-                                    CharacterLength = 0
-                                });
-                            }
-                        }
-
-                        // Add target language resource (language determined by filename)
+                        // Non-base file: import translations for the target language only
+                        // Do NOT add source language resource - only import the target language from the file
                         if (!string.IsNullOrEmpty(targetLanguage))
                         {
                             var targetResource = resourceList.FirstOrDefault(r => r.Culture == targetLanguage);
