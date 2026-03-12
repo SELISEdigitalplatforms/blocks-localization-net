@@ -1247,28 +1247,31 @@ namespace DomainService.Services
         {
             try
             {
+                // Validate filename pattern - only accept messages.xlf (base) or messages.{lang}.xlf (language files)
+                if (!IsValidXlfFileName(fileData.Name, out var extractedLanguageCode, out var isBaseFile))
+                {
+                    _logger.LogWarning("ImportXlfFile: Ignoring file {FileName} - filename does not match expected pattern (messages.xlf or messages.{{lang}}.xlf)", fileData.Name);
+                    return false;
+                }
+
                 // Get all languages from the database for mapping
                 var dbLanguages = await _languageManagementService.GetLanguagesAsync();
 
-                // Extract target language from filename (e.g., messages.en.xlf -> "en", messages.xlf -> null)
-                var targetLanguageFromFileName = ExtractLanguageFromFileName(fileData.Name);
-                var isBaseFile = string.IsNullOrEmpty(targetLanguageFromFileName);
-
                 // Map the extracted language code to the full database language code
                 string? mappedLanguageCode = null;
-                if (!isBaseFile && !string.IsNullOrEmpty(targetLanguageFromFileName))
+                if (!isBaseFile && !string.IsNullOrEmpty(extractedLanguageCode))
                 {
-                    mappedLanguageCode = MapToDbLanguageCode(targetLanguageFromFileName, dbLanguages);
+                    mappedLanguageCode = MapToDbLanguageCode(extractedLanguageCode, dbLanguages);
                     if (mappedLanguageCode == null)
                     {
-                        _logger.LogWarning("ImportXlfFile: No matching language found in database for language code '{LanguageCode}' from file {FileName}. Using original code.", 
-                            targetLanguageFromFileName, fileData.Name);
-                        mappedLanguageCode = targetLanguageFromFileName;
+                        _logger.LogWarning("ImportXlfFile: No matching language found in database for language code '{LanguageCode}' from file {FileName}. Ignoring file.", 
+                            extractedLanguageCode, fileData.Name);
+                        return false;
                     }
                     else
                     {
                         _logger.LogInformation("ImportXlfFile: Mapped language code '{OriginalCode}' to '{MappedCode}'", 
-                            targetLanguageFromFileName, mappedLanguageCode);
+                            extractedLanguageCode, mappedLanguageCode);
                     }
                 }
 
@@ -1321,42 +1324,56 @@ namespace DomainService.Services
         }
 
         /// <summary>
-        /// Extracts the language code from the XLF filename.
-        /// Expected patterns: messages.en.xlf, messages.it.xlf, messages.de.xlf, messages.fr.xlf
-        /// Base files (no language): messages.xlf, messages 10.xlf
+        /// Validates if the XLF filename matches the expected pattern.
+        /// Base file must be exactly "messages.xlf"
+        /// Language files must be exactly "messages.{languageCode}.xlf" (e.g., messages.de.xlf, messages.en.xlf)
         /// </summary>
-        /// <param name="fileName">The filename to extract language from</param>
-        /// <returns>The language code if found, null otherwise (base file)</returns>
-        private static string? ExtractLanguageFromFileName(string fileName)
+        /// <param name="fileName">The filename to validate</param>
+        /// <param name="languageCode">Output: the extracted language code (null for base file)</param>
+        /// <param name="isBaseFile">Output: true if this is the base file (messages.xlf)</param>
+        /// <returns>True if the filename matches the expected pattern, false otherwise</returns>
+        private static bool IsValidXlfFileName(string fileName, out string? languageCode, out bool isBaseFile)
         {
+            languageCode = null;
+            isBaseFile = false;
+
             if (string.IsNullOrEmpty(fileName))
-                return null;
+                return false;
 
-            // Remove the .xlf extension
-            var nameWithoutExtension = fileName.EndsWith(".xlf", StringComparison.OrdinalIgnoreCase)
-                ? fileName[..^4]
-                : fileName;
-
-            // Split by '.' to find language code
-            // Expected format: messages.en, messages.it, messages.de, etc.
-            var parts = nameWithoutExtension.Split('.');
-
-            // If there are at least 2 parts and the last part looks like a language code (2-5 chars, letters only or with hyphen)
-            if (parts.Length >= 2)
+            // Check for exact base file name: messages.xlf
+            if (fileName.Equals("messages.xlf", StringComparison.OrdinalIgnoreCase))
             {
-                var potentialLanguage = parts[^1];
-
-                // Language codes are typically 2-5 characters (e.g., "en", "de", "fr", "en-US", "zh-CN")
-                // They should contain only letters and possibly a hyphen
-                if (potentialLanguage.Length >= 2 && potentialLanguage.Length <= 10 &&
-                    potentialLanguage.All(c => char.IsLetter(c) || c == '-'))
-                {
-                    return potentialLanguage;
-                }
+                isBaseFile = true;
+                return true;
             }
 
-            // No language found - this is a base file
-            return null;
+            // Check for language file pattern: messages.{lang}.xlf
+            if (!fileName.StartsWith("messages.", StringComparison.OrdinalIgnoreCase) ||
+                !fileName.EndsWith(".xlf", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            // Extract language code from messages.{lang}.xlf
+            var nameWithoutExtension = fileName[..^4]; // Remove .xlf
+            var parts = nameWithoutExtension.Split('.');
+
+            // Should be exactly ["messages", "lang"] - no additional parts
+            if (parts.Length != 2)
+                return false;
+
+            var potentialLanguage = parts[1];
+
+            // Language codes are typically 2-5 characters (e.g., "en", "de", "fr", "en-US", "zh-CN")
+            // They should contain only letters and possibly a hyphen
+            if (potentialLanguage.Length >= 2 && potentialLanguage.Length <= 10 &&
+                potentialLanguage.All(c => char.IsLetter(c) || c == '-'))
+            {
+                languageCode = potentialLanguage;
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -1463,23 +1480,12 @@ namespace DomainService.Services
                     // Add or update resources
                     var resourceList = model.Resources?.ToList() ?? new List<Resource>();
 
-                    // For base files, only import keys (source values) without translations
+                    // For base files, only import the key without any translations
+                    // Do not add any language resources - existing translations should be preserved
                     if (isBaseFile)
                     {
-                        // Base file: only add source language resource for key import
-                        if (!string.IsNullOrEmpty(sourceLanguage) && !string.IsNullOrEmpty(sourceValue))
-                        {
-                            var sourceResource = resourceList.FirstOrDefault(r => r.Culture == sourceLanguage);
-                            if (sourceResource == null)
-                            {
-                                resourceList.Add(new Resource
-                                {
-                                    Culture = sourceLanguage,
-                                    Value = sourceValue,
-                                    CharacterLength = 0
-                                });
-                            }
-                        }
+                        // Base file: just import the key, no resources added
+                        // The key will be created/updated but existing translations are preserved via MergeResources
                     }
                     else
                     {
@@ -2151,7 +2157,9 @@ namespace DomainService.Services
                     // Write database values into the XLF template
                     var exportStream = WriteToXlf(copyStream, resourceKeyValueMap, language);
 
-                    var xlfFileName = $"messages.{language}.xlf";
+                    // Use short language code for filename (e.g., "de" instead of "de-DE")
+                    var shortLanguageCode = language.Contains('-') ? language.Split('-')[0] : language;
+                    var xlfFileName = $"messages.{shortLanguageCode}.xlf";
 
                     exportStreamFileMap.Add(xlfFileName, exportStream);
                 }
