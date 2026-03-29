@@ -187,14 +187,16 @@ namespace Api.Controllers
         [HttpGet]
         public async Task GetUilmFile([FromQuery] GetUilmFileRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.ProjectKey))
+            if (request == null) BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(request);
+
+            var tenantId = BlocksContext.GetContext()?.TenantId;
+            if (string.IsNullOrWhiteSpace(tenantId))
             {
                 Response.StatusCode = 401;
                 await Response.WriteAsync(string.Empty);
                 return;
             }
-            if (request == null) BadRequest(new BaseMutationResponse());
-            _changeControllerContext.ChangeContext(request);
             Response.ContentType = "application/json";
 
             string result = await _keyManagementService.GetUilmFile(request);
@@ -229,14 +231,15 @@ namespace Api.Controllers
             if (request == null) BadRequest(new BaseMutationResponse());
             _changeControllerContext.ChangeContext(request);
 
-            if (string.IsNullOrWhiteSpace(request.ProjectKey))
+            var tenantId = BlocksContext.GetContext()?.TenantId;
+            if (string.IsNullOrWhiteSpace(tenantId))
             {
                 return BadRequest(new BaseMutationResponse
                 {
                     IsSuccess = false,
                     Errors = new Dictionary<string, string>
                     {
-                        { "ProjectKey", "Invalid or missing ProjectKey" }
+                        { "TenantId", "Invalid or missing TenantId" }
                     }
                 });
             }
@@ -280,17 +283,17 @@ namespace Api.Controllers
         [ProtectedEndPoint]
         public async Task<IActionResult> UilmImport([FromBody] UilmImportRequest request)
         {
-            //if (request == null) return BadRequest();
             if (request == null) return BadRequest(new BaseMutationResponse());
             _changeControllerContext.ChangeContext(request);
-            if (string.IsNullOrWhiteSpace(request.ProjectKey))
+            var tenantId = BlocksContext.GetContext()?.TenantId;
+            if (string.IsNullOrWhiteSpace(tenantId))
             {
                 return BadRequest(new BaseMutationResponse
                 {
                     IsSuccess = false,
                     Errors = new Dictionary<string, string>
                     {
-                        { "ProjectKey", "Invalid or missing ProjectKey" }
+                        { "TenantId", "Invalid or missing TenantId" }
                     }
                 });
             }
@@ -310,14 +313,15 @@ namespace Api.Controllers
 
             if (request == null) return BadRequest(new BaseMutationResponse());
             _changeControllerContext.ChangeContext(request);
-            if (string.IsNullOrWhiteSpace(request.ProjectKey))
+            var tenantId = BlocksContext.GetContext()?.TenantId;
+            if (string.IsNullOrWhiteSpace(tenantId))
             {
                 return BadRequest(new BaseMutationResponse
                 {
                     IsSuccess = false,
                     Errors = new Dictionary<string, string>
                     {
-                        { "ProjectKey", "Invalid or missing ProjectKey" }
+                        { "TenantId", "Invalid or missing TenantId" }
                     }
                 });
             }

@@ -20,6 +20,6 @@ namespace DomainService.Services
         public string CallerTenantId { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
-        public string ProjectKey { get; set; }
+        public string? ProjectKey { get; set; }
     }
 }

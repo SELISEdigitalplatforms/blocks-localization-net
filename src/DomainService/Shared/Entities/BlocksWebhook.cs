@@ -14,7 +14,7 @@ namespace DomainService.Shared.Entities
         public required string ContentType { get; set; }
         public required BlocksWebhookSecret BlocksWebhookSecret { get; set; }
         public bool IsDisabled { get; set; }
-        public required string ProjectKey { get; set; }
+        public string? ProjectKey { get; set; }
     }
 
     public class BlocksWebhookSecret

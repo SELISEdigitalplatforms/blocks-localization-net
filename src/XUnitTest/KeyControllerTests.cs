@@ -254,10 +254,10 @@ namespace XUnitTest
         #region TranslateAll Tests
 
         [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
-        public async Task TranslateAll_WithValidProjectKey_ReturnsOk()
+        public async Task TranslateAll_WithValidTenantId_ReturnsOk()
         {
             // Arrange
-            var request = new TranslateAllRequest { ProjectKey = "project-1" };
+            var request = new TranslateAllRequest();
 
             // Act
             var result = await _controller.TranslateAll(request);
@@ -267,10 +267,10 @@ namespace XUnitTest
         }
 
         [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
-        public async Task TranslateAll_WithNullProjectKey_ReturnsBadRequest()
+        public async Task TranslateAll_WithNullTenantId_ReturnsBadRequest()
         {
-            // Arrange
-            var request = new TranslateAllRequest { ProjectKey = null };
+            // Arrange - TenantId from BlocksContext.GetContext() will be null in test context
+            var request = new TranslateAllRequest();
 
             // Act
             var result = await _controller.TranslateAll(request);
@@ -279,17 +279,14 @@ namespace XUnitTest
             result.Should().BeOfType<BadRequestObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
-        public async Task TranslateAll_WithEmptyProjectKey_ReturnsBadRequest()
+        [Fact]
+        public void TranslateAllRequest_ProjectKey_IsNullable()
         {
-            // Arrange
-            var request = new TranslateAllRequest { ProjectKey = "" };
-
-            // Act
-            var result = await _controller.TranslateAll(request);
+            // Arrange & Act
+            var request = new TranslateAllRequest { ProjectKey = null };
 
             // Assert
-            result.Should().BeOfType<BadRequestObjectResult>();
+            request.ProjectKey.Should().BeNull();
         }
 
         #endregion
@@ -362,10 +359,10 @@ namespace XUnitTest
         #region UilmImport Tests
 
         [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
-        public async Task UilmImport_WithValidRequest_ReturnsOk()
+        public async Task UilmImport_WithValidTenantId_ReturnsOk()
         {
             // Arrange
-            var request = new UilmImportRequest { ProjectKey = "project-1", FileId = "file-123" };
+            var request = new UilmImportRequest { FileId = "file-123" };
 
             // Act
             var result = await _controller.UilmImport(request);
@@ -375,16 +372,26 @@ namespace XUnitTest
         }
 
         [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
-        public async Task UilmImport_WithNullProjectKey_ReturnsBadRequest()
+        public async Task UilmImport_WithNullTenantId_ReturnsBadRequest()
         {
-            // Arrange
-            var request = new UilmImportRequest { ProjectKey = null, FileId = "file-123" };
+            // Arrange - TenantId from BlocksContext.GetContext() will be null in test context
+            var request = new UilmImportRequest { FileId = "file-123" };
 
             // Act
             var result = await _controller.UilmImport(request);
 
             // Assert
             result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public void UilmImportRequest_ProjectKey_IsNullable()
+        {
+            // Arrange & Act
+            var request = new UilmImportRequest { FileId = "file-123", ProjectKey = null };
+
+            // Assert
+            request.ProjectKey.Should().BeNull();
         }
 
         #endregion
@@ -392,10 +399,10 @@ namespace XUnitTest
         #region UilmExport Tests
 
         [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
-        public async Task UilmExport_WithValidRequest_ReturnsOk()
+        public async Task UilmExport_WithValidTenantId_ReturnsOk()
         {
             // Arrange
-            var request = new UilmExportRequest { ProjectKey = "project-1" };
+            var request = new UilmExportRequest();
 
             // Act
             var result = await _controller.UilmExport(request);
@@ -405,16 +412,26 @@ namespace XUnitTest
         }
 
         [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
-        public async Task UilmExport_WithNullProjectKey_ReturnsBadRequest()
+        public async Task UilmExport_WithNullTenantId_ReturnsBadRequest()
         {
-            // Arrange
-            var request = new UilmExportRequest { ProjectKey = null };
+            // Arrange - TenantId from BlocksContext.GetContext() will be null in test context
+            var request = new UilmExportRequest();
 
             // Act
             var result = await _controller.UilmExport(request);
 
             // Assert
             result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public void UilmExportRequest_ProjectKey_IsNullable()
+        {
+            // Arrange & Act
+            var request = new UilmExportRequest { ProjectKey = null };
+
+            // Assert
+            request.ProjectKey.Should().BeNull();
         }
 
         #endregion

@@ -11,6 +11,6 @@ namespace DomainService.Services
         public string LanguageName { get; set; }
         public string LanguageCode { get; set; }
         public bool IsDefault { get; set; } = false;
-        public string ProjectKey { get; set; }
+        public string? ProjectKey { get; set; }
     }
 }

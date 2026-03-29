@@ -2,6 +2,6 @@
 {
     public interface IProjectKey
     {
-        public string ProjectKey { get; set; }
+        public string? ProjectKey { get; set; }
     }
 }
