@@ -16,45 +16,76 @@ namespace XUnitTest.Repositories
 {
     public class KeyTimelineRepositoryTests
     {
+        private readonly Mock<IDbContextProvider> _dbContextProvider;
+        private readonly Mock<IConfiguration> _configuration;
+        private readonly Mock<IMongoDatabase> _database;
+        private readonly Mock<IMongoCollection<KeyTimeline>> _collection;
+        private readonly KeyTimelineRepository _repo;
+
+        public KeyTimelineRepositoryTests()
+        {
+            _dbContextProvider = new Mock<IDbContextProvider>();
+            _configuration = new Mock<IConfiguration>();
+            _database = new Mock<IMongoDatabase>();
+            _collection = new Mock<IMongoCollection<KeyTimeline>>();
+
+            _dbContextProvider.Setup(x => x.GetDatabase(It.IsAny<string>())).Returns(_database.Object);
+            _database.Setup(x => x.GetCollection<KeyTimeline>(It.IsAny<string>(), null)).Returns(_collection.Object);
+
+            _repo = new KeyTimelineRepository(_dbContextProvider.Object, _configuration.Object);
+        }
+
         [Fact]
         public async Task SaveKeyTimelineAsync_SetsItemIdAndDates_WhenNoItemId()
         {
-            var dbContextProvider = new Mock<IDbContextProvider>();
-            var configuration = new Mock<IConfiguration>();
-            var database = new Mock<IMongoDatabase>();
-            var collection = new Mock<IMongoCollection<KeyTimeline>>();
-            dbContextProvider.Setup(x => x.GetDatabase(It.IsAny<string>())).Returns(database.Object);
-            database.Setup(x => x.GetCollection<KeyTimeline>(It.IsAny<string>(), null)).Returns(collection.Object);
-            var repo = new KeyTimelineRepository(dbContextProvider.Object, configuration.Object);
-            var timeline = new KeyTimeline { EntityId = "e", UserId = "u" };
-            // InsertOneAsync is an extension method in MongoDB.Driver and cannot be directly verified with Moq.
-            // We verify the side effects: ItemId and CreateDate are set.
-            try
-            {
-                await repo.SaveKeyTimelineAsync(timeline);
-            }
-            catch { /* InsertOneAsync may fail without real DB, but side effects should be set */ }
+            var timeline = new KeyTimeline { ItemId = null, EntityId = "e", UserId = "u" };
+
+            // InsertOneAsync is settable on the mock
+            _collection.Setup(x => x.InsertOneAsync(
+                It.IsAny<KeyTimeline>(),
+                It.IsAny<InsertOneOptions>(),
+                It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+            await _repo.SaveKeyTimelineAsync(timeline);
+
             timeline.ItemId.Should().NotBeNullOrWhiteSpace();
             timeline.CreateDate.Should().NotBe(default);
+            timeline.LastUpdateDate.Should().NotBe(default);
+
+            _collection.Verify(x => x.InsertOneAsync(
+                timeline,
+                It.IsAny<InsertOneOptions>(),
+                It.IsAny<CancellationToken>()), Times.Once);
         }
+
+        [Fact]
+        public async Task SaveKeyTimelineAsync_SetsEmptyItemIdAndDates_WhenEmptyString()
+        {
+            var timeline = new KeyTimeline { ItemId = "", EntityId = "e", UserId = "u" };
+
+            _collection.Setup(x => x.InsertOneAsync(
+                It.IsAny<KeyTimeline>(),
+                It.IsAny<InsertOneOptions>(),
+                It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+            await _repo.SaveKeyTimelineAsync(timeline);
+
+            timeline.ItemId.Should().NotBeNullOrWhiteSpace();
+        }
+
         [Fact]
         public async Task SaveKeyTimelineAsync_Upserts_WhenItemIdExists()
         {
-            var dbContextProvider = new Mock<IDbContextProvider>();
-            var configuration = new Mock<IConfiguration>();
-            var database = new Mock<IMongoDatabase>();
-            var collection = new Mock<IMongoCollection<KeyTimeline>>();
-            dbContextProvider.Setup(x => x.GetDatabase(It.IsAny<string>())).Returns(database.Object);
-            database.Setup(x => x.GetCollection<KeyTimeline>(It.IsAny<string>(), null)).Returns(collection.Object);
-            collection.Setup(x => x.ReplaceOneAsync(
+            _collection.Setup(x => x.ReplaceOneAsync(
                 It.IsAny<FilterDefinition<KeyTimeline>>(),
                 It.IsAny<KeyTimeline>(),
                 It.IsAny<ReplaceOptions>(),
                 It.IsAny<CancellationToken>())).ReturnsAsync(Mock.Of<ReplaceOneResult>());
-            var repo = new KeyTimelineRepository(dbContextProvider.Object, configuration.Object);
+
             var timeline = new KeyTimeline { ItemId = "id", EntityId = "e", UserId = "u", CreateDate = DateTime.UtcNow.AddDays(-1) };
-            await repo.SaveKeyTimelineAsync(timeline);
-            collection.Verify(x => x.ReplaceOneAsync(
+            await _repo.SaveKeyTimelineAsync(timeline);
+
+            _collection.Verify(x => x.ReplaceOneAsync(
                 It.IsAny<FilterDefinition<KeyTimeline>>(),
                 timeline,
                 It.Is<ReplaceOptions>(o => o.IsUpsert),
@@ -64,39 +95,50 @@ namespace XUnitTest.Repositories
         [Fact]
         public async Task BulkSaveKeyTimelinesAsync_EmptyList_DoesNothing()
         {
-            var dbContextProvider = new Mock<IDbContextProvider>();
-            var configuration = new Mock<IConfiguration>();
-            var repo = new KeyTimelineRepository(dbContextProvider.Object, configuration.Object);
-            await repo.BulkSaveKeyTimelinesAsync(new List<KeyTimeline>(), "tenant");
-            dbContextProvider.Verify(x => x.GetDatabase(It.IsAny<string>()), Times.Never);
+            await _repo.BulkSaveKeyTimelinesAsync(new List<KeyTimeline>(), "tenant");
+            _dbContextProvider.Verify(x => x.GetDatabase("tenant"), Times.Never);
         }
 
         [Fact]
         public async Task BulkSaveKeyTimelinesAsync_WithItems_SetsIdsAndDatesAndInserts()
         {
-            var dbContextProvider = new Mock<IDbContextProvider>();
-            var configuration = new Mock<IConfiguration>();
-            var database = new Mock<IMongoDatabase>();
-            var collection = new Mock<IMongoCollection<KeyTimeline>>();
-            dbContextProvider.Setup(x => x.GetDatabase("tenant")).Returns(database.Object);
-            database.Setup(x => x.GetCollection<KeyTimeline>(It.IsAny<string>(), null)).Returns(collection.Object);
-            collection.Setup(x => x.InsertManyAsync(
+            _collection.Setup(x => x.InsertManyAsync(
                 It.IsAny<IEnumerable<KeyTimeline>>(),
                 It.IsAny<InsertManyOptions>(),
                 It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-            var repo = new KeyTimelineRepository(dbContextProvider.Object, configuration.Object);
+
             var timelines = new List<KeyTimeline> {
                 new KeyTimeline { ItemId = null, EntityId = "e1", UserId = "u1" },
                 new KeyTimeline { ItemId = "id2", EntityId = "e2", UserId = "u2" }
             };
-            await repo.BulkSaveKeyTimelinesAsync(timelines, "tenant");
+
+            await _repo.BulkSaveKeyTimelinesAsync(timelines, "tenant");
+
             timelines[0].ItemId.Should().NotBeNullOrWhiteSpace();
             timelines[0].CreateDate.Should().NotBe(default);
             timelines[1].CreateDate.Should().NotBe(default);
-            collection.Verify(x => x.InsertManyAsync(
+
+            _collection.Verify(x => x.InsertManyAsync(
                 timelines,
                 It.IsAny<InsertManyOptions>(),
                 It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task BulkSaveKeyTimelinesAsync_PreservesExistingItemId()
+        {
+            _collection.Setup(x => x.InsertManyAsync(
+                It.IsAny<IEnumerable<KeyTimeline>>(),
+                It.IsAny<InsertManyOptions>(),
+                It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+            var timelines = new List<KeyTimeline> {
+                new KeyTimeline { ItemId = "existing-id", EntityId = "e1", UserId = "u1" }
+            };
+
+            await _repo.BulkSaveKeyTimelinesAsync(timelines, "tenant");
+
+            timelines[0].ItemId.Should().Be("existing-id");
         }
     }
 }

@@ -14,20 +14,73 @@ namespace XUnitTest.Repositories
 {
     public class LanguageRepositoryTests
     {
+        private readonly Mock<IDbContextProvider> _dbContextProvider;
+        private readonly Mock<IMongoDatabase> _database;
+        private readonly Mock<IMongoCollection<BlocksLanguage>> _collection;
+        private readonly LanguageRepository _repo;
+
+        public LanguageRepositoryTests()
+        {
+            _dbContextProvider = new Mock<IDbContextProvider>();
+            _database = new Mock<IMongoDatabase>();
+            _collection = new Mock<IMongoCollection<BlocksLanguage>>();
+
+            _dbContextProvider.Setup(x => x.GetDatabase(It.IsAny<string>())).Returns(_database.Object);
+            _database.Setup(x => x.GetCollection<BlocksLanguage>(It.IsAny<string>(), null)).Returns(_collection.Object);
+
+            _repo = new LanguageRepository(_dbContextProvider.Object);
+        }
+
         [Fact]
         public async Task SaveAsync_UpsertsLanguage()
         {
-            var dbContextProvider = new Mock<IDbContextProvider>();
-            var database = new Mock<IMongoDatabase>();
-            var collection = new Mock<IMongoCollection<BlocksLanguage>>();
-            dbContextProvider.Setup(x => x.GetDatabase(It.IsAny<string>())).Returns(database.Object);
-            database.Setup(x => x.GetCollection<BlocksLanguage>(It.IsAny<string>(), null)).Returns(collection.Object);
-            collection.Setup(x => x.ReplaceOneAsync(It.IsAny<FilterDefinition<BlocksLanguage>>(), It.IsAny<BlocksLanguage>(), It.IsAny<ReplaceOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(Mock.Of<ReplaceOneResult>());
-            var repo = new LanguageRepository(dbContextProvider.Object);
+            _collection.Setup(x => x.ReplaceOneAsync(
+                It.IsAny<FilterDefinition<BlocksLanguage>>(),
+                It.IsAny<BlocksLanguage>(),
+                It.IsAny<ReplaceOptions>(),
+                It.IsAny<CancellationToken>())).ReturnsAsync(Mock.Of<ReplaceOneResult>());
+
             var language = new BlocksLanguage { ItemId = "l1", LanguageName = "English", LanguageCode = "en" };
-            await repo.SaveAsync(language);
-            collection.Verify(x => x.ReplaceOneAsync(It.IsAny<FilterDefinition<BlocksLanguage>>(), language, It.Is<ReplaceOptions>(o => o.IsUpsert), It.IsAny<CancellationToken>()), Times.Once);
+            await _repo.SaveAsync(language);
+
+            _collection.Verify(x => x.ReplaceOneAsync(
+                It.IsAny<FilterDefinition<BlocksLanguage>>(),
+                language,
+                It.Is<ReplaceOptions>(o => o.IsUpsert),
+                It.IsAny<CancellationToken>()), Times.Once);
         }
-        // Add more tests for coverage
+
+        [Fact]
+        public async Task DeleteAsync_CallsDeleteOneAsync()
+        {
+            _collection.Setup(x => x.DeleteOneAsync(
+                It.IsAny<FilterDefinition<BlocksLanguage>>(),
+                It.IsAny<CancellationToken>())).ReturnsAsync(Mock.Of<DeleteResult>());
+
+            await _repo.DeleteAsync("English");
+
+            _collection.Verify(x => x.DeleteOneAsync(
+                It.IsAny<FilterDefinition<BlocksLanguage>>(),
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task RemoveDefault_CallsUpdateManyAsync()
+        {
+            _collection.Setup(x => x.UpdateManyAsync(
+                It.IsAny<FilterDefinition<BlocksLanguage>>(),
+                It.IsAny<UpdateDefinition<BlocksLanguage>>(),
+                It.IsAny<UpdateOptions>(),
+                It.IsAny<CancellationToken>())).ReturnsAsync(Mock.Of<UpdateResult>());
+
+            var language = new BlocksLanguage { ItemId = "l1", LanguageName = "English", LanguageCode = "en" };
+            await _repo.RemoveDefault(language);
+
+            _collection.Verify(x => x.UpdateManyAsync(
+                It.IsAny<FilterDefinition<BlocksLanguage>>(),
+                It.IsAny<UpdateDefinition<BlocksLanguage>>(),
+                It.IsAny<UpdateOptions>(),
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
     }
 }
