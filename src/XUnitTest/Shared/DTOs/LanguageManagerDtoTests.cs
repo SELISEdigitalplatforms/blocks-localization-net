@@ -2,6 +2,7 @@ using DomainService.Repositories;
 using DomainService.Services;
 using DomainService.Shared.DTOs;
 using FluentAssertions;
+using Xunit;
 
 namespace XUnitTest
 {

@@ -18,7 +18,7 @@ namespace XUnitTest
         [Fact]
         public void GetMessageConfiguration_ReturnsExpectedQueuesAndEmptyTopics()
         {
-            var config = Constants.GetMessageConfiguration();
+            var config = Constants.GetMessageConfiguration("Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=test;SharedAccessKey=test");
 
             config.Should().NotBeNull();
             var serviceBusConfig = config.AzureServiceBusConfiguration;

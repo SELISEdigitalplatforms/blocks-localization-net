@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using BlocksLanguageModule = DomainService.Repositories.BlocksLanguageModule;
+using ModuleModel = DomainService.Services.Module;
 
 namespace XUnitTest
 {
@@ -13,14 +14,14 @@ namespace XUnitTest
     {
         private readonly Mock<ILogger<ModuleManagementService>> _loggerMock;
         private readonly Mock<IModuleRepository> _moduleRepositoryMock;
-        private readonly Mock<IValidator<Module>> _validatorMock;
+        private readonly Mock<IValidator<ModuleModel>> _validatorMock;
         private readonly ModuleManagementService _service;
 
         public ModuleManagementServiceTests()
         {
             _loggerMock = new Mock<ILogger<ModuleManagementService>>();
             _moduleRepositoryMock = new Mock<IModuleRepository>();
-            _validatorMock = new Mock<IValidator<Module>>();
+            _validatorMock = new Mock<IValidator<ModuleModel>>();
             
             _service = new ModuleManagementService(
                 _validatorMock.Object,

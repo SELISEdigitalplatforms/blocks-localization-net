@@ -12,6 +12,7 @@ using Moq;
 using StorageDriver;
 using Xunit;
 using BlocksLanguageKey = DomainService.Repositories.BlocksLanguageKey;
+using KeyModel = DomainService.Services.Key;
 using KeyTimeline = DomainService.Services.KeyTimeline;
 
 namespace XUnitTest
@@ -22,7 +23,7 @@ namespace XUnitTest
         private readonly Mock<IKeyRepository> _keyRepositoryMock;
         private readonly Mock<IKeyTimelineRepository> _keyTimelineRepositoryMock;
         private readonly Mock<ILanguageFileGenerationHistoryRepository> _languageFileGenerationHistoryRepositoryMock;
-        private readonly Mock<IValidator<Key>> _validatorMock;
+        private readonly Mock<IValidator<KeyModel>> _validatorMock;
         private readonly Mock<ILanguageManagementService> _languageManagementServiceMock;
         private readonly Mock<IModuleManagementService> _moduleManagementServiceMock;
         private readonly Mock<IMessageClient> _messageClientMock;
@@ -39,7 +40,7 @@ namespace XUnitTest
             _keyRepositoryMock = new Mock<IKeyRepository>();
             _keyTimelineRepositoryMock = new Mock<IKeyTimelineRepository>();
             _languageFileGenerationHistoryRepositoryMock = new Mock<ILanguageFileGenerationHistoryRepository>();
-            _validatorMock = new Mock<IValidator<Key>>();
+            _validatorMock = new Mock<IValidator<KeyModel>>();
             _languageManagementServiceMock = new Mock<ILanguageManagementService>();
             _moduleManagementServiceMock = new Mock<IModuleManagementService>();
             _messageClientMock = new Mock<IMessageClient>();
@@ -71,7 +72,7 @@ namespace XUnitTest
         public async Task SaveKeyAsync_ValidKey_ReturnsSuccess()
         {
             // Arrange
-            var key = new Key
+            var key = new KeyModel
             {
                 KeyName = "welcome.message",
                 ModuleId = "auth-module",
@@ -117,7 +118,7 @@ namespace XUnitTest
             };
             var keys = new List<Key>
             {
-                new Key
+                new KeyModel
                 {
                     ItemId = "key-id",
                     KeyName = "welcome",
@@ -209,7 +210,7 @@ namespace XUnitTest
         public async Task SaveKeyAsync_InvalidKey_ReturnsValidationError()
         {
             // Arrange
-            var key = new Key
+            var key = new KeyModel
             {
                 KeyName = "",
                 ModuleId = "auth-module",
@@ -235,7 +236,7 @@ namespace XUnitTest
         public async Task SaveKeyAsync_ExistingKey_UpdatesKey()
         {
             // Arrange
-            var key = new Key
+            var key = new KeyModel
             {
                 KeyName = "welcome.message",
                 ModuleId = "auth-module",
@@ -280,7 +281,7 @@ namespace XUnitTest
         public async Task SaveKeyAsync_WithShouldPublish_TriggersUilmGeneration()
         {
             // Arrange
-            var key = new Key
+            var key = new KeyModel
             {
                 KeyName = "welcome.message",
                 ModuleId = "auth-module",
@@ -324,14 +325,14 @@ namespace XUnitTest
             // Arrange
             var keys = new List<Key>
             {
-                new Key
+                new KeyModel
                 {
                     KeyName = "key1",
                     ModuleId = "module1",
                     Resources = new[] { new Resource { Culture = "en-US", Value = "Value1" } },
                     ProjectKey = "test-project"
                 },
-                new Key
+                new KeyModel
                 {
                     KeyName = "key2",
                     ModuleId = "module1",
@@ -383,14 +384,14 @@ namespace XUnitTest
             // Arrange
             var keys = new List<Key>
             {
-                new Key
+                new KeyModel
                 {
                     KeyName = "valid-key",
                     ModuleId = "module1",
                     Resources = new[] { new Resource { Culture = "en-US", Value = "Value" } },
                     ProjectKey = "test-project"
                 },
-                new Key
+                new KeyModel
                 {
                     KeyName = "",
                     ModuleId = "module1",
@@ -429,7 +430,7 @@ namespace XUnitTest
         {
             // Arrange
             var request = new GetKeyRequest { ItemId = "key-id" };
-            var key = new Key
+            var key = new KeyModel
             {
                 ItemId = "key-id",
                 KeyName = "welcome.message",
@@ -477,7 +478,7 @@ namespace XUnitTest
             };
 
             _keyRepositoryMock.Setup(r => r.GetByIdAsync(request.ItemId))
-                .ReturnsAsync(new Key { ItemId = "key-id", KeyName = "welcome.message", ModuleId = "auth-module" });
+                .ReturnsAsync(new KeyModel { ItemId = "key-id", KeyName = "welcome.message", ModuleId = "auth-module" });
 
             _keyRepositoryMock.Setup(r => r.GetKeyByNameAsync(repoKey.KeyName, repoKey.ModuleId))
                 .ReturnsAsync(repoKey);
@@ -781,8 +782,8 @@ namespace XUnitTest
             var keyNames = new[] { "welcome.message", "login.title" };
             var expectedKeys = new List<Key>
             {
-                new Key { KeyName = "welcome.message", ModuleId = "auth-module", Resources = new[] { new Resource { Culture = "en-US", Value = "Welcome" } } },
-                new Key { KeyName = "login.title", ModuleId = "auth-module", Resources = new[] { new Resource { Culture = "en-US", Value = "Login" } } }
+                new KeyModel { KeyName = "welcome.message", ModuleId = "auth-module", Resources = new[] { new Resource { Culture = "en-US", Value = "Welcome" } } },
+                new KeyModel { KeyName = "login.title", ModuleId = "auth-module", Resources = new[] { new Resource { Culture = "en-US", Value = "Login" } } }
             };
 
             _keyRepositoryMock
@@ -862,7 +863,7 @@ namespace XUnitTest
             var keyNames = new[] { "welcome.message" };
             var expectedKeys = new List<Key>
             {
-                new Key { KeyName = "welcome.message", ModuleId = "auth-module", Resources = new[] { new Resource { Culture = "en-US", Value = "Welcome" } } }
+                new KeyModel { KeyName = "welcome.message", ModuleId = "auth-module", Resources = new[] { new Resource { Culture = "en-US", Value = "Welcome" } } }
             };
 
             _keyRepositoryMock

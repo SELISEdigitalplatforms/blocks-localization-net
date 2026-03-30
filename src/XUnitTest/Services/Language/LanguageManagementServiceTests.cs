@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using BlocksLanguage = DomainService.Repositories.BlocksLanguage;
+using LanguageModel = DomainService.Services.Language;
 
 namespace XUnitTest
 {
@@ -13,14 +14,14 @@ namespace XUnitTest
     {
         private readonly Mock<ILogger<LanguageManagementService>> _loggerMock;
         private readonly Mock<ILanguageRepository> _languageRepositoryMock;
-        private readonly Mock<IValidator<Language>> _validatorMock;
+        private readonly Mock<IValidator<LanguageModel>> _validatorMock;
         private readonly LanguageManagementService _service;
 
         public LanguageManagementServiceTests()
         {
             _loggerMock = new Mock<ILogger<LanguageManagementService>>();
             _languageRepositoryMock = new Mock<ILanguageRepository>();
-            _validatorMock = new Mock<IValidator<Language>>();
+            _validatorMock = new Mock<IValidator<LanguageModel>>();
             
             _service = new LanguageManagementService(
                 _validatorMock.Object,
@@ -33,7 +34,7 @@ namespace XUnitTest
         public async Task SaveLanguageAsync_ValidLanguage_ReturnsSuccess()
         {
             // Arrange
-            var language = new Language
+            var language = new LanguageModel
             {
                 LanguageName = "English",
                 LanguageCode = "en-US",
@@ -64,7 +65,7 @@ namespace XUnitTest
         public async Task SaveLanguageAsync_InvalidLanguage_ReturnsValidationError()
         {
             // Arrange
-            var language = new Language
+            var language = new LanguageModel
             {
                 LanguageName = "",
                 LanguageCode = "invalid",
@@ -90,7 +91,7 @@ namespace XUnitTest
         public async Task SaveLanguageAsync_ExistingLanguage_UpdatesLanguage()
         {
             // Arrange
-            var language = new Language
+            var language = new LanguageModel
             {
                 LanguageName = "English",
                 LanguageCode = "en-US",
@@ -132,7 +133,7 @@ namespace XUnitTest
         public async Task SaveLanguageAsync_ExceptionThrown_ReturnsError()
         {
             // Arrange
-            var language = new Language
+            var language = new LanguageModel
             {
                 LanguageName = "English",
                 LanguageCode = "en-US",
@@ -161,8 +162,8 @@ namespace XUnitTest
             // Arrange
             var languages = new List<Language>
             {
-                new Language { LanguageName = "English", LanguageCode = "en-US", ProjectKey = "test-project" },
-                new Language { LanguageName = "French", LanguageCode = "fr-FR", ProjectKey = "test-project" }
+                new LanguageModel { LanguageName = "English", LanguageCode = "en-US", ProjectKey = "test-project" },
+                new LanguageModel { LanguageName = "French", LanguageCode = "fr-FR", ProjectKey = "test-project" }
             };
 
             _languageRepositoryMock.Setup(r => r.GetAllLanguagesAsync())
