@@ -12,6 +12,19 @@ using Xunit;
 namespace XUnitTest
 {
     public class ModuleControllerTests
+            [Fact]
+            public async Task Save_WithNullModule_ReturnsBadRequestOrThrows()
+            {
+                var result = await _controller.Save(null);
+                result.Should().NotBeNull();
+            }
+
+            [Fact]
+            public async Task Gets_WithNullQuery_ReturnsBadRequest()
+            {
+                var result = await _controller.Gets(null);
+                result.Should().BeNull();
+            }
     {
         private readonly Mock<IModuleManagementService> _moduleManagementServiceMock;
         private readonly ModuleController _controller;

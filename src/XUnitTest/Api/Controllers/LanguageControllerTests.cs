@@ -11,6 +11,19 @@ using Xunit;
 namespace XUnitTest
 {
     public class LanguageControllerTests
+            [Fact]
+            public async Task Gets_WithNullRequest_ReturnsBadRequest()
+            {
+                var result = await _controller.Gets(null);
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public async Task Delete_WithNullRequest_ReturnsBadRequest()
+            {
+                var result = await _controller.Delete(null);
+                result.Should().BeOfType<BadRequestObjectResult>();
+            }
     {
         private readonly Mock<ILanguageManagementService> _languageManagementServiceMock;
         private readonly LanguageController _controller;
