@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Blocks.Genesis;
 using DomainService.Repositories;
 using DomainService.Services;
 using DomainService.Shared.Entities;

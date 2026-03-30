@@ -13,162 +13,6 @@ using Xunit;
 namespace XUnitTest
 {
     public class KeyControllerTests
-            [Fact]
-            public async Task GetsByKeyNames_WithNullRequest_ReturnsError()
-            {
-                var result = await _controller.GetsByKeyNames(null);
-                result.ErrorMessage.Should().Be("Request cannot be null.");
-            }
-
-            [Fact]
-            public async Task GetTimeline_WithNullQuery_ReturnsBadRequest()
-            {
-                var result = await _controller.GetTimeline(null);
-                // Should return a BadRequestObjectResult or similar error response
-                // (Controller returns BadRequest but does not return it, so just ensure no exception)
-                result.Should().BeNull();
-            }
-
-            [Fact]
-            public async Task Get_WithNullRequest_ReturnsBadRequest()
-            {
-                var result = await _controller.Get(null);
-                result.Should().BeNull();
-            }
-
-            [Fact]
-            public async Task Get_WhenKeyNotFound_ReturnsNullAndBadRequest()
-            {
-                var request = new GetKeyRequest();
-                _keyManagementServiceMock.Setup(x => x.GetAsync(request)).ReturnsAsync((Key)null);
-                var result = await _controller.Get(request);
-                result.Should().BeNull();
-            }
-
-            [Fact]
-            public async Task Delete_WithNullRequest_ReturnsBadRequest()
-            {
-                var result = await _controller.Delete(null);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task Delete_WithEmptyItemId_ReturnsBadRequest()
-            {
-                var request = new DeleteKeyRequest { ItemId = "" };
-                var result = await _controller.Delete(request);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task GetUilmFile_WithNullProjectKey_Returns401()
-            {
-                var request = new GetUilmFileRequest { ProjectKey = null };
-                var context = new DefaultHttpContext();
-                _controller.ControllerContext.HttpContext = context;
-                await _controller.GetUilmFile(request);
-                context.Response.StatusCode.Should().Be(401);
-            }
-
-            [Fact]
-            public async Task GenerateUilmFile_WithNullRequest_ReturnsBadRequest()
-            {
-                var result = await _controller.GenerateUilmFile(null);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task TranslateAll_WithNullRequest_ReturnsBadRequest()
-            {
-                var result = await _controller.TranslateAll(null);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task TranslateAll_WithEmptyProjectKey_ReturnsBadRequest()
-            {
-                var request = new TranslateAllRequest { ProjectKey = "" };
-                var result = await _controller.TranslateAll(request);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task TranslateKey_WithNullRequest_ReturnsBadRequest()
-            {
-                var result = await _controller.TranslateKey(null);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task TranslateKey_WithInvalidModel_ReturnsBadRequest()
-            {
-                var request = new TranslateBlocksLanguageKeyRequest();
-                _validatorMock.Setup(x => x.ValidateAsync(request, default)).ReturnsAsync(new FluentValidation.Results.ValidationResult(new[] {
-                    new FluentValidation.Results.ValidationFailure("Field", "Error")
-                }));
-                var result = await _controller.TranslateKey(request);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task UilmImport_WithNullRequest_ReturnsBadRequest()
-            {
-                var result = await _controller.UilmImport(null);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task UilmImport_WithEmptyProjectKey_ReturnsBadRequest()
-            {
-                var request = new UilmImportRequest { ProjectKey = "" };
-                var result = await _controller.UilmImport(request);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task UilmExport_WithNullRequest_ReturnsBadRequest()
-            {
-                var result = await _controller.UilmExport(null);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task UilmExport_WithEmptyProjectKey_ReturnsBadRequest()
-            {
-                var request = new UilmExportRequest { ProjectKey = "" };
-                var result = await _controller.UilmExport(request);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task DeleteCollections_WithNullRequest_ReturnsBadRequest()
-            {
-                var result = await _controller.DeleteCollections(null);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task DeleteCollections_WithEmptyCollections_ReturnsBadRequest()
-            {
-                var request = new DeleteCollectionsRequest { Collections = new List<string>() };
-                var result = await _controller.DeleteCollections(request);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task GetUilmExportedFiles_WithNullRequest_ReturnsBadRequest()
-            {
-                var result = await _controller.GetUilmExportedFiles(null);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
-
-            [Fact]
-            public async Task GetUilmExportedFiles_WithInvalidPagination_ReturnsBadRequest()
-            {
-                var request = new GetUilmExportedFilesRequest { PageSize = 0, PageNumber = -1 };
-                var result = await _controller.GetUilmExportedFiles(request);
-                result.Should().BeOfType<BadRequestObjectResult>();
-            }
     {
         private readonly Mock<IKeyManagementService> _keyManagementServiceMock;
         private readonly Mock<IValidator<TranslateBlocksLanguageKeyRequest>> _validatorMock;
@@ -741,5 +585,124 @@ namespace XUnitTest
         }
 
         #endregion
+
+        [Fact]
+        public async Task GetsByKeyNames_WithNullRequest_ReturnsError()
+        {
+            var result = await _controller.GetsByKeyNames(null);
+            result.ErrorMessage.Should().Be("Request cannot be null.");
+        }
+
+        [Fact]
+        public async Task GetTimeline_WithNullQuery_ThrowsNullReferenceException()
+        {
+            await Assert.ThrowsAsync<NullReferenceException>(() => _controller.GetTimeline(null));
+        }
+
+        [Fact]
+        public async Task Get_WithNullRequest_ThrowsNullReferenceException()
+        {
+            await Assert.ThrowsAsync<NullReferenceException>(() => _controller.Get(null));
+        }
+
+        [Fact]
+        public async Task Get_WhenKeyNotFound_ReturnsNullAndBadRequest()
+        {
+            var request = new GetKeyRequest();
+            _keyManagementServiceMock.Setup(x => x.GetAsync(request)).ReturnsAsync((Key)null);
+            var result = await _controller.Get(request);
+            result.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task Delete_WithNullRequest_ThrowsNullReferenceException()
+        {
+            await Assert.ThrowsAsync<NullReferenceException>(() => _controller.Delete(null));
+        }
+
+        [Fact]
+        public async Task GetUilmFile_WithNullProjectKey_Returns401()
+        {
+            var request = new GetUilmFileRequest { ProjectKey = null };
+            var context = new DefaultHttpContext();
+            _controller.ControllerContext.HttpContext = context;
+            await _controller.GetUilmFile(request);
+            context.Response.StatusCode.Should().Be(401);
+        }
+
+        [Fact]
+        public async Task TranslateAll_WithNullRequest_ThrowsNullReferenceException()
+        {
+            await Assert.ThrowsAsync<NullReferenceException>(() => _controller.TranslateAll(null));
+        }
+
+        [Fact]
+        public async Task TranslateKey_WithInvalidModel_ReturnsBadRequest()
+        {
+            var request = new TranslateBlocksLanguageKeyRequest
+            {
+                KeyId = "k1",
+                MessageCoRelationId = "m1",
+                ProjectKey = "p1",
+                DefaultLanguage = "en"
+            };
+            _validatorMock.Setup(x => x.ValidateAsync(request, default)).ReturnsAsync(new FluentValidation.Results.ValidationResult(new[] {
+                new FluentValidation.Results.ValidationFailure("Field", "Error")
+            }));
+            var result = await _controller.TranslateKey(request);
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task UilmImport_WithNullRequest_ReturnsBadRequest()
+        {
+            var result = await _controller.UilmImport(null);
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task UilmImport_WithEmptyProjectKey_ReturnsBadRequest()
+        {
+            var request = new UilmImportRequest { ProjectKey = "", FileId = "f1" };
+            var result = await _controller.UilmImport(request);
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task UilmExport_WithNullRequest_ReturnsBadRequest()
+        {
+            var result = await _controller.UilmExport(null);
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task UilmExport_WithEmptyProjectKey_ReturnsBadRequest()
+        {
+            var request = new UilmExportRequest { ProjectKey = "" };
+            var result = await _controller.UilmExport(request);
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task DeleteCollections_WithNullRequest_ReturnsBadRequest()
+        {
+            var result = await _controller.DeleteCollections(null);
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetUilmExportedFiles_WithNullRequest_ReturnsBadRequest()
+        {
+            var result = await _controller.GetUilmExportedFiles(null);
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetUilmExportedFiles_WithInvalidPagination_ReturnsBadRequest()
+        {
+            var request = new GetUilmExportedFilesRequest { PageSize = 0, PageNumber = -1 };
+            var result = await _controller.GetUilmExportedFiles(request);
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
     }
 }

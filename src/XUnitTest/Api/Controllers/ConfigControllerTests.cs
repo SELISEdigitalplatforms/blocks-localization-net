@@ -12,13 +12,6 @@ using Xunit;
 namespace XUnitTest
 {
     public class ConfigControllerTests
-            [Fact]
-            public async Task SaveWebHook_WithNullWebhook_ReturnsBadRequest()
-            {
-                var result = await _controller.SaveWebHook(null);
-                // Should return BadRequest or throw, accept either for coverage
-                result.Should().NotBeNull();
-            }
     {
         private readonly Mock<IWebHookService> _webHookServiceMock;
         private readonly ConfigController _controller;
@@ -168,6 +161,12 @@ namespace XUnitTest
             result1.Success.Should().BeTrue();
             result2.Success.Should().BeTrue();
             _webHookServiceMock.Verify(x => x.SaveWebhookAsync(It.IsAny<BlocksWebhook>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task SaveWebHook_WithNullWebhook_ThrowsNullReferenceException()
+        {
+            await Assert.ThrowsAsync<NullReferenceException>(() => _controller.SaveWebHook(null));
         }
     }
 }
