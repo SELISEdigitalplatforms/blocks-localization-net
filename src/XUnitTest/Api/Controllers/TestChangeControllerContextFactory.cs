@@ -28,6 +28,7 @@ namespace XUnitTest
                 userName: "test-user",
                 phoneNumber: "",
                 displayName: "Test User",
+                refreshToken: "",
                 oauthToken: "",
                 actualTentId: "test-tenant");
             BlocksContext.SetContext(blocksContext, true);
