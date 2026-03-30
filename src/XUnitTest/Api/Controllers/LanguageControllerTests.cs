@@ -19,11 +19,11 @@ namespace XUnitTest
         {
             _languageManagementServiceMock = new Mock<ILanguageManagementService>();
 
-            var changeControllerContextMock = new Mock<ChangeControllerContext>(MockBehavior.Loose, null, null, null);
+            var changeControllerContext = TestChangeControllerContextFactory.Create();
 
             _controller = new LanguageController(
                 _languageManagementServiceMock.Object,
-                changeControllerContextMock.Object
+                changeControllerContext
             )
             {
                 ControllerContext = new ControllerContext()
@@ -32,7 +32,7 @@ namespace XUnitTest
 
         #region Save Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Save_WithValidLanguage_ReturnsSuccess()
         {
             // Arrange
@@ -67,7 +67,7 @@ namespace XUnitTest
 
         #region Gets Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Gets_WithValidRequest_ReturnsLanguageList()
         {
             // Arrange
@@ -90,7 +90,7 @@ namespace XUnitTest
             result.Should().HaveCount(2);
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Gets_WithEmptyLanguageList_ReturnsEmpty()
         {
             // Arrange
@@ -111,7 +111,7 @@ namespace XUnitTest
 
         #region Delete Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Delete_WithValidLanguageName_ReturnsOk()
         {
             // Arrange
@@ -129,7 +129,7 @@ namespace XUnitTest
             result.Should().BeOfType<OkObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Delete_WithNullLanguageName_ReturnsBadRequest()
         {
             // Arrange
@@ -142,7 +142,7 @@ namespace XUnitTest
             result.Should().BeOfType<BadRequestObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Delete_WithEmptyLanguageName_ReturnsBadRequest()
         {
             // Arrange
@@ -159,7 +159,7 @@ namespace XUnitTest
 
         #region SetDefault Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task SetDefault_WithValidLanguageName_ReturnsOk()
         {
             // Arrange
@@ -177,7 +177,7 @@ namespace XUnitTest
             result.Should().BeOfType<OkObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task SetDefault_WithNullLanguageName_ReturnsBadRequest()
         {
             // Arrange
@@ -190,7 +190,7 @@ namespace XUnitTest
             result.Should().BeOfType<BadRequestObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task SetDefault_WhenServiceFails_ReturnsBadRequest()
         {
             // Arrange

@@ -5,6 +5,7 @@ using DomainService.Shared;
 using DomainService.Shared.Events;
 using FluentAssertions;
 using FluentValidation;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Xunit;
@@ -22,17 +23,21 @@ namespace XUnitTest
             _keyManagementServiceMock = new Mock<IKeyManagementService>();
             _validatorMock = new Mock<IValidator<TranslateBlocksLanguageKeyRequest>>();
 
-            var changeControllerContextMock = new Mock<ChangeControllerContext>(MockBehavior.Loose, null, null, null);
+            var changeControllerContext = TestChangeControllerContextFactory.Create();
             
-            _controller = new KeyController(_keyManagementServiceMock.Object, changeControllerContextMock.Object, _validatorMock.Object)
+            var httpContext = new DefaultHttpContext();
+            _controller = new KeyController(_keyManagementServiceMock.Object, changeControllerContext, _validatorMock.Object)
             {
-                ControllerContext = new ControllerContext()
+                ControllerContext = new ControllerContext
+                {
+                    HttpContext = httpContext
+                }
             };
         }
 
         #region Save Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Save_WithValidKey_ReturnsSuccess()
         {
             // Arrange
@@ -63,7 +68,7 @@ namespace XUnitTest
 
         #region SaveKeys Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task SaveKeys_WithValidKeyList_ReturnsSuccess()
         {
             // Arrange
@@ -98,7 +103,7 @@ namespace XUnitTest
 
         #region Gets Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Gets_WithValidQuery_ReturnsKeyList()
         {
             // Arrange
@@ -120,7 +125,7 @@ namespace XUnitTest
 
         #region Get Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Get_WithValidRequest_ReturnsKey()
         {
             // Arrange
@@ -139,7 +144,7 @@ namespace XUnitTest
             result.KeyName.Should().Be("TestKey");
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Get_WhenKeyNotFound_ReturnsNull()
         {
             // Arrange
@@ -160,7 +165,7 @@ namespace XUnitTest
 
         #region Delete Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Delete_WithValidItemId_ReturnsOk()
         {
             // Arrange
@@ -178,7 +183,7 @@ namespace XUnitTest
             result.Should().BeOfType<OkObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Delete_WithNullItemId_ReturnsBadRequest()
         {
             // Arrange
@@ -191,7 +196,7 @@ namespace XUnitTest
             result.Should().BeOfType<BadRequestObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Delete_WithEmptyItemId_ReturnsBadRequest()
         {
             // Arrange
@@ -204,7 +209,7 @@ namespace XUnitTest
             result.Should().BeOfType<BadRequestObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Delete_WhenServiceFails_ReturnsBadRequest()
         {
             // Arrange
@@ -226,7 +231,7 @@ namespace XUnitTest
 
         #region GenerateUilmFile Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task GenerateUilmFile_WithValidRequest_ReturnsOk()
         {
             // Arrange
@@ -253,7 +258,7 @@ namespace XUnitTest
 
         #region TranslateAll Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task TranslateAll_WithValidProjectKey_ReturnsOk()
         {
             // Arrange
@@ -266,7 +271,7 @@ namespace XUnitTest
             result.Should().BeOfType<OkObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task TranslateAll_WithNullProjectKey_ReturnsBadRequest()
         {
             // Arrange
@@ -279,7 +284,7 @@ namespace XUnitTest
             result.Should().BeOfType<BadRequestObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task TranslateAll_WithEmptyProjectKey_ReturnsBadRequest()
         {
             // Arrange
@@ -296,7 +301,7 @@ namespace XUnitTest
 
         #region TranslateKey Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task TranslateKey_WithValidRequest_ReturnsOk()
         {
             // Arrange
@@ -330,7 +335,7 @@ namespace XUnitTest
             result.Should().BeOfType<BadRequestObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task TranslateKey_WithInvalidRequest_ReturnsBadRequest()
         {
             // Arrange
@@ -361,7 +366,7 @@ namespace XUnitTest
 
         #region UilmImport Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task UilmImport_WithValidRequest_ReturnsOk()
         {
             // Arrange
@@ -374,7 +379,7 @@ namespace XUnitTest
             result.Should().BeOfType<OkObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task UilmImport_WithNullProjectKey_ReturnsBadRequest()
         {
             // Arrange
@@ -391,7 +396,7 @@ namespace XUnitTest
 
         #region UilmExport Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task UilmExport_WithValidRequest_ReturnsOk()
         {
             // Arrange
@@ -404,7 +409,7 @@ namespace XUnitTest
             result.Should().BeOfType<OkObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task UilmExport_WithNullProjectKey_ReturnsBadRequest()
         {
             // Arrange
@@ -421,7 +426,7 @@ namespace XUnitTest
 
         #region DeleteCollections Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task DeleteCollections_WithValidCollections_ReturnsOk()
         {
             // Arrange
@@ -439,7 +444,7 @@ namespace XUnitTest
             result.Should().BeOfType<OkObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task DeleteCollections_WithEmptyCollections_ReturnsBadRequest()
         {
             // Arrange
@@ -456,7 +461,7 @@ namespace XUnitTest
 
         #region GetUilmExportedFiles Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task GetUilmExportedFiles_WithValidPagination_ReturnsOk()
         {
             // Arrange
@@ -474,7 +479,7 @@ namespace XUnitTest
             result.Should().BeOfType<OkObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task GetUilmExportedFiles_WithInvalidPageSize_ReturnsBadRequest()
         {
             // Arrange
@@ -491,7 +496,7 @@ namespace XUnitTest
 
         #region GetLanguageFileGenerationHistory Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task GetLanguageFileGenerationHistory_WithValidPagination_ReturnsOk()
         {
             // Arrange
@@ -509,7 +514,7 @@ namespace XUnitTest
             result.Should().BeOfType<OkObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task GetLanguageFileGenerationHistory_WithInvalidPageSize_ReturnsBadRequest()
         {
             // Arrange
@@ -526,7 +531,7 @@ namespace XUnitTest
 
         #region RollBack Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task RollBack_WithValidItemId_ReturnsOk()
         {
             // Arrange
@@ -544,7 +549,7 @@ namespace XUnitTest
             result.Should().BeOfType<OkObjectResult>();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task RollBack_WithNullItemId_ReturnsBadRequest()
         {
             // Arrange
@@ -561,7 +566,7 @@ namespace XUnitTest
 
         #region GetTimeline Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task GetTimeline_WithValidRequest_ReturnsTimeline()
         {
             // Arrange
