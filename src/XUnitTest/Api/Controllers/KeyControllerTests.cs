@@ -5,6 +5,7 @@ using DomainService.Shared;
 using DomainService.Shared.Events;
 using FluentAssertions;
 using FluentValidation;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Xunit;
@@ -24,9 +25,13 @@ namespace XUnitTest
 
             var changeControllerContext = TestChangeControllerContextFactory.Create();
             
+            var httpContext = new DefaultHttpContext();
             _controller = new KeyController(_keyManagementServiceMock.Object, changeControllerContext, _validatorMock.Object)
             {
-                ControllerContext = new ControllerContext()
+                ControllerContext = new ControllerContext
+                {
+                    HttpContext = httpContext
+                }
             };
         }
 
