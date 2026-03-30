@@ -136,5 +136,26 @@ namespace XUnitTest
             _blocksWebhookRepository.Verify(r => r.SaveAsync(webhook), Times.Once);
             _httpHelperServices.VerifyNoOtherCalls();
         }
+
+        [Fact]
+        public async Task CallWebhook_WhenHttpRequestFails_ReturnsFalse()
+        {
+            var webhook = new BlocksWebhook
+            {
+                Url = "https://callback.test/webhook",
+                ContentType = "application/json",
+                BlocksWebhookSecret = new BlocksWebhookSecret { HeaderKey = "X-Signature", Secret = "secret" },
+                IsDisabled = false,
+                ProjectKey = "proj"
+            };
+            _blocksWebhookRepository.Setup(r => r.GetAsync()).ReturnsAsync(webhook);
+            _httpHelperServices
+                .Setup(h => h.MakeHttpRequestForWebhook(It.IsAny<object>(), webhook))
+                .ReturnsAsync(false);
+
+            var result = await _service.CallWebhook(new { ok = true });
+
+            result.Should().BeFalse();
+        }
     }
 }
