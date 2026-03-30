@@ -513,6 +513,483 @@ namespace XUnitTest
         }
 
         [Fact]
+        public async Task UilmImportEventConsumer_Consume_WhenFailure_DoesNotCallWebhook()
+        {
+            var keyManagementService = new Mock<IKeyManagementService>();
+            var webHookService = new Mock<IWebHookService>();
+
+            keyManagementService.Setup(x => x.ImportUilmFile(It.IsAny<UilmImportEvent>())).ReturnsAsync(false);
+
+            var consumer = new UilmImportEventConsumer(keyManagementService.Object, webHookService.Object);
+            var @event = new UilmImportEvent { MessageCoRelationId = "corr-fail", FileId = "file-fail", ProjectKey = "tenant-1" };
+
+            await consumer.Consume(@event);
+
+            keyManagementService.Verify(x => x.ImportUilmFile(@event), Times.Once);
+            webHookService.Verify(x => x.CallWebhook(It.IsAny<object>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task EnvironmentDataMigrationEventConsumer_Consume_WhenNoSourceModules_SkipsModuleMigration()
+        {
+            var keyManagementService = new Mock<IKeyManagementService>();
+            var migrationRepository = new Mock<IEnvironmentDataMigrationRepository>();
+            var logger = new Mock<ILogger<EnvironmentDataMigrationEventConsumer>>();
+            var messageClient = new Mock<IMessageClient>();
+
+            migrationRepository.Setup(x => x.GetAllModulesAsync("source")).ReturnsAsync(new List<BlocksLanguageModule>());
+            migrationRepository.Setup(x => x.GetAllKeysAsync("source")).ReturnsAsync(new List<BlocksLanguageKey>());
+
+            var consumer = new EnvironmentDataMigrationEventConsumer(
+                keyManagementService.Object,
+                migrationRepository.Object,
+                logger.Object,
+                messageClient.Object);
+
+            var @event = new EnvironmentDataMigrationEvent
+            {
+                ProjectKey = "source",
+                TargetedProjectKey = "target",
+                ShouldOverWriteExistingData = false,
+                TrackerId = "tracker-empty"
+            };
+
+            await consumer.Consume(@event);
+
+            migrationRepository.Verify(x => x.GetExistingModulesByNamesAsync(It.IsAny<List<string>>(), It.IsAny<string>()), Times.Never);
+            migrationRepository.Verify(x => x.BulkUpsertModulesByNameAsync(It.IsAny<List<BlocksLanguageModule>>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            messageClient.Verify(x => x.SendToMassConsumerAsync(
+                It.Is<ConsumerMessage<MigrationCompletionEvent>>(m =>
+                    m.Payload.TrackerId == "tracker-empty" &&
+                    m.Payload.IsSuccess)), Times.Once);
+        }
+
+        [Fact]
+        public async Task EnvironmentDataMigrationEventConsumer_Consume_WhenSourceModuleIsNewInTarget_GeneratesNewItemId()
+        {
+            var keyManagementService = new Mock<IKeyManagementService>();
+            var migrationRepository = new Mock<IEnvironmentDataMigrationRepository>();
+            var logger = new Mock<ILogger<EnvironmentDataMigrationEventConsumer>>();
+            var messageClient = new Mock<IMessageClient>();
+
+            var sourceModules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule
+                {
+                    ItemId = "src-mod-new",
+                    ModuleName = "NewModule",
+                    Name = "NewModule",
+                    CreateDate = DateTime.UtcNow.AddDays(-5),
+                    LastUpdateDate = DateTime.UtcNow.AddDays(-1),
+                    TenantId = "source",
+                    CreatedBy = "user-1",
+                    LastUpdatedBy = "user-1"
+                }
+            };
+
+            migrationRepository.Setup(x => x.GetAllModulesAsync("source")).ReturnsAsync(sourceModules);
+            migrationRepository.Setup(x => x.GetExistingModulesByNamesAsync(It.IsAny<List<string>>(), "target"))
+                .ReturnsAsync(new List<BlocksLanguageModule>()); // No existing modules in target
+            migrationRepository.Setup(x => x.BulkUpsertModulesByNameAsync(It.IsAny<List<BlocksLanguageModule>>(), "target", false))
+                .Returns(Task.CompletedTask);
+
+            // Keys
+            migrationRepository.Setup(x => x.GetAllKeysAsync("source")).ReturnsAsync(new List<BlocksLanguageKey>());
+
+            messageClient.Setup(x => x.SendToMassConsumerAsync(It.IsAny<ConsumerMessage<MigrationCompletionEvent>>()))
+                .Returns(Task.CompletedTask);
+
+            var consumer = new EnvironmentDataMigrationEventConsumer(
+                keyManagementService.Object,
+                migrationRepository.Object,
+                logger.Object,
+                messageClient.Object);
+
+            var @event = new EnvironmentDataMigrationEvent
+            {
+                ProjectKey = "source",
+                TargetedProjectKey = "target",
+                ShouldOverWriteExistingData = false,
+                TrackerId = "tracker-new-module"
+            };
+
+            await consumer.Consume(@event);
+
+            migrationRepository.Verify(x => x.BulkUpsertModulesByNameAsync(
+                It.Is<List<BlocksLanguageModule>>(modules =>
+                    modules.Count == 1 &&
+                    modules[0].ItemId != "src-mod-new" && // Should get a new GUID, not source ItemId
+                    modules[0].ModuleName == "NewModule" &&
+                    modules[0].TenantId == "target" &&
+                    modules[0].CreatedBy == "user-1"), // Falls through to source CreatedBy
+                "target",
+                false), Times.Once);
+        }
+
+        [Fact]
+        public async Task EnvironmentDataMigrationEventConsumer_Consume_WhenNoSourceKeys_SkipsKeyMigration()
+        {
+            var keyManagementService = new Mock<IKeyManagementService>();
+            var migrationRepository = new Mock<IEnvironmentDataMigrationRepository>();
+            var logger = new Mock<ILogger<EnvironmentDataMigrationEventConsumer>>();
+            var messageClient = new Mock<IMessageClient>();
+
+            var sourceModules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule
+                {
+                    ItemId = "src-mod-1",
+                    ModuleName = "Mod1",
+                    Name = "Mod1",
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    TenantId = "source",
+                    CreatedBy = "user",
+                    LastUpdatedBy = "user"
+                }
+            };
+
+            migrationRepository.Setup(x => x.GetAllModulesAsync("source")).ReturnsAsync(sourceModules);
+            migrationRepository.Setup(x => x.GetExistingModulesByNamesAsync(It.IsAny<List<string>>(), "target"))
+                .ReturnsAsync(new List<BlocksLanguageModule>());
+            migrationRepository.Setup(x => x.BulkUpsertModulesByNameAsync(It.IsAny<List<BlocksLanguageModule>>(), "target", false))
+                .Returns(Task.CompletedTask);
+
+            migrationRepository.Setup(x => x.GetAllKeysAsync("source")).ReturnsAsync(new List<BlocksLanguageKey>());
+
+            messageClient.Setup(x => x.SendToMassConsumerAsync(It.IsAny<ConsumerMessage<MigrationCompletionEvent>>()))
+                .Returns(Task.CompletedTask);
+
+            var consumer = new EnvironmentDataMigrationEventConsumer(
+                keyManagementService.Object,
+                migrationRepository.Object,
+                logger.Object,
+                messageClient.Object);
+
+            var @event = new EnvironmentDataMigrationEvent
+            {
+                ProjectKey = "source",
+                TargetedProjectKey = "target",
+                ShouldOverWriteExistingData = false,
+                TrackerId = "tracker-no-keys"
+            };
+
+            await consumer.Consume(@event);
+
+            migrationRepository.Verify(x => x.GetExistingKeysByModuleNameAndKeyNameAsync(
+                It.IsAny<List<(string, string)>>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()), Times.Never);
+            migrationRepository.Verify(x => x.BulkUpsertKeysByModuleNameAndKeyNameAsync(
+                It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task EnvironmentDataMigrationEventConsumer_Consume_WhenKeyModuleIdNotInSourceMapping_SkipsKey()
+        {
+            var keyManagementService = new Mock<IKeyManagementService>();
+            var migrationRepository = new Mock<IEnvironmentDataMigrationRepository>();
+            var logger = new Mock<ILogger<EnvironmentDataMigrationEventConsumer>>();
+            var messageClient = new Mock<IMessageClient>();
+
+            var sourceModules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule
+                {
+                    ItemId = "src-mod-1",
+                    ModuleName = "Mod1",
+                    Name = "Mod1",
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    TenantId = "source",
+                    CreatedBy = "user",
+                    LastUpdatedBy = "user"
+                }
+            };
+
+            var targetModules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule
+                {
+                    ItemId = "target-mod-1",
+                    ModuleName = "Mod1",
+                    Name = "Mod1",
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    TenantId = "target",
+                    CreatedBy = "user",
+                    LastUpdatedBy = "user"
+                }
+            };
+
+            // Key references a module that doesn't exist in source
+            var sourceKeys = new List<BlocksLanguageKey>
+            {
+                new BlocksLanguageKey
+                {
+                    ItemId = "src-key-orphan",
+                    KeyName = "OrphanKey",
+                    ModuleId = "non-existent-module-id",
+                    Value = "Orphan",
+                    Resources = new[] { new Resource { Culture = "en", Value = "Orphan", CharacterLength = 6 } },
+                    Routes = new List<string>(),
+                    IsPartiallyTranslated = false,
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    TenantId = "source",
+                    CreatedBy = "user",
+                    LastUpdatedBy = "user"
+                }
+            };
+
+            migrationRepository.Setup(x => x.GetAllModulesAsync("source")).ReturnsAsync(sourceModules);
+            migrationRepository.Setup(x => x.GetExistingModulesByNamesAsync(It.IsAny<List<string>>(), "target"))
+                .ReturnsAsync(targetModules);
+            migrationRepository.Setup(x => x.BulkUpsertModulesByNameAsync(It.IsAny<List<BlocksLanguageModule>>(), "target", false))
+                .Returns(Task.CompletedTask);
+
+            migrationRepository.Setup(x => x.GetAllKeysAsync("source")).ReturnsAsync(sourceKeys);
+            // When MigrateKeysAsync calls GetAllModulesAsync again for both source and target
+            migrationRepository.Setup(x => x.GetAllModulesAsync("target")).ReturnsAsync(targetModules);
+            migrationRepository.Setup(x => x.GetExistingKeysByModuleNameAndKeyNameAsync(
+                It.IsAny<List<(string, string)>>(), It.IsAny<Dictionary<string, string>>(), "target"))
+                .ReturnsAsync(new List<BlocksLanguageKey>());
+            migrationRepository.Setup(x => x.BulkUpsertKeysByModuleNameAndKeyNameAsync(
+                It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<Dictionary<string, string>>(), "target", false))
+                .ReturnsAsync(new BulkUpsertResult());
+
+            messageClient.Setup(x => x.SendToMassConsumerAsync(It.IsAny<ConsumerMessage<MigrationCompletionEvent>>()))
+                .Returns(Task.CompletedTask);
+
+            var consumer = new EnvironmentDataMigrationEventConsumer(
+                keyManagementService.Object,
+                migrationRepository.Object,
+                logger.Object,
+                messageClient.Object);
+
+            var @event = new EnvironmentDataMigrationEvent
+            {
+                ProjectKey = "source",
+                TargetedProjectKey = "target",
+                ShouldOverWriteExistingData = false,
+                TrackerId = "tracker-orphan"
+            };
+
+            await consumer.Consume(@event);
+
+            // The orphan key should be skipped - 0 keys upserted
+            migrationRepository.Verify(x => x.BulkUpsertKeysByModuleNameAndKeyNameAsync(
+                It.Is<List<BlocksLanguageKey>>(keys => keys.Count == 0),
+                It.IsAny<List<BlocksLanguageKey>>(),
+                It.IsAny<Dictionary<string, string>>(),
+                "target",
+                false), Times.Once);
+        }
+
+        [Fact]
+        public async Task EnvironmentDataMigrationEventConsumer_Consume_WhenKeyModuleNotInTarget_SkipsKey()
+        {
+            var keyManagementService = new Mock<IKeyManagementService>();
+            var migrationRepository = new Mock<IEnvironmentDataMigrationRepository>();
+            var logger = new Mock<ILogger<EnvironmentDataMigrationEventConsumer>>();
+            var messageClient = new Mock<IMessageClient>();
+
+            var sourceModules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule
+                {
+                    ItemId = "src-mod-1",
+                    ModuleName = "Mod1",
+                    Name = "Mod1",
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    TenantId = "source",
+                    CreatedBy = "user",
+                    LastUpdatedBy = "user"
+                }
+            };
+
+            // Source key belongs to Mod1, but target has no module named Mod1
+            var sourceKeys = new List<BlocksLanguageKey>
+            {
+                new BlocksLanguageKey
+                {
+                    ItemId = "src-key-1",
+                    KeyName = "SomeKey",
+                    ModuleId = "src-mod-1",
+                    Value = "val",
+                    Resources = new[] { new Resource { Culture = "en", Value = "val", CharacterLength = 3 } },
+                    Routes = new List<string>(),
+                    IsPartiallyTranslated = false,
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    TenantId = "source",
+                    CreatedBy = "user",
+                    LastUpdatedBy = "user"
+                }
+            };
+
+            migrationRepository.Setup(x => x.GetAllModulesAsync("source")).ReturnsAsync(sourceModules);
+            migrationRepository.Setup(x => x.GetExistingModulesByNamesAsync(It.IsAny<List<string>>(), "target"))
+                .ReturnsAsync(new List<BlocksLanguageModule>());
+            migrationRepository.Setup(x => x.BulkUpsertModulesByNameAsync(It.IsAny<List<BlocksLanguageModule>>(), "target", false))
+                .Returns(Task.CompletedTask);
+
+            migrationRepository.Setup(x => x.GetAllKeysAsync("source")).ReturnsAsync(sourceKeys);
+            // Target has no modules at all
+            migrationRepository.Setup(x => x.GetAllModulesAsync("target")).ReturnsAsync(new List<BlocksLanguageModule>());
+            migrationRepository.Setup(x => x.GetExistingKeysByModuleNameAndKeyNameAsync(
+                It.IsAny<List<(string, string)>>(), It.IsAny<Dictionary<string, string>>(), "target"))
+                .ReturnsAsync(new List<BlocksLanguageKey>());
+            migrationRepository.Setup(x => x.BulkUpsertKeysByModuleNameAndKeyNameAsync(
+                It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<Dictionary<string, string>>(), "target", false))
+                .ReturnsAsync(new BulkUpsertResult());
+
+            messageClient.Setup(x => x.SendToMassConsumerAsync(It.IsAny<ConsumerMessage<MigrationCompletionEvent>>()))
+                .Returns(Task.CompletedTask);
+
+            var consumer = new EnvironmentDataMigrationEventConsumer(
+                keyManagementService.Object,
+                migrationRepository.Object,
+                logger.Object,
+                messageClient.Object);
+
+            var @event = new EnvironmentDataMigrationEvent
+            {
+                ProjectKey = "source",
+                TargetedProjectKey = "target",
+                ShouldOverWriteExistingData = false,
+                TrackerId = "tracker-no-target-mod"
+            };
+
+            await consumer.Consume(@event);
+
+            // Key should be skipped because target has no matching module
+            migrationRepository.Verify(x => x.BulkUpsertKeysByModuleNameAndKeyNameAsync(
+                It.Is<List<BlocksLanguageKey>>(keys => keys.Count == 0),
+                It.IsAny<List<BlocksLanguageKey>>(),
+                It.IsAny<Dictionary<string, string>>(),
+                "target",
+                false), Times.Once);
+        }
+
+        [Fact]
+        public async Task EnvironmentDataMigrationEventConsumer_Consume_WhenNotOverwriteAndNoInsertedKeys_SkipsTimelineCreation()
+        {
+            var keyManagementService = new Mock<IKeyManagementService>();
+            var migrationRepository = new Mock<IEnvironmentDataMigrationRepository>();
+            var logger = new Mock<ILogger<EnvironmentDataMigrationEventConsumer>>();
+            var messageClient = new Mock<IMessageClient>();
+
+            var sourceModules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule
+                {
+                    ItemId = "src-mod-1",
+                    ModuleName = "Mod1",
+                    Name = "Mod1",
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    TenantId = "source",
+                    CreatedBy = "user",
+                    LastUpdatedBy = "user"
+                }
+            };
+
+            var targetModules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule
+                {
+                    ItemId = "target-mod-1",
+                    ModuleName = "Mod1",
+                    Name = "Mod1",
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    TenantId = "target",
+                    CreatedBy = "user",
+                    LastUpdatedBy = "user"
+                }
+            };
+
+            var sourceKeys = new List<BlocksLanguageKey>
+            {
+                new BlocksLanguageKey
+                {
+                    ItemId = "src-key-1",
+                    KeyName = "Key1",
+                    ModuleId = "src-mod-1",
+                    Value = "val",
+                    Resources = new[] { new Resource { Culture = "en", Value = "val", CharacterLength = 3 } },
+                    Routes = new List<string>(),
+                    IsPartiallyTranslated = false,
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    TenantId = "source",
+                    CreatedBy = "user",
+                    LastUpdatedBy = "user"
+                }
+            };
+
+            // Existing target key means it won't be inserted (not overwriting)
+            var existingTargetKeys = new List<BlocksLanguageKey>
+            {
+                new BlocksLanguageKey
+                {
+                    ItemId = "target-key-1",
+                    KeyName = "Key1",
+                    ModuleId = "target-mod-1",
+                    Value = "existing-val",
+                    Resources = new[] { new Resource { Culture = "en", Value = "existing-val", CharacterLength = 12 } },
+                    Routes = new List<string>(),
+                    IsPartiallyTranslated = false,
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    TenantId = "target",
+                    CreatedBy = "user",
+                    LastUpdatedBy = "user"
+                }
+            };
+
+            migrationRepository.Setup(x => x.GetAllModulesAsync("source")).ReturnsAsync(sourceModules);
+            migrationRepository.Setup(x => x.GetAllModulesAsync("target")).ReturnsAsync(targetModules);
+            migrationRepository.Setup(x => x.GetExistingModulesByNamesAsync(It.IsAny<List<string>>(), "target"))
+                .ReturnsAsync(targetModules);
+            migrationRepository.Setup(x => x.BulkUpsertModulesByNameAsync(It.IsAny<List<BlocksLanguageModule>>(), "target", false))
+                .Returns(Task.CompletedTask);
+
+            migrationRepository.Setup(x => x.GetAllKeysAsync("source")).ReturnsAsync(sourceKeys);
+            migrationRepository.Setup(x => x.GetExistingKeysByModuleNameAndKeyNameAsync(
+                It.IsAny<List<(string, string)>>(), It.IsAny<Dictionary<string, string>>(), "target"))
+                .ReturnsAsync(existingTargetKeys);
+            migrationRepository.Setup(x => x.BulkUpsertKeysByModuleNameAndKeyNameAsync(
+                It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<Dictionary<string, string>>(), "target", false))
+                .ReturnsAsync(new BulkUpsertResult { InsertedKeys = new List<BlocksLanguageKey>() }); // No inserted keys
+
+            messageClient.Setup(x => x.SendToMassConsumerAsync(It.IsAny<ConsumerMessage<MigrationCompletionEvent>>()))
+                .Returns(Task.CompletedTask);
+
+            var consumer = new EnvironmentDataMigrationEventConsumer(
+                keyManagementService.Object,
+                migrationRepository.Object,
+                logger.Object,
+                messageClient.Object);
+
+            var @event = new EnvironmentDataMigrationEvent
+            {
+                ProjectKey = "source",
+                TargetedProjectKey = "target",
+                ShouldOverWriteExistingData = false,
+                TrackerId = "tracker-no-inserts"
+            };
+
+            await consumer.Consume(@event);
+
+            // No timeline entries should be created since no keys were inserted
+            keyManagementService.Verify(x => x.CreateBulkKeyTimelineEntriesAsync(
+                It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            keyManagementService.Verify(x => x.CreateBulkKeyTimelineEntriesAsync(
+                It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
         public async Task EnvironmentDataMigrationEventConsumer_Consume_OnFailure_WhenTrackerStatusLoggingFails_StillPublishesFailureAndRethrows()
         {
             var keyManagementService = new Mock<IKeyManagementService>();

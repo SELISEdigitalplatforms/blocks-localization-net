@@ -20,11 +20,11 @@ namespace XUnitTest
         {
             _moduleManagementServiceMock = new Mock<IModuleManagementService>();
 
-            var changeControllerContextMock = new Mock<ChangeControllerContext>(MockBehavior.Loose, null, null, null);
+            var changeControllerContext = TestChangeControllerContextFactory.Create();
             
             _controller = new ModuleController(
                 _moduleManagementServiceMock.Object,
-                changeControllerContextMock.Object
+                changeControllerContext
             )
             {
                 ControllerContext = new ControllerContext()
@@ -33,7 +33,7 @@ namespace XUnitTest
 
         #region Save Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Save_WithValidModuleRequest_ReturnsSuccess()
         {
             // Arrange
@@ -65,7 +65,7 @@ namespace XUnitTest
             await Assert.ThrowsAsync<NullReferenceException>(() => _controller.Save(null));
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Save_WhenServiceFails_ReturnsFailure()
         {
             // Arrange 
@@ -92,7 +92,7 @@ namespace XUnitTest
 
         #region Gets Tests
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Gets_WithValidQuery_ReturnsModuleList()
         {
             // Arrange
@@ -116,7 +116,7 @@ namespace XUnitTest
             result.Should().HaveCount(2);
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Gets_WithEmptyModuleList_ReturnsEmpty()
         {
             // Arrange
@@ -133,7 +133,7 @@ namespace XUnitTest
             result.Should().BeEmpty();
         }
 
-        [Fact(Skip = "Blocked by non-overridable Blocks.Genesis.ChangeControllerContext.ChangeContext and null internal dependencies in test context")]
+        [Fact]
         public async Task Gets_WhenServiceThrows_PropagatesException()
         {
             // Arrange
