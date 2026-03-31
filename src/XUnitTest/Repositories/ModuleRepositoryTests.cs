@@ -10,6 +10,7 @@ using FluentAssertions;
 using Moq;
 using MongoDB.Driver;
 using Xunit;
+using XUnitTest.Shared;
 
 namespace XUnitTest.Repositories
 {
@@ -28,9 +29,13 @@ namespace XUnitTest.Repositories
 
             _dbContextProvider.Setup(x => x.GetDatabase(It.IsAny<string>())).Returns(_database.Object);
             _database.Setup(x => x.GetCollection<BlocksLanguageModule>(It.IsAny<string>(), null)).Returns(_collection.Object);
+            // GetAllAsync uses _dbContextProvider.GetCollection directly
+            _dbContextProvider.Setup(x => x.GetCollection<BlocksLanguageModule>(It.IsAny<string>())).Returns(_collection.Object);
 
             _repo = new ModuleRepository(_dbContextProvider.Object);
         }
+
+        #region SaveAsync
 
         [Fact]
         public async Task SaveAsync_UpsertsModule()
@@ -51,25 +56,87 @@ namespace XUnitTest.Repositories
                 It.IsAny<CancellationToken>()), Times.Once);
         }
 
+        #endregion
+
+        #region GetByNameAsync
+
         [Fact]
-        public async Task GetAllAsync_UsesGetCollection()
+        public async Task GetByNameAsync_ReturnsModule_WhenFound()
         {
-            // GetAllAsync uses extension method Find which can't be mocked,
-            // but we can verify the collection is obtained from the correct collection name
-            var collectionMock = new Mock<IMongoCollection<BlocksLanguageModule>>();
-            _dbContextProvider.Setup(x => x.GetCollection<BlocksLanguageModule>("BlocksLanguageModules")).Returns(collectionMock.Object);
+            var module = new BlocksLanguageModule { ItemId = "m1", ModuleName = "mod1", Name = "Module1" };
+            MockCursorHelper.SetupFindAsync(_collection, new List<BlocksLanguageModule> { module });
 
-            // This will throw because Find is an extension method, but we verify collection access
-            try
-            {
-                await _repo.GetAllAsync();
-            }
-            catch
-            {
-                // Expected - Find extension method cannot be mocked
-            }
+            var result = await _repo.GetByNameAsync("mod1");
 
-            _dbContextProvider.Verify(x => x.GetCollection<BlocksLanguageModule>("BlocksLanguageModules"), Times.Once);
+            result.Should().NotBeNull();
+            result.ModuleName.Should().Be("mod1");
         }
+
+        [Fact]
+        public async Task GetByNameAsync_ReturnsNull_WhenNotFound()
+        {
+            MockCursorHelper.SetupFindAsyncEmpty(_collection);
+
+            var result = await _repo.GetByNameAsync("nonexistent");
+
+            result.Should().BeNull();
+        }
+
+        #endregion
+
+        #region GetByIdAsync
+
+        [Fact]
+        public async Task GetByIdAsync_ReturnsModule_WhenFound()
+        {
+            var module = new BlocksLanguageModule { ItemId = "m1", ModuleName = "mod1", Name = "Module1" };
+            MockCursorHelper.SetupFindAsync(_collection, new List<BlocksLanguageModule> { module });
+
+            var result = await _repo.GetByIdAsync("m1");
+
+            result.Should().NotBeNull();
+            result.ItemId.Should().Be("m1");
+        }
+
+        [Fact]
+        public async Task GetByIdAsync_ReturnsNull_WhenNotFound()
+        {
+            MockCursorHelper.SetupFindAsyncEmpty(_collection);
+
+            var result = await _repo.GetByIdAsync("nonexistent");
+
+            result.Should().BeNull();
+        }
+
+        #endregion
+
+        #region GetAllAsync
+
+        [Fact]
+        public async Task GetAllAsync_ReturnsAllModules()
+        {
+            var modules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule { ItemId = "m1", ModuleName = "mod1", Name = "Module1" },
+                new BlocksLanguageModule { ItemId = "m2", ModuleName = "mod2", Name = "Module2" }
+            };
+            MockCursorHelper.SetupFindAsync(_collection, modules);
+
+            var result = await _repo.GetAllAsync();
+
+            result.Should().HaveCount(2);
+        }
+
+        [Fact]
+        public async Task GetAllAsync_ReturnsEmpty_WhenNoModules()
+        {
+            MockCursorHelper.SetupFindAsyncEmpty(_collection);
+
+            var result = await _repo.GetAllAsync();
+
+            result.Should().BeEmpty();
+        }
+
+        #endregion
     }
 }
