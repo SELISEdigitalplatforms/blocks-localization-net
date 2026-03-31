@@ -540,6 +540,181 @@ namespace XUnitTest
         }
 
         [Fact]
+        public async Task GetKeysAsync_WithResourceSearchFilters_PassesFiltersToRepository()
+        {
+            // Arrange
+            var request = new GetKeysRequest
+            {
+                ProjectKey = "test-project",
+                ResourceSearchFilters = new[]
+                {
+                    new ResourceSearchFilter { Culture = "en", SearchText = "hello" },
+                    new ResourceSearchFilter { Culture = "fr", SearchText = "bonjour" }
+                }
+            };
+            var response = new GetKeysQueryResponse
+            {
+                Keys = new List<Key>
+                {
+                    new Key
+                    {
+                        KeyName = "GREETING",
+                        Resources = new[]
+                        {
+                            new Resource { Culture = "en", Value = "Hello World" },
+                            new Resource { Culture = "fr", Value = "Bonjour le monde" }
+                        }
+                    }
+                },
+                TotalCount = 1
+            };
+
+            _keyRepositoryMock.Setup(r => r.GetAllKeysAsync(request))
+                .ReturnsAsync(response);
+
+            // Act
+            var result = await _service.GetKeysAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Keys.Should().HaveCount(1);
+            result.TotalCount.Should().Be(1);
+            _keyRepositoryMock.Verify(r => r.GetAllKeysAsync(It.Is<GetKeysRequest>(
+                q => q.ResourceSearchFilters != null && q.ResourceSearchFilters.Length == 2)), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetKeysAsync_WithKeySearchTextAndResourceSearchFilters_PassesBothToRepository()
+        {
+            // Arrange
+            var request = new GetKeysRequest
+            {
+                ProjectKey = "test-project",
+                KeySearchText = "GREET",
+                ResourceSearchFilters = new[]
+                {
+                    new ResourceSearchFilter { Culture = "en", SearchText = "hello" }
+                }
+            };
+            var response = new GetKeysQueryResponse
+            {
+                Keys = new List<Key>(),
+                TotalCount = 0
+            };
+
+            _keyRepositoryMock.Setup(r => r.GetAllKeysAsync(request))
+                .ReturnsAsync(response);
+
+            // Act
+            var result = await _service.GetKeysAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            _keyRepositoryMock.Verify(r => r.GetAllKeysAsync(It.Is<GetKeysRequest>(
+                q => q.KeySearchText == "GREET" 
+                    && q.ResourceSearchFilters != null 
+                    && q.ResourceSearchFilters.Length == 1
+                    && q.ResourceSearchFilters[0].Culture == "en"
+                    && q.ResourceSearchFilters[0].SearchText == "hello")), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetKeysAsync_WithNullResourceSearchFilters_PassesNullToRepository()
+        {
+            // Arrange
+            var request = new GetKeysRequest
+            {
+                ProjectKey = "test-project",
+                ResourceSearchFilters = null
+            };
+            var response = new GetKeysQueryResponse
+            {
+                Keys = new List<Key>(),
+                TotalCount = 0
+            };
+
+            _keyRepositoryMock.Setup(r => r.GetAllKeysAsync(request))
+                .ReturnsAsync(response);
+
+            // Act
+            var result = await _service.GetKeysAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            _keyRepositoryMock.Verify(r => r.GetAllKeysAsync(It.Is<GetKeysRequest>(
+                q => q.ResourceSearchFilters == null)), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetKeysAsync_WithLastUpdateDateRange_PassesRangeToRepository()
+        {
+            // Arrange
+            var request = new GetKeysRequest
+            {
+                ProjectKey = "test-project",
+                LastUpdateDateRange = new DateRange
+                {
+                    StartDate = new DateTime(2025, 1, 1),
+                    EndDate = new DateTime(2025, 12, 31)
+                }
+            };
+            var response = new GetKeysQueryResponse
+            {
+                Keys = new List<Key>(),
+                TotalCount = 0
+            };
+
+            _keyRepositoryMock.Setup(r => r.GetAllKeysAsync(request))
+                .ReturnsAsync(response);
+
+            // Act
+            var result = await _service.GetKeysAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            _keyRepositoryMock.Verify(r => r.GetAllKeysAsync(It.Is<GetKeysRequest>(
+                q => q.LastUpdateDateRange != null
+                    && q.LastUpdateDateRange.StartDate == new DateTime(2025, 1, 1)
+                    && q.LastUpdateDateRange.EndDate == new DateTime(2025, 12, 31))), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetKeysAsync_WithBothDateRanges_PassesBothToRepository()
+        {
+            // Arrange
+            var request = new GetKeysRequest
+            {
+                ProjectKey = "test-project",
+                CreateDateRange = new DateRange
+                {
+                    StartDate = new DateTime(2024, 1, 1),
+                    EndDate = new DateTime(2024, 12, 31)
+                },
+                LastUpdateDateRange = new DateRange
+                {
+                    StartDate = new DateTime(2025, 1, 1),
+                    EndDate = new DateTime(2025, 6, 30)
+                }
+            };
+            var response = new GetKeysQueryResponse
+            {
+                Keys = new List<Key>(),
+                TotalCount = 0
+            };
+
+            _keyRepositoryMock.Setup(r => r.GetAllKeysAsync(request))
+                .ReturnsAsync(response);
+
+            // Act
+            var result = await _service.GetKeysAsync(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            _keyRepositoryMock.Verify(r => r.GetAllKeysAsync(It.Is<GetKeysRequest>(
+                q => q.CreateDateRange != null && q.LastUpdateDateRange != null)), Times.Once);
+        }
+
+        [Fact]
         public async Task GetKeyTimelineAsync_ReturnsTimelineResponse()
         {
             // Arrange

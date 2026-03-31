@@ -29,7 +29,8 @@ namespace XUnitTest
                 phoneNumber: "",
                 displayName: "Test User",
                 oauthToken: "",
-                actualTentId: "test-tenant");
+                actualTentId: "test-tenant",
+                refreshToken: "");
             BlocksContext.SetContext(blocksContext, true);
 
             var tenantsMock = new Mock<ITenants>();
