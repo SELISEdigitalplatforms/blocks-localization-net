@@ -578,17 +578,28 @@ namespace DomainService.Services
 
             _logger.LogInformation("++ JsonOutputGeneratorService: GenerateAsync()... Found {ApplicationsCount} UilmApplications.", applications.Count);
 
+            var publishedKeys = new List<Key>();
+            var failedKeys = new List<Key>();
+
             foreach (BlocksLanguageModule application in applications)
             {
                 List<Key> resourceKeys = await _keyRepository.GetAllKeysByModuleAsync(application.ItemId);
                 _logger.LogInformation("++ JsonOutputGeneratorService: GenerateAsync()... Found {ResourceKeysCount} UilmResourceKeys for UilmApplication={ApplicationName}.", resourceKeys.Count, application.ModuleName);
 
-                List<UilmFile> uilmfiles = ProcessUilmFile(command, languageSetting, resourceKeys, application);
+                try
+                {
+                    List<UilmFile> uilmfiles = ProcessUilmFile(command, languageSetting, resourceKeys, application);
 
-                _logger.LogInformation("++Saving {UilmfilesCount} UilmFiles for UilmApplication={ApplicationName}", uilmfiles.Count, application.ModuleName);
-                await SaveUniqeFiles(uilmfiles);
+                    _logger.LogInformation("++Saving {UilmfilesCount} UilmFiles for UilmApplication={ApplicationName}", uilmfiles.Count, application.ModuleName);
+                    await SaveUniqeFiles(uilmfiles);
 
-               
+                    publishedKeys.AddRange(resourceKeys);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Failed to publish keys for module {ModuleId}: {Error}", application.ItemId, ex.Message);
+                    failedKeys.AddRange(resourceKeys);
+                }
             }
              // Create history entry for this generation
             var latestHistory = await _languageFileGenerationHistoryRepository.GetLatestLanguageFileGenerationHistory(command.ProjectKey ?? "");
@@ -611,6 +622,19 @@ namespace DomainService.Services
             if(!string.IsNullOrWhiteSpace(command.ModuleId))
             {
                 await _notificationService.NotifyExtensionEvent(true, command.ProjectKey);
+            }
+
+            // Bulk-insert timeline entries after all operations are complete
+            if (publishedKeys.Any())
+            {
+                var mappedPublishedKeys = publishedKeys.Select(MapKeyToBlocksLanguageKey).ToList();
+                await CreateBulkKeyTimelineEntriesAsync(mappedPublishedKeys, "Published", command.ProjectKey ?? "");
+            }
+
+            if (failedKeys.Any())
+            {
+                var mappedFailedKeys = failedKeys.Select(MapKeyToBlocksLanguageKey).ToList();
+                await CreateBulkKeyTimelineEntriesAsync(mappedFailedKeys, "PublishFailed", command.ProjectKey ?? "");
             }
 
             return true;
