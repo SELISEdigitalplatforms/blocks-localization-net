@@ -121,6 +121,268 @@ namespace XUnitTest
             result.Keys.Should().HaveCount(1);
         }
 
+        [Fact]
+        public async Task Gets_WithKeySearchText_ReturnsFilteredKeys()
+        {
+            // Arrange
+            var query = new GetKeysRequest { ProjectKey = "project-1", PageSize = 10, KeySearchText = "welcome" };
+            var expectedResponse = new GetKeysQueryResponse { Keys = new List<Key> { new Key { KeyName = "WELCOME_MESSAGE" } } };
+
+            _keyManagementServiceMock
+                .Setup(x => x.GetKeysAsync(query))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Gets(query);
+
+            // Assert
+            result.Keys.Should().HaveCount(1);
+            result.Keys[0].KeyName.Should().Contain("WELCOME");
+        }
+
+        [Fact]
+        public async Task Gets_WithResourceSearchFilters_ReturnsFilteredKeys()
+        {
+            // Arrange
+            var query = new GetKeysRequest
+            {
+                ProjectKey = "project-1",
+                PageSize = 10,
+                ResourceSearchFilters = new[]
+                {
+                    new ResourceSearchFilter { Culture = "en", SearchText = "hello" },
+                    new ResourceSearchFilter { Culture = "fr", SearchText = "bonjour" }
+                }
+            };
+            var expectedResponse = new GetKeysQueryResponse
+            {
+                Keys = new List<Key>
+                {
+                    new Key
+                    {
+                        KeyName = "GREETING",
+                        Resources = new[]
+                        {
+                            new Resource { Culture = "en", Value = "Hello World" },
+                            new Resource { Culture = "fr", Value = "Bonjour le monde" }
+                        }
+                    }
+                }
+            };
+
+            _keyManagementServiceMock
+                .Setup(x => x.GetKeysAsync(query))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Gets(query);
+
+            // Assert
+            result.Keys.Should().HaveCount(1);
+            result.Keys[0].KeyName.Should().Be("GREETING");
+        }
+
+        [Fact]
+        public async Task Gets_WithKeySearchTextAndResourceSearchFilters_ReturnsFilteredKeys()
+        {
+            // Arrange
+            var query = new GetKeysRequest
+            {
+                ProjectKey = "project-1",
+                PageSize = 10,
+                KeySearchText = "GREET",
+                ResourceSearchFilters = new[]
+                {
+                    new ResourceSearchFilter { Culture = "en", SearchText = "hello" }
+                }
+            };
+            var expectedResponse = new GetKeysQueryResponse
+            {
+                Keys = new List<Key>
+                {
+                    new Key
+                    {
+                        KeyName = "GREETING",
+                        Resources = new[] { new Resource { Culture = "en", Value = "Hello" } }
+                    }
+                }
+            };
+
+            _keyManagementServiceMock
+                .Setup(x => x.GetKeysAsync(query))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Gets(query);
+
+            // Assert
+            result.Keys.Should().HaveCount(1);
+            _keyManagementServiceMock.Verify(x => x.GetKeysAsync(It.Is<GetKeysRequest>(
+                r => r.KeySearchText == "GREET" && r.ResourceSearchFilters!.Length == 1)), Times.Once);
+        }
+
+        [Fact]
+        public async Task Gets_WithEmptyResourceSearchFilters_ReturnsAllKeys()
+        {
+            // Arrange
+            var query = new GetKeysRequest
+            {
+                ProjectKey = "project-1",
+                PageSize = 10,
+                ResourceSearchFilters = Array.Empty<ResourceSearchFilter>()
+            };
+            var expectedResponse = new GetKeysQueryResponse
+            {
+                Keys = new List<Key>
+                {
+                    new Key { KeyName = "Key1" },
+                    new Key { KeyName = "Key2" }
+                },
+                TotalCount = 2
+            };
+
+            _keyManagementServiceMock
+                .Setup(x => x.GetKeysAsync(query))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Gets(query);
+
+            // Assert
+            result.Keys.Should().HaveCount(2);
+            result.TotalCount.Should().Be(2);
+        }
+
+        [Fact]
+        public async Task Gets_WithNullResourceSearchFilters_ReturnsKeys()
+        {
+            // Arrange
+            var query = new GetKeysRequest
+            {
+                ProjectKey = "project-1",
+                PageSize = 10,
+                ResourceSearchFilters = null
+            };
+            var expectedResponse = new GetKeysQueryResponse
+            {
+                Keys = new List<Key> { new Key { KeyName = "Key1" } },
+                TotalCount = 1
+            };
+
+            _keyManagementServiceMock
+                .Setup(x => x.GetKeysAsync(query))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Gets(query);
+
+            // Assert
+            result.Keys.Should().HaveCount(1);
+        }
+
+        [Fact]
+        public async Task Gets_WithLastUpdateDateRange_ReturnsFilteredKeys()
+        {
+            // Arrange
+            var query = new GetKeysRequest
+            {
+                ProjectKey = "project-1",
+                PageSize = 10,
+                LastUpdateDateRange = new DateRange
+                {
+                    StartDate = new DateTime(2025, 1, 1),
+                    EndDate = new DateTime(2025, 12, 31)
+                }
+            };
+            var expectedResponse = new GetKeysQueryResponse
+            {
+                Keys = new List<Key> { new Key { KeyName = "Key1" } },
+                TotalCount = 1
+            };
+
+            _keyManagementServiceMock
+                .Setup(x => x.GetKeysAsync(query))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Gets(query);
+
+            // Assert
+            result.Keys.Should().HaveCount(1);
+            _keyManagementServiceMock.Verify(x => x.GetKeysAsync(It.Is<GetKeysRequest>(
+                r => r.LastUpdateDateRange != null
+                    && r.LastUpdateDateRange.StartDate == new DateTime(2025, 1, 1)
+                    && r.LastUpdateDateRange.EndDate == new DateTime(2025, 12, 31))), Times.Once);
+        }
+
+        [Fact]
+        public async Task Gets_WithLastUpdateDateRangeStartDateOnly_ReturnsFilteredKeys()
+        {
+            // Arrange
+            var query = new GetKeysRequest
+            {
+                ProjectKey = "project-1",
+                PageSize = 10,
+                LastUpdateDateRange = new DateRange
+                {
+                    StartDate = new DateTime(2025, 6, 1)
+                }
+            };
+            var expectedResponse = new GetKeysQueryResponse
+            {
+                Keys = new List<Key> { new Key { KeyName = "Key1" }, new Key { KeyName = "Key2" } },
+                TotalCount = 2
+            };
+
+            _keyManagementServiceMock
+                .Setup(x => x.GetKeysAsync(query))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Gets(query);
+
+            // Assert
+            result.Keys.Should().HaveCount(2);
+        }
+
+        [Fact]
+        public async Task Gets_WithBothDateRanges_ReturnsFilteredKeys()
+        {
+            // Arrange
+            var query = new GetKeysRequest
+            {
+                ProjectKey = "project-1",
+                PageSize = 10,
+                CreateDateRange = new DateRange
+                {
+                    StartDate = new DateTime(2024, 1, 1),
+                    EndDate = new DateTime(2024, 12, 31)
+                },
+                LastUpdateDateRange = new DateRange
+                {
+                    StartDate = new DateTime(2025, 1, 1),
+                    EndDate = new DateTime(2025, 6, 30)
+                }
+            };
+            var expectedResponse = new GetKeysQueryResponse
+            {
+                Keys = new List<Key> { new Key { KeyName = "Key1" } },
+                TotalCount = 1
+            };
+
+            _keyManagementServiceMock
+                .Setup(x => x.GetKeysAsync(query))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Gets(query);
+
+            // Assert
+            result.Keys.Should().HaveCount(1);
+            _keyManagementServiceMock.Verify(x => x.GetKeysAsync(It.Is<GetKeysRequest>(
+                r => r.CreateDateRange != null && r.LastUpdateDateRange != null)), Times.Once);
+        }
+
         #endregion
 
         #region Get Tests
