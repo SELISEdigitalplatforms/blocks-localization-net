@@ -109,11 +109,11 @@ namespace DomainService.Services
                 {
                     if (isNewKey)
                     {
-                        await CreateKeyTimelineEntryAsync(null, repoKey, "KeyController.Create");
+                        await CreateKeyTimelineEntryAsync(null, repoKey, LogFromConstants.KeyCreate);
                     }
                     else
                     {
-                        await CreateKeyTimelineEntryAsync(previousKey, repoKey, "KeyController.Save");
+                        await CreateKeyTimelineEntryAsync(previousKey, repoKey, LogFromConstants.KeySave);
                     }
                 }
             }
@@ -135,6 +135,7 @@ namespace DomainService.Services
 
             var errors = new List<string>();
             var successCount = 0;
+            var bulkOperationId = Guid.NewGuid().ToString();
 
             foreach (var key in keys)
             {
@@ -178,11 +179,11 @@ namespace DomainService.Services
                     {
                         if (isNewKey)
                         {
-                            await CreateKeyTimelineEntryAsync(null, repoKey, "KeyController.BulkCreate");
+                            await CreateKeyTimelineEntryAsync(null, repoKey, LogFromConstants.KeyBulkCreate, bulkOperationId);
                         }
                         else
                         {
-                            await CreateKeyTimelineEntryAsync(previousKey, repoKey, "KeyController.BulkSave");
+                            await CreateKeyTimelineEntryAsync(previousKey, repoKey, LogFromConstants.KeyBulkSave, bulkOperationId);
                         }
                     }
 
@@ -258,6 +259,16 @@ namespace DomainService.Services
             return await _keyTimelineRepository.GetKeyTimelineAsync(query);
         }
 
+        public async Task<GetLocalizationTimelineResponse> GetLocalizationTimelineAsync(GetLocalizationTimelineRequest query)
+        {
+            return await _keyTimelineRepository.GetLocalizationTimelineAsync(query);
+        }
+
+        public async Task<GetKeyTimelineQueryResponse> GetTimelineByOperationIdAsync(GetTimelineByOperationIdRequest query)
+        {
+            return await _keyTimelineRepository.GetTimelineByOperationIdAsync(query);
+        }
+
         public async Task<Key?> GetAsync(GetKeyRequest request)
         {
             var key = await _keyRepository.GetByIdAsync(request.ItemId);
@@ -290,7 +301,7 @@ namespace DomainService.Services
                 var repoKey = await _keyRepository.GetKeyByNameAsync(key.KeyName, key.ModuleId);
                 if (repoKey != null)
                 {
-                    await CreateKeyTimelineEntryAsync(repoKey, repoKey, "KeyController.Delete");
+                    await CreateKeyTimelineEntryAsync(repoKey, repoKey, LogFromConstants.KeyDelete);
                 }
             }
             catch (Exception ex)
@@ -310,6 +321,7 @@ namespace DomainService.Services
 
             var page = 0;
             var pageSize = 1000;
+            var changeAllOperationId = Guid.NewGuid().ToString();
 
             while (true)
             {
@@ -336,7 +348,7 @@ namespace DomainService.Services
 
                 if (resourceKeys.Any())
                 {
-                    await UpdateResourceKey(resourceKeys, request, originalResourceKeys);
+                    await UpdateResourceKey(resourceKeys, request, originalResourceKeys, changeAllOperationId);
                 }
 
                 page++;
@@ -387,7 +399,7 @@ namespace DomainService.Services
                         originalResourceKeys[resourceKey.ItemId] = originalKey;
                     }
                     
-                    await UpdateResourceKey(uilmResourceKeyList, translateAllEvent, originalResourceKeys);
+                    await UpdateResourceKey(uilmResourceKeyList, translateAllEvent, originalResourceKeys, null, LogFromConstants.TranslateKey);
                 }
 
                 return true;
@@ -539,8 +551,10 @@ namespace DomainService.Services
             return keywordResources != null;
         }
 
-        public async Task UpdateResourceKey(List<BlocksLanguageKey> resourceKeys, TranslateAllEvent request, Dictionary<string, BlocksLanguageKey>? originalResourceKeys = null)
+        public async Task UpdateResourceKey(List<BlocksLanguageKey> resourceKeys, TranslateAllEvent request, Dictionary<string, BlocksLanguageKey>? originalResourceKeys = null, string? translateAllOperationId = null, string logFrom = null)
         {
+            logFrom ??= LogFromConstants.TranslateAll;
+            translateAllOperationId ??= Guid.NewGuid().ToString();
             var updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(resourceKeys);
 
             // Create timeline entries for updated keys
@@ -555,7 +569,7 @@ namespace DomainService.Services
                         previousKey = originalResourceKeys[resourceKey.ItemId];
                     }
                     
-                    await CreateKeyTimelineEntryAsync(previousKey, resourceKey, "TranslateAll");
+                    await CreateKeyTimelineEntryAsync(previousKey, resourceKey, logFrom, translateAllOperationId);
                 }
                 catch (Exception ex)
                 {
@@ -628,13 +642,13 @@ namespace DomainService.Services
             if (publishedKeys.Any())
             {
                 var mappedPublishedKeys = publishedKeys.Select(MapKeyToBlocksLanguageKey).ToList();
-                await CreateBulkKeyTimelineEntriesAsync(mappedPublishedKeys, "Published", command.ProjectKey ?? "");
+                await CreateBulkKeyTimelineEntriesAsync(mappedPublishedKeys, LogFromConstants.Published, command.ProjectKey ?? "");
             }
 
             if (failedKeys.Any())
             {
                 var mappedFailedKeys = failedKeys.Select(MapKeyToBlocksLanguageKey).ToList();
-                await CreateBulkKeyTimelineEntriesAsync(mappedFailedKeys, "PublishFailed", command.ProjectKey ?? "");
+                await CreateBulkKeyTimelineEntriesAsync(mappedFailedKeys, LogFromConstants.PublishFailed, command.ProjectKey ?? "");
             }
 
             return true;
@@ -1833,6 +1847,8 @@ namespace DomainService.Services
 
         private async Task SaveUilmResourceKey(List<BlocksLanguageKey> uilmResourceKeys, List<BlocksLanguageKey> resourceKeysWithoutId, List<BlocksLanguageKey> oldUilmResourceKeys = null)
         {
+            var importOperationId = Guid.NewGuid().ToString();
+
             if (uilmResourceKeys.Any())
             {
                 long? updateCount = 0;
@@ -1844,7 +1860,7 @@ namespace DomainService.Services
                 {
                     try
                     {
-                        await CreateKeyTimelineEntryAsync(oldUilmResourceKeys.FirstOrDefault(x => x.ItemId == resourceKey.ItemId), resourceKey, "UilmImport.Update");
+                        await CreateKeyTimelineEntryAsync(oldUilmResourceKeys.FirstOrDefault(x => x.ItemId == resourceKey.ItemId), resourceKey, LogFromConstants.UilmImportUpdate, importOperationId);
                     }
                     catch (Exception ex)
                     {
@@ -1866,7 +1882,7 @@ namespace DomainService.Services
                 {
                     try
                     {
-                        await CreateKeyTimelineEntryAsync(null, resourceKey, "UilmImport.Insert");
+                        await CreateKeyTimelineEntryAsync(null, resourceKey, LogFromConstants.UilmImportInsert, importOperationId);
                     }
                     catch (Exception ex)
                     {
@@ -2474,7 +2490,7 @@ namespace DomainService.Services
                 await _keyRepository.SaveKeyAsync(currentKey);
 
                 // Create timeline entry for the rollback operation
-                await CreateKeyTimelineEntryAsync(rollbackFromKey, currentKey, "Rollback");
+                await CreateKeyTimelineEntryAsync(rollbackFromKey, currentKey, LogFromConstants.Rollback);
 
                 _logger.LogInformation("Rollback operation completed successfully for ItemId: {ItemId}", request.ItemId);
 
@@ -2497,7 +2513,7 @@ namespace DomainService.Services
             }
         }
 
-        private async Task CreateKeyTimelineEntryAsync(BlocksLanguageKey? previousKey, BlocksLanguageKey currentKey, string logFrom)
+        private async Task CreateKeyTimelineEntryAsync(BlocksLanguageKey? previousKey, BlocksLanguageKey currentKey, string logFrom, string? operationId = null)
         {
             try
             {
@@ -2510,7 +2526,8 @@ namespace DomainService.Services
                     LogFrom = logFrom,
                     UserId = context?.UserId ?? "System",
                     CreateDate = DateTime.UtcNow,
-                    LastUpdateDate = DateTime.UtcNow
+                    LastUpdateDate = DateTime.UtcNow,
+                    OperationId = operationId ?? Guid.NewGuid().ToString()
                 };
 
                 await _keyTimelineRepository.SaveKeyTimelineAsync(timeline);
@@ -2529,16 +2546,18 @@ namespace DomainService.Services
             {
                 if (!keys.Any()) return;
 
+                var operationId = Guid.NewGuid().ToString();
                 var context = BlocksContext.GetContext();
                 var timelines = keys.Select(key => new KeyTimeline
                 {
                     EntityId = key.ItemId,
                     CurrentData = key,
-                    PreviousData = null, // For migration, we don't have previous data
+                    PreviousData = null,
                     LogFrom = logFrom,
                     UserId = context?.UserId ?? "System",
                     CreateDate = DateTime.UtcNow,
-                    LastUpdateDate = DateTime.UtcNow
+                    LastUpdateDate = DateTime.UtcNow,
+                    OperationId = operationId
                 }).ToList();
 
                 await _keyTimelineRepository.BulkSaveKeyTimelinesAsync(timelines, targetedProjectKey);
@@ -2560,6 +2579,7 @@ namespace DomainService.Services
                 // Create a dictionary for quick lookup of previous keys by ItemId
                 var previousKeyDict = previousKeys?.ToDictionary(k => k.ItemId, k => k) ?? new Dictionary<string, BlocksLanguageKey>();
 
+                var operationId = Guid.NewGuid().ToString();
                 var context = BlocksContext.GetContext();
                 var timelines = keys.Select(key => new KeyTimeline
                 {
@@ -2569,7 +2589,8 @@ namespace DomainService.Services
                     LogFrom = logFrom,
                     UserId = context?.UserId ?? "System",
                     CreateDate = DateTime.UtcNow,
-                    LastUpdateDate = DateTime.UtcNow
+                    LastUpdateDate = DateTime.UtcNow,
+                    OperationId = operationId
                 }).ToList();
 
                 await _keyTimelineRepository.BulkSaveKeyTimelinesAsync(timelines, targetedProjectKey);

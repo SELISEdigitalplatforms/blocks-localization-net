@@ -122,6 +122,34 @@ namespace Api.Controllers
         }
 
         /// <summary>
+        /// Retrieves the localization-level overview timeline grouped by operation.
+        /// </summary>
+        /// <param name="query">The query parameters for filtering and pagination.</param>
+        /// <returns>A paginated list of operation-level timeline entries.</returns>
+        [HttpGet]
+        [Authorize]
+        public async Task<GetLocalizationTimelineResponse> GetLocalizationTimeline([FromQuery] GetLocalizationTimelineRequest query)
+        {
+            if (query == null) BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(query);
+            return await _keyManagementService.GetLocalizationTimelineAsync(query);
+        }
+
+        /// <summary>
+        /// Retrieves timeline entries for a specific operation by OperationId.
+        /// </summary>
+        /// <param name="query">The query containing the OperationId and pagination parameters.</param>
+        /// <returns>A paginated list of <see cref="KeyTimeline"/> entries for the operation.</returns>
+        [HttpGet]
+        [Authorize]
+        public async Task<GetKeyTimelineQueryResponse> GetTimelineByOperationId([FromQuery] GetTimelineByOperationIdRequest query)
+        {
+            if (query == null) BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(query);
+            return await _keyManagementService.GetTimelineByOperationIdAsync(query);
+        }
+
+        /// <summary>
         /// Retrieves a specific key by item ID.
         /// </summary>
         /// <param name="request">The request containing the item ID of the key to retrieve.</param>
