@@ -8,5 +8,7 @@ namespace DomainService.Repositories
         Task SaveKeyTimelineAsync(KeyTimeline timeline);
         Task BulkSaveKeyTimelinesAsync(List<KeyTimeline> timelines, string targetedProjectKey);
         Task<KeyTimeline?> GetTimelineByItemIdAsync(string itemId);
+        Task<GetLocalizationTimelineResponse> GetLocalizationTimelineAsync(GetLocalizationTimelineRequest query);
+        Task<GetKeyTimelineQueryResponse> GetTimelineByOperationIdAsync(GetTimelineByOperationIdRequest query);
     }
 }

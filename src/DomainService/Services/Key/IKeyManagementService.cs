@@ -35,5 +35,7 @@ namespace DomainService.Services
         Task<BaseMutationResponse> DeleteCollectionsAsync(DeleteCollectionsRequest request);
         Task<BaseMutationResponse> RollbackAsync(RollbackRequest request);
         Task<GetLanguageFileGenerationHistoryResponse> GetLanguageFileGenerationHistoryAsync(GetLanguageFileGenerationHistoryRequest request);
+        Task<GetLocalizationTimelineResponse> GetLocalizationTimelineAsync(GetLocalizationTimelineRequest query);
+        Task<GetKeyTimelineQueryResponse> GetTimelineByOperationIdAsync(GetTimelineByOperationIdRequest query);
     }
 }

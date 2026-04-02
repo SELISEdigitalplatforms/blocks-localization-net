@@ -427,5 +427,112 @@ namespace XUnitTest.Repositories
         }
 
         #endregion
+
+        #region GetTimelineByOperationIdAsync
+
+        [Fact]
+        public async Task GetTimelineByOperationIdAsync_ReturnsTimelinesAndCount()
+        {
+            var timelines = new List<KeyTimeline>
+            {
+                new KeyTimeline { ItemId = "t1", EntityId = "e1", UserId = "u1", OperationId = "op1", CreateDate = DateTime.UtcNow },
+                new KeyTimeline { ItemId = "t2", EntityId = "e2", UserId = "u1", OperationId = "op1", CreateDate = DateTime.UtcNow }
+            };
+            MockCursorHelper.SetupFindAsync(_collection, timelines);
+            MockCursorHelper.SetupCountDocuments(_collection, 2);
+
+            _dbContextProvider.Setup(x => x.GetDatabase("root-tenant")).Returns(_rootDatabase.Object);
+            var users = new List<User>
+            {
+                new User { ItemId = "u1", FirstName = "John", LastName = "Doe", Email = "john@test.com" }
+            };
+            MockCursorHelper.SetupFindAsync(_usersCollection, users);
+
+            var request = new GetTimelineByOperationIdRequest { OperationId = "op1", PageNumber = 1, PageSize = 10 };
+            var result = await _repo.GetTimelineByOperationIdAsync(request);
+
+            result.Should().NotBeNull();
+            result.TotalCount.Should().Be(2);
+            result.Timelines.Should().HaveCount(2);
+            result.Timelines[0].UserName.Should().Be("John Doe");
+        }
+
+        [Fact]
+        public async Task GetTimelineByOperationIdAsync_EmptyResult_ReturnsEmptyList()
+        {
+            MockCursorHelper.SetupFindAsyncEmpty(_collection);
+            MockCursorHelper.SetupCountDocuments(_collection, 0);
+
+            var request = new GetTimelineByOperationIdRequest { OperationId = "nonexistent", PageNumber = 1, PageSize = 10 };
+            var result = await _repo.GetTimelineByOperationIdAsync(request);
+
+            result.Should().NotBeNull();
+            result.TotalCount.Should().Be(0);
+            result.Timelines.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task GetTimelineByOperationIdAsync_PopulatesUserName_FallsBackToEmail()
+        {
+            var timelines = new List<KeyTimeline>
+            {
+                new KeyTimeline { ItemId = "t1", EntityId = "e1", UserId = "u1", OperationId = "op1", CreateDate = DateTime.UtcNow }
+            };
+            MockCursorHelper.SetupFindAsync(_collection, timelines);
+            MockCursorHelper.SetupCountDocuments(_collection, 1);
+
+            _dbContextProvider.Setup(x => x.GetDatabase("root-tenant")).Returns(_rootDatabase.Object);
+            var users = new List<User>
+            {
+                new User { ItemId = "u1", FirstName = null, LastName = null, Email = "john@test.com" }
+            };
+            MockCursorHelper.SetupFindAsync(_usersCollection, users);
+
+            var request = new GetTimelineByOperationIdRequest { OperationId = "op1", PageNumber = 1, PageSize = 10 };
+            var result = await _repo.GetTimelineByOperationIdAsync(request);
+
+            result.Timelines[0].UserName.Should().Be("john@test.com");
+        }
+
+        [Fact]
+        public async Task GetTimelineByOperationIdAsync_NullUserId_SetsUnknown()
+        {
+            var timelines = new List<KeyTimeline>
+            {
+                new KeyTimeline { ItemId = "t1", EntityId = "e1", UserId = null, OperationId = "op1", CreateDate = DateTime.UtcNow }
+            };
+            MockCursorHelper.SetupFindAsync(_collection, timelines);
+            MockCursorHelper.SetupCountDocuments(_collection, 1);
+
+            var request = new GetTimelineByOperationIdRequest { OperationId = "op1", PageNumber = 1, PageSize = 10 };
+            var result = await _repo.GetTimelineByOperationIdAsync(request);
+
+            result.Timelines[0].UserName.Should().Be("Unknown");
+        }
+
+        [Fact]
+        public async Task GetTimelineByOperationIdAsync_UserWithNoNameNoEmail_FallsBackToUserId()
+        {
+            var timelines = new List<KeyTimeline>
+            {
+                new KeyTimeline { ItemId = "t1", EntityId = "e1", UserId = "u1", OperationId = "op1", CreateDate = DateTime.UtcNow }
+            };
+            MockCursorHelper.SetupFindAsync(_collection, timelines);
+            MockCursorHelper.SetupCountDocuments(_collection, 1);
+
+            _dbContextProvider.Setup(x => x.GetDatabase("root-tenant")).Returns(_rootDatabase.Object);
+            var users = new List<User>
+            {
+                new User { ItemId = "u1", FirstName = null, LastName = null, Email = null }
+            };
+            MockCursorHelper.SetupFindAsync(_usersCollection, users);
+
+            var request = new GetTimelineByOperationIdRequest { OperationId = "op1", PageNumber = 1, PageSize = 10 };
+            var result = await _repo.GetTimelineByOperationIdAsync(request);
+
+            result.Timelines[0].UserName.Should().Be("u1");
+        }
+
+        #endregion
     }
 }

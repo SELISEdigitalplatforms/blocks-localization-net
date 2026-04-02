@@ -8,5 +8,6 @@ namespace DomainService.Services
     public class KeyTimeline : BlocksBaseTimelineEntity<BlocksLanguageKey, BlocksLanguageKey>
     {
         public string? UserName { get; set; }
+        public string? OperationId { get; set; }
     }
 }
