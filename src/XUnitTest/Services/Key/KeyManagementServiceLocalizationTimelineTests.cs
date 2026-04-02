@@ -315,5 +315,146 @@ namespace XUnitTest
         }
 
         #endregion
+
+        #region DeleteAsync Timeline Behavior
+
+        [Fact]
+        public async Task DeleteAsync_CreatesTimelineAfterDeletion_WithNullCurrentData()
+        {
+            // Arrange
+            var key = new KeyModel { ItemId = "k1", KeyName = "testKey", ModuleId = "m1" };
+            var repoKey = new BlocksLanguageKey { ItemId = "k1", KeyName = "testKey", ModuleId = "m1" };
+
+            _keyRepositoryMock.Setup(r => r.GetByIdAsync("k1")).ReturnsAsync(key);
+            _keyRepositoryMock.Setup(r => r.GetKeyByNameAsync("testKey", "m1")).ReturnsAsync(repoKey);
+            _keyRepositoryMock.Setup(r => r.DeleteAsync("k1")).Returns(Task.CompletedTask);
+
+            KeyTimeline? capturedTimeline = null;
+            _keyTimelineRepositoryMock.Setup(r => r.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Callback<KeyTimeline>(t => capturedTimeline = t)
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _service.DeleteAsysnc(new DeleteKeyRequest { ItemId = "k1" });
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            capturedTimeline.Should().NotBeNull();
+            capturedTimeline!.CurrentData.Should().BeNull("the key is deleted so CurrentData should be empty");
+            capturedTimeline.PreviousData.Should().NotBeNull("PreviousData should contain the key before deletion");
+            capturedTimeline.PreviousData!.KeyName.Should().Be("testKey");
+            capturedTimeline.LogFrom.Should().Be(LogFromConstants.KeyDelete);
+            capturedTimeline.EntityId.Should().Be("k1");
+        }
+
+        [Fact]
+        public async Task DeleteAsync_DeleteIsCalledBeforeTimelineCreation()
+        {
+            // Arrange — verify that DeleteAsync is called before SaveKeyTimelineAsync
+            var key = new KeyModel { ItemId = "k1", KeyName = "testKey", ModuleId = "m1" };
+            var repoKey = new BlocksLanguageKey { ItemId = "k1", KeyName = "testKey", ModuleId = "m1" };
+
+            _keyRepositoryMock.Setup(r => r.GetByIdAsync("k1")).ReturnsAsync(key);
+            _keyRepositoryMock.Setup(r => r.GetKeyByNameAsync("testKey", "m1")).ReturnsAsync(repoKey);
+
+            var callOrder = new List<string>();
+            _keyRepositoryMock.Setup(r => r.DeleteAsync("k1"))
+                .Callback(() => callOrder.Add("delete"))
+                .Returns(Task.CompletedTask);
+            _keyTimelineRepositoryMock.Setup(r => r.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Callback<KeyTimeline>(_ => callOrder.Add("timeline"))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await _service.DeleteAsysnc(new DeleteKeyRequest { ItemId = "k1" });
+
+            // Assert
+            callOrder.Should().ContainInOrder("delete", "timeline");
+        }
+
+        [Fact]
+        public async Task DeleteAsync_TimelineSaveFails_StillReturnsSuccess()
+        {
+            // Arrange — timeline save failure should not break the delete operation
+            var key = new KeyModel { ItemId = "k1", KeyName = "testKey", ModuleId = "m1" };
+            var repoKey = new BlocksLanguageKey { ItemId = "k1", KeyName = "testKey", ModuleId = "m1" };
+
+            _keyRepositoryMock.Setup(r => r.GetByIdAsync("k1")).ReturnsAsync(key);
+            _keyRepositoryMock.Setup(r => r.GetKeyByNameAsync("testKey", "m1")).ReturnsAsync(repoKey);
+            _keyRepositoryMock.Setup(r => r.DeleteAsync("k1")).Returns(Task.CompletedTask);
+            _keyTimelineRepositoryMock.Setup(r => r.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .ThrowsAsync(new Exception("timeline save failed"));
+
+            // Act
+            var result = await _service.DeleteAsysnc(new DeleteKeyRequest { ItemId = "k1" });
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            _keyRepositoryMock.Verify(r => r.DeleteAsync("k1"), Times.Once);
+        }
+
+        [Fact]
+        public async Task DeleteAsync_RepoKeyNotFound_StillDeletesWithoutTimeline()
+        {
+            // Arrange — if GetKeyByNameAsync returns null, still delete but skip timeline
+            var key = new KeyModel { ItemId = "k1", KeyName = "testKey", ModuleId = "m1" };
+
+            _keyRepositoryMock.Setup(r => r.GetByIdAsync("k1")).ReturnsAsync(key);
+            _keyRepositoryMock.Setup(r => r.GetKeyByNameAsync("testKey", "m1")).ReturnsAsync((BlocksLanguageKey?)null);
+            _keyRepositoryMock.Setup(r => r.DeleteAsync("k1")).Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _service.DeleteAsysnc(new DeleteKeyRequest { ItemId = "k1" });
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            _keyRepositoryMock.Verify(r => r.DeleteAsync("k1"), Times.Once);
+            _keyTimelineRepositoryMock.Verify(r => r.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task DeleteAsync_GetKeyByNameThrows_StillDeletesAndReturnsSuccess()
+        {
+            // Arrange — if getting key data fails, should still delete
+            var key = new KeyModel { ItemId = "k1", KeyName = "testKey", ModuleId = "m1" };
+
+            _keyRepositoryMock.Setup(r => r.GetByIdAsync("k1")).ReturnsAsync(key);
+            _keyRepositoryMock.Setup(r => r.GetKeyByNameAsync("testKey", "m1"))
+                .ThrowsAsync(new Exception("db error"));
+            _keyRepositoryMock.Setup(r => r.DeleteAsync("k1")).Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _service.DeleteAsysnc(new DeleteKeyRequest { ItemId = "k1" });
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            _keyRepositoryMock.Verify(r => r.DeleteAsync("k1"), Times.Once);
+        }
+
+        [Fact]
+        public async Task DeleteAsync_TimelineHasOperationId()
+        {
+            // Arrange — verify the timeline entry gets an OperationId
+            var key = new KeyModel { ItemId = "k1", KeyName = "testKey", ModuleId = "m1" };
+            var repoKey = new BlocksLanguageKey { ItemId = "k1", KeyName = "testKey", ModuleId = "m1" };
+
+            _keyRepositoryMock.Setup(r => r.GetByIdAsync("k1")).ReturnsAsync(key);
+            _keyRepositoryMock.Setup(r => r.GetKeyByNameAsync("testKey", "m1")).ReturnsAsync(repoKey);
+            _keyRepositoryMock.Setup(r => r.DeleteAsync("k1")).Returns(Task.CompletedTask);
+
+            KeyTimeline? capturedTimeline = null;
+            _keyTimelineRepositoryMock.Setup(r => r.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Callback<KeyTimeline>(t => capturedTimeline = t)
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await _service.DeleteAsysnc(new DeleteKeyRequest { ItemId = "k1" });
+
+            // Assert
+            capturedTimeline.Should().NotBeNull();
+            capturedTimeline!.OperationId.Should().NotBeNullOrWhiteSpace();
+        }
+
+        #endregion
     }
 }

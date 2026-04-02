@@ -1030,7 +1030,7 @@ namespace XUnitTest
             var previous = new BlocksLanguageKey { ItemId = "k1", KeyName = "key1" };
             var current = new BlocksLanguageKey { ItemId = "k1", KeyName = "key1" };
 
-            var task = method.Invoke(_service, new object?[] { previous, current, "Test", null }) as Task;
+            var task = method.Invoke(_service, new object?[] { previous, current, "Test", null, null }) as Task;
             await task!;
 
             _keyTimelineRepositoryMock.Verify(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()), Times.Once);
@@ -1045,7 +1045,7 @@ namespace XUnitTest
             var method = GetInstanceMethod("CreateKeyTimelineEntryAsync");
             var current = new BlocksLanguageKey { ItemId = "k1", KeyName = "key1" };
 
-            var task = method.Invoke(_service, new object?[] { (BlocksLanguageKey?)null, current, "Test", null }) as Task;
+            var task = method.Invoke(_service, new object?[] { (BlocksLanguageKey?)null, current, "Test", null, null }) as Task;
             // Should not throw
             await task!;
         }
