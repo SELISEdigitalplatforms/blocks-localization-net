@@ -34,5 +34,42 @@ namespace XUnitTest
             });
             serviceBusConfig.Topics.Should().BeEmpty();
         }
+
+        [Fact]
+        public void GetMessageConfiguration_WithRabbitMqAmqpUri_ReturnsRabbitMqConfig()
+        {
+            var config = Constants.GetMessageConfiguration("amqp://guest:guest@localhost:5672/");
+
+            config.Should().NotBeNull();
+            config.RabbitMqConfiguration.Should().NotBeNull();
+            config.RabbitMqConfiguration!.ConsumerSubscriptions.Should().HaveCount(5);
+        }
+
+        [Fact]
+        public void GetMessageConfiguration_WithRabbitMqAmqpsUri_ReturnsRabbitMqConfig()
+        {
+            var config = Constants.GetMessageConfiguration("amqps://user:pass@rabbitmq.example.com:5671/");
+
+            config.Should().NotBeNull();
+            config.RabbitMqConfiguration.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void GetMessageConfiguration_WithHttpUri_ReturnsAzureConfig()
+        {
+            var config = Constants.GetMessageConfiguration("https://servicebus.example.com");
+
+            config.Should().NotBeNull();
+            config.AzureServiceBusConfiguration.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void GetMessageConfiguration_WithPlainString_ReturnsAzureConfig()
+        {
+            var config = Constants.GetMessageConfiguration("some-connection-string");
+
+            config.Should().NotBeNull();
+            config.AzureServiceBusConfiguration.Should().NotBeNull();
+        }
     }
 }

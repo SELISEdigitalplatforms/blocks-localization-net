@@ -162,5 +162,11 @@ namespace XUnitTest
             result2.Success.Should().BeTrue();
             _webHookServiceMock.Verify(x => x.SaveWebhookAsync(It.IsAny<BlocksWebhook>()), Times.Exactly(2));
         }
+
+        [Fact]
+        public async Task SaveWebHook_WithNullWebhook_ThrowsNullReferenceException()
+        {
+            await Assert.ThrowsAsync<NullReferenceException>(() => _controller.SaveWebHook(null));
+        }
     }
 }

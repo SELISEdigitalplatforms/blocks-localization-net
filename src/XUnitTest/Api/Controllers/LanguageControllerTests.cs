@@ -209,5 +209,17 @@ namespace XUnitTest
         }
 
         #endregion
+
+        [Fact]
+        public async Task Gets_WithNullRequest_ThrowsNullReferenceException()
+        {
+            await Assert.ThrowsAsync<NullReferenceException>(() => _controller.Gets(null));
+        }
+
+        [Fact]
+        public async Task Delete_WithNullRequest_ThrowsNullReferenceException()
+        {
+            await Assert.ThrowsAsync<NullReferenceException>(() => _controller.Delete(null));
+        }
     }
 }
