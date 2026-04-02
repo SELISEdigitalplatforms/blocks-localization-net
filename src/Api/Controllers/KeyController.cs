@@ -127,7 +127,7 @@ namespace Api.Controllers
         /// <param name="query">The query parameters for filtering and pagination.</param>
         /// <returns>A paginated list of operation-level timeline entries.</returns>
         [HttpGet]
-        //[ProtectedEndPoint]
+        [Authorize]
         public async Task<GetLocalizationTimelineResponse> GetLocalizationTimeline([FromQuery] GetLocalizationTimelineRequest query)
         {
             if (query == null) BadRequest(new BaseMutationResponse());
@@ -141,7 +141,7 @@ namespace Api.Controllers
         /// <param name="query">The query containing the OperationId and pagination parameters.</param>
         /// <returns>A paginated list of <see cref="KeyTimeline"/> entries for the operation.</returns>
         [HttpGet]
-        //[ProtectedEndPoint]
+        [Authorize]
         public async Task<GetKeyTimelineQueryResponse> GetTimelineByOperationId([FromQuery] GetTimelineByOperationIdRequest query)
         {
             if (query == null) BadRequest(new BaseMutationResponse());
