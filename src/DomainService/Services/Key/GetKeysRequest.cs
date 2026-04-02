@@ -13,6 +13,14 @@ namespace DomainService.Services
         public string? SortProperty { get; set; }
         public bool IsDescending { get; set; }
         public string? ProjectKey { get; set; }
+        public ResourceSearchFilter[]? ResourceSearchFilters { get; set; }
+        public DateRange? LastUpdateDateRange { get; set; }
+    }
+
+    public class ResourceSearchFilter
+    {
+        public string Culture { get; set; } = string.Empty;
+        public string SearchText { get; set; } = string.Empty;
     }
 
     public class DateRange

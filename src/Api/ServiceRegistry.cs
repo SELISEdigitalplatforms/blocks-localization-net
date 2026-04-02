@@ -3,8 +3,10 @@ using DomainService.Repositories;
 using DomainService.Services;
 using DomainService.Services.HelperService;
 using DomainService.Shared.Entities;
+using DomainService.Storage;
 using DomainService.Validation;
 using FluentValidation;
+using Storage.DomainService.Shared.Services;
 using Storage.DomainService.Storage;
 using Storage.DomainService.Storage.Validators;
 
@@ -34,6 +36,12 @@ namespace Api
             services.AddSingleton<IValidator<Language>, LanguageValidator>();
 
             services.AddSingleton<StorageHelper>();
+
+            services.AddSingleton<DmsArtifactBuilderFactory>();
+            services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
+            services.AddTransient<AwsS3CompatibleStorageService>();
+            services.AddSingleton<FileArtifactBuilder>();
+            services.AddSingleton<FolderArtifactBuilder>();
 
             services.AddSingleton<IKeyManagementService, KeyManagementService>();
             services.AddSingleton<IKeyRepository, KeyRepository>();
