@@ -295,21 +295,31 @@ namespace DomainService.Services
             }
 
             // Create timeline entry before deletion
+            BlocksLanguageKey? repoKey = null;
             try
             {
-                // Get the repository key for timeline
-                var repoKey = await _keyRepository.GetKeyByNameAsync(key.KeyName, key.ModuleId);
-                if (repoKey != null)
-                {
-                    await CreateKeyTimelineEntryAsync(repoKey, repoKey, LogFromConstants.KeyDelete);
-                }
+                // Get the repository key for timeline before deletion
+                repoKey = await _keyRepository.GetKeyByNameAsync(key.KeyName, key.ModuleId);
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failed to create timeline entry for deleted Key {KeyId}: {Error}", key.ItemId, ex.Message);
+                _logger.LogError("Failed to get key data for timeline before deletion {KeyId}: {Error}", key.ItemId, ex.Message);
             }
 
             await _keyRepository.DeleteAsync(request.ItemId);
+
+            // Create timeline entry after successful deletion — CurrentData is null since the key is deleted
+            if (repoKey != null)
+            {
+                try
+                {
+                    await CreateKeyTimelineEntryAsync(repoKey, null, LogFromConstants.KeyDelete, entityId: repoKey.ItemId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Failed to create timeline entry for deleted Key {KeyId}: {Error}", key.ItemId, ex.Message);
+                }
+            }
 
             _logger.LogInformation("Deleting Key end -- Success");
             return new BaseMutationResponse { IsSuccess = true };
@@ -2513,14 +2523,15 @@ namespace DomainService.Services
             }
         }
 
-        private async Task CreateKeyTimelineEntryAsync(BlocksLanguageKey? previousKey, BlocksLanguageKey currentKey, string logFrom, string? operationId = null)
+        private async Task CreateKeyTimelineEntryAsync(BlocksLanguageKey? previousKey, BlocksLanguageKey? currentKey, string logFrom, string? operationId = null, string? entityId = null)
         {
             try
             {
                 var context = BlocksContext.GetContext();
+                var resolvedEntityId = entityId ?? currentKey?.ItemId ?? previousKey?.ItemId ?? "";
                 var timeline = new KeyTimeline
                 {
-                    EntityId = currentKey.ItemId,
+                    EntityId = resolvedEntityId,
                     CurrentData = currentKey,
                     PreviousData = previousKey,
                     LogFrom = logFrom,
@@ -2531,11 +2542,11 @@ namespace DomainService.Services
                 };
 
                 await _keyTimelineRepository.SaveKeyTimelineAsync(timeline);
-                _logger.LogInformation("Timeline entry created for Key {KeyId} from {LogFrom}", currentKey.ItemId, logFrom);
+                _logger.LogInformation("Timeline entry created for Key {KeyId} from {LogFrom}", resolvedEntityId, logFrom);
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failed to create timeline entry for Key {KeyId}: {Error}", currentKey.ItemId, ex.Message);
+                _logger.LogError("Failed to create timeline entry for Key {KeyId}: {Error}", entityId ?? currentKey?.ItemId ?? previousKey?.ItemId, ex.Message);
                 // Don't throw - timeline creation should not break the main operation
             }
         }
