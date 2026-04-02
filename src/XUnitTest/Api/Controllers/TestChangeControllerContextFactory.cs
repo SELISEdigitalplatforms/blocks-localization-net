@@ -30,7 +30,7 @@ namespace XUnitTest
                 displayName: "Test User",
                 refreshToken: "",
                 oauthToken: "",
-                actualTenantId: "test-tenant");
+                actualTentId: "test-tenant");
             BlocksContext.SetContext(blocksContext, true);
 
             var tenantsMock = new Mock<ITenants>();
