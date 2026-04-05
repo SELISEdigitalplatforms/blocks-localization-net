@@ -15,7 +15,7 @@ namespace DomainService.Services
             // Validate KeyName
             RuleFor(key => key.KeyName)
                 .NotEmpty().WithMessage("KeyName is required.")
-                .Length(3, 100).WithMessage("KeyName must be between 3 and 100 characters long.");
+                .Length(2, 100).WithMessage("KeyName must be between 2 and 100 characters long.");
 
             // Validate Module
             RuleFor(key => key.ModuleId)
