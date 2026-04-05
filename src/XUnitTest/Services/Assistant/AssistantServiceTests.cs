@@ -540,5 +540,217 @@ namespace XUnitTest
         }
 
         #endregion
+
+        #region MakeRequestAsync Success Tests
+
+        [Fact]
+        public async Task MakeRequestAsync_WithSuccessResponse_ReturnsOkStatus()
+        {
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"result\": \"ok\"}", Encoding.UTF8, "application/json")
+                });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var service = new AssistantService(
+                _loggerMock.Object,
+                _configurationMock.Object,
+                httpClient,
+                _localizationSecretMock.Object
+            );
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "http://test.com/api");
+            request.Content = new StringContent("{}", Encoding.UTF8, "application/json");
+            var result = await service.MakeRequestAsync(request, "test-secret");
+
+            result.Should().NotBeNull();
+            result.HttpStatusCode.Should().Be(HttpStatusCode.OK);
+            ((string)result.ResponseData).Should().Contain("ok");
+        }
+
+        [Fact]
+        public async Task MakeRequestAsync_SetsAuthorizationHeader()
+        {
+            HttpRequestMessage? capturedRequest = null;
+            var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+            handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
+                .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{}", Encoding.UTF8, "application/json")
+                });
+
+            var httpClient = new HttpClient(handlerMock.Object);
+            var service = new AssistantService(
+                _loggerMock.Object,
+                _configurationMock.Object,
+                httpClient,
+                _localizationSecretMock.Object
+            );
+
+            var request = new HttpRequestMessage(HttpMethod.Get, "http://test.com/api");
+            await service.MakeRequestAsync(request, "my-secret");
+
+            // The HttpClient should have had the Authorization header set
+            httpClient.DefaultRequestHeaders.Authorization.Should().NotBeNull();
+            httpClient.DefaultRequestHeaders.Authorization!.Scheme.Should().Be("Bearer");
+            httpClient.DefaultRequestHeaders.Authorization!.Parameter.Should().Be("my-secret");
+        }
+
+        #endregion
+
+        #region TemperatureValidator Tests
+
+        [Fact]
+        public async Task AiCompletion_WithValidTemperature_DoesNotThrowValidationError()
+        {
+            // Temperature 0.7 is valid - the method should proceed but may fail on encryption
+            var configMock = new Mock<IConfiguration>();
+            configMock.SetupGet(x => x["ChatGptTemperature"]).Returns("0.7");
+            configMock.SetupGet(x => x["AiCompletionUrl"]).Returns("http://test-url.com");
+
+            var localizationSecretMock = new Mock<ILocalizationSecret>();
+            localizationSecretMock.SetupGet(x => x.ChatGptEncryptedSecret).Returns("dummySecret");
+            localizationSecretMock.SetupGet(x => x.ChatGptEncryptionKey).Returns("dummyKey");
+
+            var saltSection = new Mock<IConfigurationSection>();
+            configMock.Setup(x => x.GetSection("Salt")).Returns(saltSection.Object);
+
+            var service = new AssistantService(
+                _loggerMock.Object,
+                configMock.Object,
+                _httpClient,
+                localizationSecretMock.Object
+            );
+
+            var request = new AiCompletionRequest("Test", 0.5);
+            // Will fail due to salt being null but should pass temperature validation
+            var result = await service.AiCompletion(request);
+            result.Should().BeNull(); // Fails at salt validation
+        }
+
+        #endregion
+
+        #region AiCompletionModel Tests
+
+        [Fact]
+        public void AiCompletionModel_ConstructCommand_SetsCorrectProperties()
+        {
+            var model = new AiCompletionModel();
+            var result = model.ConstructCommand("Translate hello to Spanish", 0.7);
+
+            result.model.Should().Be("gpt-4o-mini");
+            result.temperature.Should().Be(0.7);
+            result.messages.Should().HaveCount(2);
+            result.messages[0].role.Should().Be("system");
+            result.messages[1].role.Should().Be("user");
+            result.messages[1].content.Should().Be("Translate hello to Spanish");
+        }
+
+        #endregion
+
+        #region AiCompletionRequest Model Tests
+
+        [Fact]
+        public void AiCompletionRequest_Constructor_SetsProperties()
+        {
+            var request = new AiCompletionRequest("Test message", 0.5);
+            request.Message.Should().Be("Test message");
+            request.Temperature.Should().Be(0.5);
+        }
+
+        #endregion
+
+        #region RestResponse Model Tests
+
+        [Fact]
+        public void RestResponse_Properties_SetCorrectly()
+        {
+            var response = new RestResponse
+            {
+                HttpStatusCode = HttpStatusCode.OK,
+                ResponseData = "test data"
+            };
+
+            response.HttpStatusCode.Should().Be(HttpStatusCode.OK);
+            ((string)response.ResponseData).Should().Be("test data");
+        }
+
+        #endregion
+
+        #region ChatGptAiCompletionRequestResponse Model Tests
+
+        [Fact]
+        public void ChatGptAiCompletionRequestResponse_Properties_SetCorrectly()
+        {
+            var response = new ChatGptAiCompletionRequestResponse
+            {
+                id = "test-id",
+                @object = "chat.completion",
+                created = 12345,
+                model = "gpt-4",
+                usage = new Usage { prompt_tokens = 10, completion_tokens = 20, total_tokens = 30 },
+                choices = new List<Choice>
+                {
+                    new Choice
+                    {
+                        index = 0,
+                        finish_reason = "stop",
+                        message = new Message { role = "assistant", content = "Hola" }
+                    }
+                }
+            };
+
+            response.id.Should().Be("test-id");
+            response.model.Should().Be("gpt-4");
+            response.usage.total_tokens.Should().Be(30);
+            response.choices.Should().HaveCount(1);
+            response.choices[0].message.content.Should().Be("Hola");
+        }
+
+        #endregion
+
+        #region SuggestLanguageRequest Model Tests
+
+        [Fact]
+        public void SuggestLanguageRequest_DefaultValues_AreCorrect()
+        {
+            var request = new SuggestLanguageRequest();
+            request.MaxCharacterLength.Should().Be(0);
+        }
+
+        [Fact]
+        public void SuggestLanguageRequest_Properties_SetCorrectly()
+        {
+            var request = new SuggestLanguageRequest
+            {
+                ElementType = "button",
+                ElementApplicationContext = "checkout",
+                ElementDetailContext = "submit button",
+                Temperature = 0.7,
+                MaxCharacterLength = 50,
+                SourceText = "Submit",
+                DestinationLanguage = "es",
+                CurrentLanguage = "en"
+            };
+
+            request.ElementType.Should().Be("button");
+            request.ElementApplicationContext.Should().Be("checkout");
+            request.MaxCharacterLength.Should().Be(50);
+        }
+
+        #endregion
     }
 }

@@ -23,7 +23,6 @@ namespace XUnitTest
 
             // Create a loose mock that allows any method calls without throwing
             var changeControllerContextMock = new Mock<ChangeControllerContext>(MockBehavior.Loose, null, null, null);
-            changeControllerContextMock.Setup(x => x.ChangeContext(It.IsAny<object>()));
             
             _controller = new AssistantController(
                 changeControllerContextMock.Object,
@@ -56,9 +55,9 @@ namespace XUnitTest
 
             // Assert
             result.Should().NotBeNull();
-            var okResult = result as OkObjectResult;
-            okResult.Should().NotBeNull();
-            okResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            var objectResult = result as ObjectResult;
+            objectResult.Should().NotBeNull();
+            objectResult!.StatusCode.Should().Be((int)HttpStatusCode.OK);
             
             _assistantServiceMock.Verify(x => x.SuggestTranslation(request), Times.Once);
         }
@@ -83,8 +82,9 @@ namespace XUnitTest
 
             // Assert
             result.Should().NotBeNull();
-            var okResult = result as OkObjectResult;
-            okResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            var objectResult = result as ObjectResult;
+            objectResult.Should().NotBeNull();
+            objectResult!.StatusCode.Should().Be((int)HttpStatusCode.OK);
         }
 
         [Fact]
@@ -107,6 +107,35 @@ namespace XUnitTest
 
             // Assert
             await act.Should().ThrowAsync<Exception>();
+        }
+
+        [Fact]
+        public async Task GetTranslationSuggestion_WithNullRequest_StillReturnsOk()
+        {
+            _assistantServiceMock.Setup(x => x.SuggestTranslation(null)).ReturnsAsync((string)null);
+            var result = await _controller.GetTranslationSuggestion(null);
+            result.Should().NotBeNull();
+            var objectResult = result as ObjectResult;
+            objectResult.Should().NotBeNull();
+            objectResult!.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task GetTranslationSuggestion_WhenServiceReturnsNull_ReturnsOkWithNullContent()
+        {
+            var request = new SuggestLanguageRequest
+            {
+                SourceText = "Test",
+                DestinationLanguage = "fr",
+                CurrentLanguage = "en",
+                ElementDetailContext = "context"
+            };
+            _assistantServiceMock.Setup(x => x.SuggestTranslation(request)).ReturnsAsync((string)null);
+            var result = await _controller.GetTranslationSuggestion(request);
+            result.Should().NotBeNull();
+            var objectResult = result as ObjectResult;
+            objectResult.Should().NotBeNull();
+            objectResult!.StatusCode.Should().Be((int)HttpStatusCode.OK);
         }
     }
 }

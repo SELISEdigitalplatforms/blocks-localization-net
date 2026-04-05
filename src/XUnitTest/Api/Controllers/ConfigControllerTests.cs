@@ -20,11 +20,10 @@ namespace XUnitTest
         {
             _webHookServiceMock = new Mock<IWebHookService>();
 
-            var changeControllerContextMock = new Mock<ChangeControllerContext>(MockBehavior.Loose, null, null, null);
-            changeControllerContextMock.Setup(x => x.ChangeContext(It.IsAny<object>()));
+            var changeControllerContext = TestChangeControllerContextFactory.Create();
             
             _controller = new ConfigController(
-                changeControllerContextMock.Object,
+                changeControllerContext,
                 _webHookServiceMock.Object
             )
             {
@@ -162,6 +161,12 @@ namespace XUnitTest
             result1.Success.Should().BeTrue();
             result2.Success.Should().BeTrue();
             _webHookServiceMock.Verify(x => x.SaveWebhookAsync(It.IsAny<BlocksWebhook>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task SaveWebHook_WithNullWebhook_ThrowsNullReferenceException()
+        {
+            await Assert.ThrowsAsync<NullReferenceException>(() => _controller.SaveWebHook(null));
         }
     }
 }

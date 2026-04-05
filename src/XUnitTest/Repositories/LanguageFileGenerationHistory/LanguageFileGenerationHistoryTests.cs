@@ -1,11 +1,169 @@
+using Blocks.Genesis;
 using DomainService.Repositories;
 using DomainService.Services;
 using FluentAssertions;
 using Moq;
+using MongoDB.Driver;
 using Xunit;
+using XUnitTest.Shared;
 
 namespace XUnitTest
 {
+    public class LanguageFileGenerationHistoryRepositoryTests
+    {
+        private readonly Mock<IDbContextProvider> _dbContextProvider;
+        private readonly Mock<IMongoDatabase> _database;
+        private readonly Mock<IMongoCollection<LanguageFileGenerationHistory>> _collection;
+        private readonly LanguageFileGenerationHistoryRepository _repo;
+
+        public LanguageFileGenerationHistoryRepositoryTests()
+        {
+            _dbContextProvider = new Mock<IDbContextProvider>();
+            _database = new Mock<IMongoDatabase>();
+            _collection = new Mock<IMongoCollection<LanguageFileGenerationHistory>>();
+
+            _dbContextProvider.Setup(x => x.GetDatabase(It.IsAny<string>())).Returns(_database.Object);
+            _database.Setup(x => x.GetCollection<LanguageFileGenerationHistory>(It.IsAny<string>(), null)).Returns(_collection.Object);
+
+            _repo = new LanguageFileGenerationHistoryRepository(_dbContextProvider.Object);
+        }
+
+        [Fact]
+        public async Task SaveAsync_CallsInsertOneAsync()
+        {
+            _collection.Setup(x => x.InsertOneAsync(
+                It.IsAny<LanguageFileGenerationHistory>(),
+                It.IsAny<InsertOneOptions>(),
+                It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+            var history = new LanguageFileGenerationHistory
+            {
+                ItemId = "h1",
+                ProjectKey = "proj-1",
+                Version = 1,
+                CreateDate = DateTime.UtcNow
+            };
+
+            await _repo.SaveAsync(history);
+
+            _collection.Verify(x => x.InsertOneAsync(
+                history,
+                It.IsAny<InsertOneOptions>(),
+                It.IsAny<CancellationToken>()), Times.Once);
+            _dbContextProvider.Verify(x => x.GetDatabase("proj-1"), Times.Once);
+        }
+
+        [Fact]
+        public async Task SaveAsync_UsesProjectKeyAsDatabase()
+        {
+            _collection.Setup(x => x.InsertOneAsync(
+                It.IsAny<LanguageFileGenerationHistory>(),
+                It.IsAny<InsertOneOptions>(),
+                It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+            var history = new LanguageFileGenerationHistory
+            {
+                ItemId = "h2",
+                ProjectKey = "custom-project",
+                Version = 5,
+                CreateDate = DateTime.UtcNow
+            };
+
+            await _repo.SaveAsync(history);
+
+            _dbContextProvider.Verify(x => x.GetDatabase("custom-project"), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetLatestLanguageFileGenerationHistory_ReturnsLatest()
+        {
+            var history = new LanguageFileGenerationHistory
+            {
+                ItemId = "h1",
+                ProjectKey = "proj-1",
+                Version = 3,
+                CreateDate = DateTime.UtcNow
+            };
+            MockCursorHelper.SetupFindAsync(_collection, new List<LanguageFileGenerationHistory> { history });
+
+            var result = await _repo.GetLatestLanguageFileGenerationHistory("proj-1");
+
+            result.Should().NotBeNull();
+            result!.Version.Should().Be(3);
+            _dbContextProvider.Verify(x => x.GetDatabase("proj-1"), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetLatestLanguageFileGenerationHistory_ReturnsNull_WhenNoHistory()
+        {
+            MockCursorHelper.SetupFindAsyncEmpty(_collection);
+
+            var result = await _repo.GetLatestLanguageFileGenerationHistory("proj-1");
+
+            result.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task GetPaginatedAsync_ReturnsItemsAndCount()
+        {
+            var items = new List<LanguageFileGenerationHistory>
+            {
+                new LanguageFileGenerationHistory { ItemId = "h1", ProjectKey = "proj-1", Version = 1, CreateDate = DateTime.UtcNow },
+                new LanguageFileGenerationHistory { ItemId = "h2", ProjectKey = "proj-1", Version = 2, CreateDate = DateTime.UtcNow }
+            };
+            MockCursorHelper.SetupFindAsync(_collection, items);
+            MockCursorHelper.SetupCountDocuments(_collection, 2);
+
+            var request = new GetLanguageFileGenerationHistoryRequest
+            {
+                ProjectKey = "proj-1",
+                PageNumber = 0,
+                PageSize = 10
+            };
+            var result = await _repo.GetPaginatedAsync(request);
+
+            result.Should().NotBeNull();
+            result.Items.Should().HaveCount(2);
+            result.TotalCount.Should().Be(2);
+        }
+
+        [Fact]
+        public async Task GetPaginatedAsync_ReturnsEmpty_WhenNoItems()
+        {
+            MockCursorHelper.SetupFindAsyncEmpty(_collection);
+            MockCursorHelper.SetupCountDocuments(_collection, 0);
+
+            var request = new GetLanguageFileGenerationHistoryRequest
+            {
+                ProjectKey = "proj-1",
+                PageNumber = 0,
+                PageSize = 10
+            };
+            var result = await _repo.GetPaginatedAsync(request);
+
+            result.Should().NotBeNull();
+            result.Items.Should().BeEmpty();
+            result.TotalCount.Should().Be(0);
+        }
+
+        [Fact]
+        public async Task GetPaginatedAsync_UsesCorrectProjectKey()
+        {
+            MockCursorHelper.SetupFindAsyncEmpty(_collection);
+            MockCursorHelper.SetupCountDocuments(_collection, 0);
+
+            var request = new GetLanguageFileGenerationHistoryRequest
+            {
+                ProjectKey = "my-project",
+                PageNumber = 1,
+                PageSize = 5
+            };
+            await _repo.GetPaginatedAsync(request);
+
+            _dbContextProvider.Verify(x => x.GetDatabase("my-project"), Times.Once);
+        }
+    }
+
     public class LanguageFileGenerationHistoryTests
     {
         private readonly Mock<ILanguageFileGenerationHistoryRepository> _repositoryMock;

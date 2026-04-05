@@ -11,6 +11,7 @@ using Moq;
 using StorageDriver;
 using System.Linq;
 using Xunit;
+using KeyModel = DomainService.Services.Key;
 
 namespace XUnitTest
 {
@@ -29,7 +30,7 @@ namespace XUnitTest
             _keyRepositoryMock = new Mock<IKeyRepository>();
             _keyTimelineRepositoryMock = new Mock<IKeyTimelineRepository>();
             _languageFileGenerationHistoryRepositoryMock = new Mock<ILanguageFileGenerationHistoryRepository>();
-            var validatorMock = new Mock<IValidator<Key>>();
+            var validatorMock = new Mock<IValidator<KeyModel>>();
             var loggerMock = new Mock<ILogger<KeyManagementService>>();
             _languageServiceMock = new Mock<ILanguageManagementService>();
             _moduleServiceMock = new Mock<IModuleManagementService>();

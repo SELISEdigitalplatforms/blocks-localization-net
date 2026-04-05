@@ -5,8 +5,10 @@ using DomainService.Services;
 using DomainService.Services.HelperService;
 using DomainService.Shared.Entities;
 using DomainService.Shared.Events;
+using DomainService.Storage;
 using DomainService.Validation;
 using FluentValidation;
+using Storage.DomainService.Shared.Services;
 using Storage.DomainService.Storage;
 using Storage.DomainService.Storage.Validators;
 using Worker.Consumers;
@@ -52,8 +54,12 @@ namespace Worker
             services.AddSingleton<IAssistantService, AssistantService>();
 
             services.RegisterBlocksStorageServices();
+            services.AddSingleton<DmsArtifactBuilderFactory>();
             services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
-
+            services.AddTransient<AwsS3CompatibleStorageService>();
+            services.AddSingleton<FileArtifactBuilder>();
+            services.AddSingleton<FolderArtifactBuilder>();
+            
             services.AddSingleton<INotificationService, NotificationService>();
             services.AddSingleton<IHttpHelperServices, HttpHelperServices>();
             services.AddSingleton<IWebHookService, WebHookService>();

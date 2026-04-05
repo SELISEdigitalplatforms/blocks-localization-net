@@ -109,11 +109,11 @@ namespace DomainService.Services
                 {
                     if (isNewKey)
                     {
-                        await CreateKeyTimelineEntryAsync(null, repoKey, "KeyController.Create");
+                        await CreateKeyTimelineEntryAsync(null, repoKey, LogFromConstants.KeyCreate);
                     }
                     else
                     {
-                        await CreateKeyTimelineEntryAsync(previousKey, repoKey, "KeyController.Save");
+                        await CreateKeyTimelineEntryAsync(previousKey, repoKey, LogFromConstants.KeySave);
                     }
                 }
             }
@@ -135,6 +135,7 @@ namespace DomainService.Services
 
             var errors = new List<string>();
             var successCount = 0;
+            var bulkOperationId = Guid.NewGuid().ToString();
 
             foreach (var key in keys)
             {
@@ -178,11 +179,11 @@ namespace DomainService.Services
                     {
                         if (isNewKey)
                         {
-                            await CreateKeyTimelineEntryAsync(null, repoKey, "KeyController.BulkCreate");
+                            await CreateKeyTimelineEntryAsync(null, repoKey, LogFromConstants.KeyBulkCreate, bulkOperationId);
                         }
                         else
                         {
-                            await CreateKeyTimelineEntryAsync(previousKey, repoKey, "KeyController.BulkSave");
+                            await CreateKeyTimelineEntryAsync(previousKey, repoKey, LogFromConstants.KeyBulkSave, bulkOperationId);
                         }
                     }
 
@@ -258,6 +259,16 @@ namespace DomainService.Services
             return await _keyTimelineRepository.GetKeyTimelineAsync(query);
         }
 
+        public async Task<GetLocalizationTimelineResponse> GetLocalizationTimelineAsync(GetLocalizationTimelineRequest query)
+        {
+            return await _keyTimelineRepository.GetLocalizationTimelineAsync(query);
+        }
+
+        public async Task<GetKeyTimelineQueryResponse> GetTimelineByOperationIdAsync(GetTimelineByOperationIdRequest query)
+        {
+            return await _keyTimelineRepository.GetTimelineByOperationIdAsync(query);
+        }
+
         public async Task<Key?> GetAsync(GetKeyRequest request)
         {
             var key = await _keyRepository.GetByIdAsync(request.ItemId);
@@ -284,21 +295,31 @@ namespace DomainService.Services
             }
 
             // Create timeline entry before deletion
+            BlocksLanguageKey? repoKey = null;
             try
             {
-                // Get the repository key for timeline
-                var repoKey = await _keyRepository.GetKeyByNameAsync(key.KeyName, key.ModuleId);
-                if (repoKey != null)
-                {
-                    await CreateKeyTimelineEntryAsync(repoKey, repoKey, "KeyController.Delete");
-                }
+                // Get the repository key for timeline before deletion
+                repoKey = await _keyRepository.GetKeyByNameAsync(key.KeyName, key.ModuleId);
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failed to create timeline entry for deleted Key {KeyId}: {Error}", key.ItemId, ex.Message);
+                _logger.LogError("Failed to get key data for timeline before deletion {KeyId}: {Error}", key.ItemId, ex.Message);
             }
 
             await _keyRepository.DeleteAsync(request.ItemId);
+
+            // Create timeline entry after successful deletion — CurrentData is null since the key is deleted
+            if (repoKey != null)
+            {
+                try
+                {
+                    await CreateKeyTimelineEntryAsync(repoKey, null, LogFromConstants.KeyDelete, entityId: repoKey.ItemId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Failed to create timeline entry for deleted Key {KeyId}: {Error}", key.ItemId, ex.Message);
+                }
+            }
 
             _logger.LogInformation("Deleting Key end -- Success");
             return new BaseMutationResponse { IsSuccess = true };
@@ -310,6 +331,7 @@ namespace DomainService.Services
 
             var page = 0;
             var pageSize = 1000;
+            var changeAllOperationId = Guid.NewGuid().ToString();
 
             while (true)
             {
@@ -336,7 +358,7 @@ namespace DomainService.Services
 
                 if (resourceKeys.Any())
                 {
-                    await UpdateResourceKey(resourceKeys, request, originalResourceKeys);
+                    await UpdateResourceKey(resourceKeys, request, originalResourceKeys, changeAllOperationId);
                 }
 
                 page++;
@@ -387,7 +409,7 @@ namespace DomainService.Services
                         originalResourceKeys[resourceKey.ItemId] = originalKey;
                     }
                     
-                    await UpdateResourceKey(uilmResourceKeyList, translateAllEvent, originalResourceKeys);
+                    await UpdateResourceKey(uilmResourceKeyList, translateAllEvent, originalResourceKeys, null, LogFromConstants.TranslateKey);
                 }
 
                 return true;
@@ -539,8 +561,10 @@ namespace DomainService.Services
             return keywordResources != null;
         }
 
-        public async Task UpdateResourceKey(List<BlocksLanguageKey> resourceKeys, TranslateAllEvent request, Dictionary<string, BlocksLanguageKey>? originalResourceKeys = null)
+        public async Task UpdateResourceKey(List<BlocksLanguageKey> resourceKeys, TranslateAllEvent request, Dictionary<string, BlocksLanguageKey>? originalResourceKeys = null, string? translateAllOperationId = null, string logFrom = null)
         {
+            logFrom ??= LogFromConstants.TranslateAll;
+            translateAllOperationId ??= Guid.NewGuid().ToString();
             var updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(resourceKeys);
 
             // Create timeline entries for updated keys
@@ -555,7 +579,7 @@ namespace DomainService.Services
                         previousKey = originalResourceKeys[resourceKey.ItemId];
                     }
                     
-                    await CreateKeyTimelineEntryAsync(previousKey, resourceKey, "TranslateAll");
+                    await CreateKeyTimelineEntryAsync(previousKey, resourceKey, logFrom, translateAllOperationId);
                 }
                 catch (Exception ex)
                 {
@@ -578,17 +602,28 @@ namespace DomainService.Services
 
             _logger.LogInformation("++ JsonOutputGeneratorService: GenerateAsync()... Found {ApplicationsCount} UilmApplications.", applications.Count);
 
+            var publishedKeys = new List<Key>();
+            var failedKeys = new List<Key>();
+
             foreach (BlocksLanguageModule application in applications)
             {
                 List<Key> resourceKeys = await _keyRepository.GetAllKeysByModuleAsync(application.ItemId);
                 _logger.LogInformation("++ JsonOutputGeneratorService: GenerateAsync()... Found {ResourceKeysCount} UilmResourceKeys for UilmApplication={ApplicationName}.", resourceKeys.Count, application.ModuleName);
 
-                List<UilmFile> uilmfiles = ProcessUilmFile(command, languageSetting, resourceKeys, application);
+                try
+                {
+                    List<UilmFile> uilmfiles = ProcessUilmFile(command, languageSetting, resourceKeys, application);
 
-                _logger.LogInformation("++Saving {UilmfilesCount} UilmFiles for UilmApplication={ApplicationName}", uilmfiles.Count, application.ModuleName);
-                await SaveUniqeFiles(uilmfiles);
+                    _logger.LogInformation("++Saving {UilmfilesCount} UilmFiles for UilmApplication={ApplicationName}", uilmfiles.Count, application.ModuleName);
+                    await SaveUniqeFiles(uilmfiles);
 
-               
+                    publishedKeys.AddRange(resourceKeys);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Failed to publish keys for module {ModuleId}: {Error}", application.ItemId, ex.Message);
+                    failedKeys.AddRange(resourceKeys);
+                }
             }
              // Create history entry for this generation
             var latestHistory = await _languageFileGenerationHistoryRepository.GetLatestLanguageFileGenerationHistory(command.ProjectKey ?? "");
@@ -611,6 +646,19 @@ namespace DomainService.Services
             if(!string.IsNullOrWhiteSpace(command.ModuleId))
             {
                 await _notificationService.NotifyExtensionEvent(true, command.ProjectKey);
+            }
+
+            // Bulk-insert timeline entries after all operations are complete
+            if (publishedKeys.Any())
+            {
+                var mappedPublishedKeys = publishedKeys.Select(MapKeyToBlocksLanguageKey).ToList();
+                await CreateBulkKeyTimelineEntriesAsync(mappedPublishedKeys, LogFromConstants.Published, command.ProjectKey ?? "");
+            }
+
+            if (failedKeys.Any())
+            {
+                var mappedFailedKeys = failedKeys.Select(MapKeyToBlocksLanguageKey).ToList();
+                await CreateBulkKeyTimelineEntriesAsync(mappedFailedKeys, LogFromConstants.PublishFailed, command.ProjectKey ?? "");
             }
 
             return true;
@@ -1033,30 +1081,35 @@ namespace DomainService.Services
 
                 //uilmAppTimeLines.Add(uilmAppTimeLine);
 
+                //var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
+                var olduilmResourceKey = await GetUilmResourceKey(appId, keyName);
+
+                // Merge resources: combine existing resources with new ones from import
+                var mergedResources = MergeResources(olduilmResourceKey?.Resources, languageJsonModel.Resources);
+
                 BlocksLanguageKey uilmResourceKey = new()
                 {
                     KeyName = keyName,
-                    Resources = languageJsonModel.Resources,
+                    Resources = mergedResources,
                     ItemId = id,
                     ModuleId = appId,
                     IsPartiallyTranslated = isPartiallyTranslated,
-                    CreateDate = DateTime.UtcNow,
+                    CreateDate = olduilmResourceKey?.CreateDate ?? DateTime.UtcNow,
                     LastUpdateDate = DateTime.UtcNow,
                     Value = string.Empty, // Value field is not exported, set to empty
-                    Routes = languageJsonModel.Routes
+                    Routes = languageJsonModel.Routes ?? olduilmResourceKey?.Routes
                 };
-
-                //var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
-                var olduilmResourceKey = await GetUilmResourceKey(uilmResourceKey.ModuleId, uilmResourceKey.KeyName);
-
-                uilmResourceKey.ItemId = string.IsNullOrWhiteSpace(uilmResourceKey.ItemId) ? Guid.NewGuid().ToString() : uilmResourceKey.ItemId;
 
                 if (olduilmResourceKey == null)
                 {
+                    // Key doesn't exist - always generate a new ItemId to avoid conflicts with non-GUID ItemIds from import
+                    uilmResourceKey.ItemId = Guid.NewGuid().ToString();
                     resourceKeysWithoutId.Add(uilmResourceKey);
                 }
                 else
                 {
+                    // Key exists - use the existing ItemId for update to ensure we update the correct record
+                    uilmResourceKey.ItemId = olduilmResourceKey.ItemId;
                     oldUilmResourceKeys.Add(olduilmResourceKey);
                     uilmResourceKeys.Add(uilmResourceKey);
                 }
@@ -1242,7 +1295,38 @@ namespace DomainService.Services
         {
             try
             {
-                var languageJsonModels = ExtractModelsFromXlf(stream);
+                // Validate filename pattern - only accept messages.xlf (base) or messages.{lang}.xlf (language files)
+                if (!IsValidXlfFileName(fileData.Name, out var extractedLanguageCode, out var isBaseFile))
+                {
+                    _logger.LogWarning("ImportXlfFile: Ignoring file {FileName} - filename does not match expected pattern (messages.xlf or messages.{{lang}}.xlf)", fileData.Name);
+                    return false;
+                }
+
+                // Get all languages from the database for mapping
+                var dbLanguages = await _languageManagementService.GetLanguagesAsync();
+
+                // Map the extracted language code to the full database language code
+                string? mappedLanguageCode = null;
+                if (!isBaseFile && !string.IsNullOrEmpty(extractedLanguageCode))
+                {
+                    mappedLanguageCode = MapToDbLanguageCode(extractedLanguageCode, dbLanguages);
+                    if (mappedLanguageCode == null)
+                    {
+                        _logger.LogWarning("ImportXlfFile: No matching language found in database for language code '{LanguageCode}' from file {FileName}. Ignoring file.", 
+                            extractedLanguageCode, fileData.Name);
+                        return false;
+                    }
+                    else
+                    {
+                        _logger.LogInformation("ImportXlfFile: Mapped language code '{OriginalCode}' to '{MappedCode}'", 
+                            extractedLanguageCode, mappedLanguageCode);
+                    }
+                }
+
+                _logger.LogInformation("ImportXlfFile: Processing file {FileName}, IsBaseFile: {IsBaseFile}, TargetLanguage: {TargetLanguage}", 
+                    fileData.Name, isBaseFile, mappedLanguageCode ?? "N/A");
+
+                var languageJsonModels = ExtractModelsFromXlf(stream, mappedLanguageCode, isBaseFile, dbLanguages);
                 var dbApplications = await GetLanguageApplications(null);
                 await ProcessJsonFile(dbApplications, languageJsonModels);
 
@@ -1256,7 +1340,99 @@ namespace DomainService.Services
             }
         }
 
-        private static List<LanguageJsonModel> ExtractModelsFromXlf(Stream stream)
+        /// <summary>
+        /// Maps a language code extracted from filename to the full language code in the database.
+        /// Supports matching by:
+        /// - Exact match (e.g., "de-DE" matches "de-DE")
+        /// - Prefix match (e.g., "de" matches "de-DE")
+        /// - Case-insensitive matching
+        /// </summary>
+        /// <param name="fileLanguageCode">Language code extracted from filename (e.g., "de", "en", "de-DE")</param>
+        /// <param name="dbLanguages">List of languages from database</param>
+        /// <returns>The matched database language code, or null if no match found</returns>
+        private static string? MapToDbLanguageCode(string? fileLanguageCode, List<Language>? dbLanguages)
+        {
+            if (string.IsNullOrEmpty(fileLanguageCode) || dbLanguages == null || !dbLanguages.Any())
+                return null;
+
+            // First, try exact match (case-insensitive)
+            var exactMatch = dbLanguages.FirstOrDefault(l => 
+                string.Equals(l.LanguageCode, fileLanguageCode, StringComparison.OrdinalIgnoreCase));
+            if (exactMatch != null)
+                return exactMatch.LanguageCode;
+
+            // Second, try prefix match (e.g., "de" matches "de-DE")
+            var prefixMatch = dbLanguages.FirstOrDefault(l => 
+                l.LanguageCode != null && 
+                l.LanguageCode.StartsWith(fileLanguageCode + "-", StringComparison.OrdinalIgnoreCase));
+            if (prefixMatch != null)
+                return prefixMatch.LanguageCode;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Validates if the XLF filename matches the expected pattern.
+        /// Base file must be exactly "messages.xlf"
+        /// Language files must be exactly "messages.{languageCode}.xlf" (e.g., messages.de.xlf, messages.en.xlf)
+        /// </summary>
+        /// <param name="fileName">The filename to validate</param>
+        /// <param name="languageCode">Output: the extracted language code (null for base file)</param>
+        /// <param name="isBaseFile">Output: true if this is the base file (messages.xlf)</param>
+        /// <returns>True if the filename matches the expected pattern, false otherwise</returns>
+        private static bool IsValidXlfFileName(string fileName, out string? languageCode, out bool isBaseFile)
+        {
+            languageCode = null;
+            isBaseFile = false;
+
+            if (string.IsNullOrEmpty(fileName))
+                return false;
+
+            // Check for exact base file name: messages.xlf
+            if (fileName.Equals("messages.xlf", StringComparison.OrdinalIgnoreCase))
+            {
+                isBaseFile = true;
+                return true;
+            }
+
+            // Check for language file pattern: messages.{lang}.xlf
+            if (!fileName.StartsWith("messages.", StringComparison.OrdinalIgnoreCase) ||
+                !fileName.EndsWith(".xlf", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            // Extract language code from messages.{lang}.xlf
+            var nameWithoutExtension = fileName[..^4]; // Remove .xlf
+            var parts = nameWithoutExtension.Split('.');
+
+            // Should be exactly ["messages", "lang"] - no additional parts
+            if (parts.Length != 2)
+                return false;
+
+            var potentialLanguage = parts[1];
+
+            // Language codes are typically 2-5 characters (e.g., "en", "de", "fr", "en-US", "zh-CN")
+            // They should contain only letters and possibly a hyphen
+            if (potentialLanguage.Length >= 2 && potentialLanguage.Length <= 10 &&
+                potentialLanguage.All(c => char.IsLetter(c) || c == '-'))
+            {
+                languageCode = potentialLanguage;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Extracts language models from XLF file.
+        /// </summary>
+        /// <param name="stream">The XLF file stream</param>
+        /// <param name="targetLanguageFromFileName">The target language extracted from filename and mapped to DB (null for base files)</param>
+        /// <param name="isBaseFile">Whether this is a base file (keys only, no translations)</param>
+        /// <param name="dbLanguages">List of languages from database for mapping source language</param>
+        /// <returns>List of language models extracted from the file</returns>
+        private static List<LanguageJsonModel> ExtractModelsFromXlf(Stream stream, string? targetLanguageFromFileName = null, bool isBaseFile = false, List<Language>? dbLanguages = null)
         {
             var memoryStream = stream as MemoryStream;
             var dataStream = new MemoryStream();
@@ -1277,8 +1453,14 @@ namespace DomainService.Services
 
             foreach (var fileElement in fileElements)
             {
-                var sourceLanguage = fileElement.Attribute("source-language")?.Value;
-                var targetLanguage = fileElement.Attribute("target-language")?.Value;
+                var sourceLanguageFromXml = fileElement.Attribute("source-language")?.Value;
+                // Map source language to database language code
+                var sourceLanguage = MapToDbLanguageCode(sourceLanguageFromXml, dbLanguages) ?? sourceLanguageFromXml;
+
+                // Use target language from filename if provided (already mapped), otherwise fall back to XML attribute and map it
+                var targetLanguage = targetLanguageFromFileName ?? 
+                    MapToDbLanguageCode(fileElement.Attribute("target-language")?.Value, dbLanguages) ?? 
+                    fileElement.Attribute("target-language")?.Value;
                 var moduleName = fileElement.Attribute("original")?.Value;
 
                 var body = fileElement.Element(ns + "body");
@@ -1289,12 +1471,11 @@ namespace DomainService.Services
                 foreach (var transUnit in transUnits)
                 {
                     var transUnitId = transUnit.Attribute("id")?.Value;
-                    var keyName = transUnit.Attribute("resname")?.Value;
-
+                    // Trim whitespace from keyName to prevent duplicate entries due to leading/trailing spaces
+                    var keyName = transUnit.Element(ns + "source")?.Value?.Trim();
                     if (string.IsNullOrEmpty(keyName)) continue;
 
                     // Extract ItemId from trans-unit id (format: ItemId_Culture)
-                    var itemId = transUnitId?.Split('_')[0];
 
                     var sourceElement = transUnit.Element(ns + "source");
                     var targetElement = transUnit.Element(ns + "target");
@@ -1333,7 +1514,7 @@ namespace DomainService.Services
                     {
                         languageJsonModels[keyName] = new LanguageJsonModel
                         {
-                            _id = itemId,
+                            _id = transUnitId,
                             Module = moduleName,
                             KeyName = keyName,
                             Resources = new List<Resource>().ToArray(),
@@ -1347,39 +1528,35 @@ namespace DomainService.Services
                     // Add or update resources
                     var resourceList = model.Resources?.ToList() ?? new List<Resource>();
 
-                    // Add source language resource if not exists
-                    if (!string.IsNullOrEmpty(sourceLanguage) && !string.IsNullOrEmpty(sourceValue))
+                    // For base files, only import the key without any translations
+                    // Do not add any language resources - existing translations should be preserved
+                    if (isBaseFile)
                     {
-                        var sourceResource = resourceList.FirstOrDefault(r => r.Culture == sourceLanguage);
-                        if (sourceResource == null)
-                        {
-                            resourceList.Add(new Resource
-                            {
-                                Culture = sourceLanguage,
-                                Value = sourceValue,
-                                CharacterLength = 0
-                            });
-                        }
+                        // Base file: just import the key, no resources added
+                        // The key will be created/updated but existing translations are preserved via MergeResources
                     }
-
-                    // Add target language resource
-                    if (!string.IsNullOrEmpty(targetLanguage))
+                    else
                     {
-                        var targetResource = resourceList.FirstOrDefault(r => r.Culture == targetLanguage);
-                        if (targetResource == null)
+                        // Non-base file: import translations for the target language only
+                        // Do NOT add source language resource - only import the target language from the file
+                        if (!string.IsNullOrEmpty(targetLanguage))
                         {
-                            resourceList.Add(new Resource
+                            var targetResource = resourceList.FirstOrDefault(r => r.Culture == targetLanguage);
+                            if (targetResource == null)
                             {
-                                Culture = targetLanguage,
-                                Value = targetValue ?? string.Empty,
-                                CharacterLength = characterLength
-                            });
-                        }
-                        else
-                        {
-                            // Update existing target resource
-                            targetResource.Value = targetValue ?? string.Empty;
-                            targetResource.CharacterLength = characterLength;
+                                resourceList.Add(new Resource
+                                {
+                                    Culture = targetLanguage,
+                                    Value = targetValue ?? string.Empty,
+                                    CharacterLength = characterLength
+                                });
+                            }
+                            else
+                            {
+                                // Update existing target resource
+                                targetResource.Value = targetValue ?? string.Empty;
+                                targetResource.CharacterLength = characterLength;
+                            }
                         }
                     }
 
@@ -1458,15 +1635,16 @@ namespace DomainService.Services
 
                 var olduilmResourceKey = await GetUilmResourceKey(uilmResourceKey.ModuleId, uilmResourceKey.KeyName);
 
-                uilmResourceKey.ItemId = string.IsNullOrWhiteSpace(uilmResourceKey.ItemId) ? Guid.NewGuid().ToString() : uilmResourceKey.ItemId;
-
                 if (olduilmResourceKey == null)
                 {
+                    // Key doesn't exist - always generate a new ItemId to avoid conflicts with non-GUID ItemIds from import
+                    uilmResourceKey.ItemId = Guid.NewGuid().ToString();
                     resourceKeysWithoutId.Add(uilmResourceKey);
                 }
                 else
                 {
-                    uilmResourceKey.ItemId = string.IsNullOrWhiteSpace(olduilmResourceKey.ItemId) ? uilmResourceKey.ItemId : olduilmResourceKey.ItemId;
+                    // Key exists - use the existing ItemId for update to ensure we update the correct record
+                    uilmResourceKey.ItemId = olduilmResourceKey.ItemId;
                     oldUilmResourceKeys.Add(olduilmResourceKey);
                     uilmResourceKeys.Add(uilmResourceKey);
                 }
@@ -1621,6 +1799,50 @@ namespace DomainService.Services
             }
         }
 
+        /// <summary>
+        /// Merges resources from import with existing resources.
+        /// New resources override existing ones for the same culture.
+        /// Existing resources for cultures not in the import are preserved.
+        /// </summary>
+        /// <param name="existingResources">Resources from the existing key in database</param>
+        /// <param name="newResources">Resources from the import file</param>
+        /// <returns>Merged array of resources</returns>
+        private static Resource[] MergeResources(Resource[]? existingResources, Resource[]? newResources)
+        {
+            if (existingResources == null || existingResources.Length == 0)
+            {
+                return newResources ?? Array.Empty<Resource>();
+            }
+
+            if (newResources == null || newResources.Length == 0)
+            {
+                return existingResources;
+            }
+
+            // Start with existing resources as a dictionary for easy lookup
+            var mergedDict = existingResources.ToDictionary(r => r.Culture, r => r);
+
+            // Add or update with new resources
+            foreach (var newResource in newResources)
+            {
+                if (string.IsNullOrEmpty(newResource.Culture))
+                    continue;
+
+                // Only update if the new resource has a value (don't overwrite with empty values)
+                if (!string.IsNullOrEmpty(newResource.Value))
+                {
+                    mergedDict[newResource.Culture] = newResource;
+                }
+                else if (!mergedDict.ContainsKey(newResource.Culture))
+                {
+                    // Add new culture even if empty (for tracking purposes)
+                    mergedDict[newResource.Culture] = newResource;
+                }
+            }
+
+            return mergedDict.Values.ToArray();
+        }
+
         private async Task<BlocksLanguageKey> GetUilmResourceKey(string appId, string keyName)
         {
             if (string.IsNullOrWhiteSpace(appId) || string.IsNullOrWhiteSpace(keyName)) return null;
@@ -1635,6 +1857,8 @@ namespace DomainService.Services
 
         private async Task SaveUilmResourceKey(List<BlocksLanguageKey> uilmResourceKeys, List<BlocksLanguageKey> resourceKeysWithoutId, List<BlocksLanguageKey> oldUilmResourceKeys = null)
         {
+            var importOperationId = Guid.NewGuid().ToString();
+
             if (uilmResourceKeys.Any())
             {
                 long? updateCount = 0;
@@ -1646,7 +1870,7 @@ namespace DomainService.Services
                 {
                     try
                     {
-                        await CreateKeyTimelineEntryAsync(oldUilmResourceKeys.FirstOrDefault(x => x.ItemId == resourceKey.ItemId), resourceKey, "UilmImport.Update");
+                        await CreateKeyTimelineEntryAsync(oldUilmResourceKeys.FirstOrDefault(x => x.ItemId == resourceKey.ItemId), resourceKey, LogFromConstants.UilmImportUpdate, importOperationId);
                     }
                     catch (Exception ex)
                     {
@@ -1668,7 +1892,7 @@ namespace DomainService.Services
                 {
                     try
                     {
-                        await CreateKeyTimelineEntryAsync(null, resourceKey, "UilmImport.Insert");
+                        await CreateKeyTimelineEntryAsync(null, resourceKey, LogFromConstants.UilmImportInsert, importOperationId);
                     }
                     catch (Exception ex)
                     {
@@ -1968,7 +2192,9 @@ namespace DomainService.Services
                     // Write database values into the XLF template
                     var exportStream = WriteToXlf(copyStream, resourceKeyValueMap, language);
 
-                    var xlfFileName = $"messages.{language}.xlf";
+                    // Use short language code for filename (e.g., "de" instead of "de-DE")
+                    var shortLanguageCode = language.Contains('-') ? language.Split('-')[0] : language;
+                    var xlfFileName = $"messages.{shortLanguageCode}.xlf";
 
                     exportStreamFileMap.Add(xlfFileName, exportStream);
                 }
@@ -1981,15 +2207,19 @@ namespace DomainService.Services
         {
             try
             {
-                XNamespace ns = "urn:oasis:names:tc:xliff:document:1.2";
                 var document = XDocument.Load(templateStream);
 
-                var fileElements = document.Root?.Elements(ns + "file");
-                if (fileElements == null)
+                // Detect the namespace from the document root instead of hardcoding it
+                XNamespace ns = document.Root?.GetDefaultNamespace() ?? "urn:oasis:names:tc:xliff:document:1.2";
+
+                var fileElements = document.Root?.Descendants(ns + "file");
+                if (fileElements == null || !fileElements.Any())
                 {
                     _logger.LogWarning("WriteToXlf: No file elements found in XLF template");
                     return new MemoryStream();
                 }
+
+                int matchedCount = 0;
 
                 // Update the target language attribute
                 foreach (var fileElement in fileElements)
@@ -1999,10 +2229,12 @@ namespace DomainService.Services
                     var body = fileElement.Element(ns + "body");
                     if (body == null) continue;
 
-                    var transUnits = body.Elements(ns + "trans-unit");
+                    // Use Descendants to find trans-unit elements that may be nested inside <group> elements
+                    var transUnits = body.Descendants(ns + "trans-unit");
                     foreach (var transUnit in transUnits)
                     {
-                        var keyName = transUnit.Attribute("resname")?.Value;
+                        var keyName = transUnit.Element(ns + "source")?.Value;
+
                         if (string.IsNullOrEmpty(keyName)) continue;
 
                         // If we have a value from database, update the target element
@@ -2012,15 +2244,14 @@ namespace DomainService.Services
                             if (targetElement != null)
                             {
                                 targetElement.Value = value;
-                                targetElement.SetAttributeValue("state", "translated");
                             }
                             else
                             {
                                 // Create target element if it doesn't exist
-                                transUnit.Add(new XElement(ns + "target",
-                                    new XAttribute("state", "translated"),
-                                    value));
+                                var sourceElement = transUnit.Element(ns + "source");
+                                sourceElement?.AddAfterSelf(new XElement(ns + "target",value));
                             }
+                            matchedCount++;
                         }
                     }
                 }
@@ -2030,7 +2261,7 @@ namespace DomainService.Services
                 document.Save(outputStream);
                 outputStream.Position = 0;
 
-                _logger.LogInformation("WriteToXlf: Successfully updated XLF for language: {Language} with {Count} keys", targetLanguage, resourceKeyValueMap.Count);
+                _logger.LogInformation("WriteToXlf: Successfully updated XLF for language: {Language} with {Count} matched keys out of {Total} available", targetLanguage, matchedCount, resourceKeyValueMap.Count);
 
                 return outputStream;
             }
@@ -2269,7 +2500,7 @@ namespace DomainService.Services
                 await _keyRepository.SaveKeyAsync(currentKey);
 
                 // Create timeline entry for the rollback operation
-                await CreateKeyTimelineEntryAsync(rollbackFromKey, currentKey, "Rollback");
+                await CreateKeyTimelineEntryAsync(rollbackFromKey, currentKey, LogFromConstants.Rollback);
 
                 _logger.LogInformation("Rollback operation completed successfully for ItemId: {ItemId}", request.ItemId);
 
@@ -2292,28 +2523,30 @@ namespace DomainService.Services
             }
         }
 
-        private async Task CreateKeyTimelineEntryAsync(BlocksLanguageKey? previousKey, BlocksLanguageKey currentKey, string logFrom)
+        private async Task CreateKeyTimelineEntryAsync(BlocksLanguageKey? previousKey, BlocksLanguageKey? currentKey, string logFrom, string? operationId = null, string? entityId = null)
         {
             try
             {
                 var context = BlocksContext.GetContext();
+                var resolvedEntityId = entityId ?? currentKey?.ItemId ?? previousKey?.ItemId ?? "";
                 var timeline = new KeyTimeline
                 {
-                    EntityId = currentKey.ItemId,
+                    EntityId = resolvedEntityId,
                     CurrentData = currentKey,
                     PreviousData = previousKey,
                     LogFrom = logFrom,
                     UserId = context?.UserId ?? "System",
                     CreateDate = DateTime.UtcNow,
-                    LastUpdateDate = DateTime.UtcNow
+                    LastUpdateDate = DateTime.UtcNow,
+                    OperationId = operationId ?? Guid.NewGuid().ToString()
                 };
 
                 await _keyTimelineRepository.SaveKeyTimelineAsync(timeline);
-                _logger.LogInformation("Timeline entry created for Key {KeyId} from {LogFrom}", currentKey.ItemId, logFrom);
+                _logger.LogInformation("Timeline entry created for Key {KeyId} from {LogFrom}", resolvedEntityId, logFrom);
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failed to create timeline entry for Key {KeyId}: {Error}", currentKey.ItemId, ex.Message);
+                _logger.LogError("Failed to create timeline entry for Key {KeyId}: {Error}", entityId ?? currentKey?.ItemId ?? previousKey?.ItemId, ex.Message);
                 // Don't throw - timeline creation should not break the main operation
             }
         }
@@ -2324,16 +2557,18 @@ namespace DomainService.Services
             {
                 if (!keys.Any()) return;
 
+                var operationId = Guid.NewGuid().ToString();
                 var context = BlocksContext.GetContext();
                 var timelines = keys.Select(key => new KeyTimeline
                 {
                     EntityId = key.ItemId,
                     CurrentData = key,
-                    PreviousData = null, // For migration, we don't have previous data
+                    PreviousData = null,
                     LogFrom = logFrom,
                     UserId = context?.UserId ?? "System",
                     CreateDate = DateTime.UtcNow,
-                    LastUpdateDate = DateTime.UtcNow
+                    LastUpdateDate = DateTime.UtcNow,
+                    OperationId = operationId
                 }).ToList();
 
                 await _keyTimelineRepository.BulkSaveKeyTimelinesAsync(timelines, targetedProjectKey);
@@ -2355,6 +2590,7 @@ namespace DomainService.Services
                 // Create a dictionary for quick lookup of previous keys by ItemId
                 var previousKeyDict = previousKeys?.ToDictionary(k => k.ItemId, k => k) ?? new Dictionary<string, BlocksLanguageKey>();
 
+                var operationId = Guid.NewGuid().ToString();
                 var context = BlocksContext.GetContext();
                 var timelines = keys.Select(key => new KeyTimeline
                 {
@@ -2364,7 +2600,8 @@ namespace DomainService.Services
                     LogFrom = logFrom,
                     UserId = context?.UserId ?? "System",
                     CreateDate = DateTime.UtcNow,
-                    LastUpdateDate = DateTime.UtcNow
+                    LastUpdateDate = DateTime.UtcNow,
+                    OperationId = operationId
                 }).ToList();
 
                 await _keyTimelineRepository.BulkSaveKeyTimelinesAsync(timelines, targetedProjectKey);

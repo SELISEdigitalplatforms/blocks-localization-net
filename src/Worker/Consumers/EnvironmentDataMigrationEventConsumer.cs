@@ -273,14 +273,14 @@ namespace Worker.Consumers
             if (@event.ShouldOverWriteExistingData)
             {
                 // When overwriting, create timeline entries for all keys with their previous data
-                await _keyManagementService.CreateBulkKeyTimelineEntriesAsync(targetKeys, existingTargetKeys, "EnvironmentDataMigration", @event.TargetedProjectKey);
+                await _keyManagementService.CreateBulkKeyTimelineEntriesAsync(targetKeys, existingTargetKeys, LogFromConstants.EnvironmentDataMigration, @event.TargetedProjectKey);
             }
             else
             {
                 // When not overwriting, only create timeline entries for keys that were actually inserted (new keys)
                 if (upsertResult.InsertedKeys.Any())
                 {
-                    await _keyManagementService.CreateBulkKeyTimelineEntriesAsync(upsertResult.InsertedKeys, "EnvironmentDataMigration", @event.TargetedProjectKey);
+                    await _keyManagementService.CreateBulkKeyTimelineEntriesAsync(upsertResult.InsertedKeys, LogFromConstants.EnvironmentDataMigration, @event.TargetedProjectKey);
                 }
             }
 

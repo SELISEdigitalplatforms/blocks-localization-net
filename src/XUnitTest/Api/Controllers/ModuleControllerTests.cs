@@ -20,12 +20,11 @@ namespace XUnitTest
         {
             _moduleManagementServiceMock = new Mock<IModuleManagementService>();
 
-            var changeControllerContextMock = new Mock<ChangeControllerContext>(MockBehavior.Loose, null, null, null);
-            changeControllerContextMock.Setup(x => x.ChangeContext(It.IsAny<object>()));
+            var changeControllerContext = TestChangeControllerContextFactory.Create();
             
             _controller = new ModuleController(
                 _moduleManagementServiceMock.Object,
-                changeControllerContextMock.Object
+                changeControllerContext
             )
             {
                 ControllerContext = new ControllerContext()
@@ -152,6 +151,18 @@ namespace XUnitTest
         }
 
         #endregion
+
+        [Fact]
+        public async Task Save_WithNullModule_ThrowsNullReferenceException2()
+        {
+            await Assert.ThrowsAsync<NullReferenceException>(() => _controller.Save(null));
+        }
+
+        [Fact]
+        public async Task Gets_WithNullQuery_ThrowsNullReferenceException()
+        {
+            await Assert.ThrowsAsync<NullReferenceException>(() => _controller.Gets(null));
+        }
     }
 }
 

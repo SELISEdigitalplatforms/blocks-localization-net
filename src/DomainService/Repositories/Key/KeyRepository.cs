@@ -90,8 +90,23 @@ namespace DomainService.Repositories
             if (!string.IsNullOrWhiteSpace(query.KeySearchText))
             {
                 var keyNameFilter = filterBuilder.Regex("KeyName", new BsonRegularExpression($".*{query.KeySearchText}.*", "i"));
-                var resourcesValueFilter = filterBuilder.ElemMatch(x => x.Resources, resource => resource.Value.ToLower().Contains(query.KeySearchText.ToLower()));
-                matchFilters.Add(filterBuilder.Or(keyNameFilter, resourcesValueFilter));
+                matchFilters.Add(keyNameFilter);
+            }
+
+            if (query.ResourceSearchFilters != null && query.ResourceSearchFilters.Length > 0)
+            {
+                foreach (var resourceFilter in query.ResourceSearchFilters)
+                {
+                    if (!string.IsNullOrWhiteSpace(resourceFilter.SearchText) && !string.IsNullOrWhiteSpace(resourceFilter.Culture))
+                    {
+                        var cultureAndValueFilter = filterBuilder.ElemMatch(x => x.Resources,
+                            Builders<Resource>.Filter.And(
+                                Builders<Resource>.Filter.Eq(r => r.Culture, resourceFilter.Culture),
+                                Builders<Resource>.Filter.Regex(r => r.Value, new BsonRegularExpression($".*{resourceFilter.SearchText}.*", "i"))
+                            ));
+                        matchFilters.Add(cultureAndValueFilter);
+                    }
+                }
             }
 
             if (query.ModuleIds != null && query.ModuleIds.Length > 0)
@@ -109,6 +124,15 @@ namespace DomainService.Repositories
             if (query.CreateDateRange != null)
             {
                 List<FilterDefinition<Key>> dateFilters = setDateFilter(query, filterBuilder);
+                if (dateFilters.Count > 0)
+                {
+                    matchFilters.Add(filterBuilder.And(dateFilters));
+                }
+            }
+
+            if (query.LastUpdateDateRange != null)
+            {
+                List<FilterDefinition<Key>> dateFilters = setLastUpdateDateFilter(query, filterBuilder);
                 if (dateFilters.Count > 0)
                 {
                     matchFilters.Add(filterBuilder.And(dateFilters));
@@ -137,6 +161,32 @@ namespace DomainService.Repositories
                 dateFilter = filterBuilder.And(
                     filterBuilder.Gte("CreateDate", query.CreateDateRange.StartDate),
                     filterBuilder.Lte("CreateDate", query.CreateDateRange.EndDate)
+                );
+                dateFilters.Add(dateFilter);
+            }
+            return dateFilters;
+        }
+
+        private static List<FilterDefinition<Key>> setLastUpdateDateFilter(GetKeysRequest query, FilterDefinitionBuilder<Key> filterBuilder)
+        {
+            FilterDefinition<Key> dateFilter;
+            var dateFilters = new List<FilterDefinition<Key>>();
+
+            if (query.LastUpdateDateRange.StartDate != default(DateTime) && query.LastUpdateDateRange.StartDate != null && (query.LastUpdateDateRange.EndDate == default(DateTime) || query.LastUpdateDateRange.EndDate == null))
+            {
+                dateFilter = filterBuilder.Gte("LastUpdateDate", query.LastUpdateDateRange.StartDate);
+                dateFilters.Add(dateFilter);
+            }
+            else if ((query.LastUpdateDateRange.StartDate == default(DateTime) || query.LastUpdateDateRange.StartDate == null) && query.LastUpdateDateRange.EndDate != default(DateTime) && query.LastUpdateDateRange.EndDate != null)
+            {
+                dateFilter = filterBuilder.Lte("LastUpdateDate", query.LastUpdateDateRange.EndDate);
+                dateFilters.Add(dateFilter);
+            }
+            else if (query.LastUpdateDateRange.StartDate != default(DateTime) && query.LastUpdateDateRange.StartDate != null && query.LastUpdateDateRange.EndDate != default(DateTime) && query.LastUpdateDateRange.EndDate != null)
+            {
+                dateFilter = filterBuilder.And(
+                    filterBuilder.Gte("LastUpdateDate", query.LastUpdateDateRange.StartDate),
+                    filterBuilder.Lte("LastUpdateDate", query.LastUpdateDateRange.EndDate)
                 );
                 dateFilters.Add(dateFilter);
             }

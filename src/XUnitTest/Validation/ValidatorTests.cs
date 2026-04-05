@@ -67,7 +67,7 @@ namespace XUnitTest
             // Arrange
             var key = new Key
             {
-                KeyName = "ab",
+                KeyName = "a",
                 ModuleId = "auth-module",
                 ProjectKey = "test-project"
             };
