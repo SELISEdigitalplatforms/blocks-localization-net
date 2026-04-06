@@ -7,7 +7,7 @@ namespace Api.Controllers
 {
     [ApiController]
     [Route("[controller]/[action]")]
-    public class AssistantController : Controller
+    public class AssistantController : ControllerBase
     {
         private readonly IAssistantService _assistantService;
 

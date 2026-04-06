@@ -1,14 +1,9 @@
 using Api.Controllers;
-using Blocks.Genesis;
 using DomainService.Services;
-using DomainService.Shared;
-using DomainService.Shared.Entities;
 using FluentAssertions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using System.Net;
-using Xunit;
 
 namespace XUnitTest
 {
