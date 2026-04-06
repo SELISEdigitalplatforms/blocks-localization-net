@@ -22,12 +22,7 @@ namespace XUnitTest
             _assistantServiceMock = new Mock<IAssistantService>();
 
             // Create a loose mock that allows any method calls without throwing
-            var changeControllerContextMock = new Mock<ChangeControllerContext>(MockBehavior.Loose, null, null, null);
-            
-            _controller = new AssistantController(
-                changeControllerContextMock.Object,
-                _assistantServiceMock.Object
-            )
+            _controller = new AssistantController(_assistantServiceMock.Object)
             {
                 ControllerContext = new ControllerContext()
             };

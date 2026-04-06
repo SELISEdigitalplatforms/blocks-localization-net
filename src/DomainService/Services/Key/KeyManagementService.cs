@@ -871,22 +871,18 @@ namespace DomainService.Services
             }
             if (fileData.Name.EndsWith(".xlsx"))
             {
-                _format = "XLSX";
                 return await ImportExcelFile(stream, fileData);
             }
             else if (fileData.Name.EndsWith(".json"))
             {
-                _format = "JSON";
                 return await ImportJsonFile(stream, fileData);
             }
             else if (fileData.Name.EndsWith(".csv"))
             {
-                _format = "CSV";
                 return await ImportCsvFile(stream, fileData);
             }
             else if (fileData.Name.EndsWith(".xlf"))
             {
-                _format = "XLF";
                 return await ImportXlfFile(stream, fileData);
             }
 
