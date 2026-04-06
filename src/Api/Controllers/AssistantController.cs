@@ -15,19 +15,7 @@ namespace Api.Controllers
         {
             _assistantService = assistantService;
         }
-
-        //[HttpPost]
-        //[Authorize]
-        //public async Task<IActionResult> AiCompletion([FromBody] AiCompletionRequest request)
-        //{
-        //    //_changeControllerContext.ChangeContext(request);
-        //    var response = await _assistantService.AiCompletion(request);
-        //    return StatusCode((int)HttpStatusCode.OK, new
-        //    {
-        //        Content = response
-        //    });
-        //}
-
+        
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> GetTranslationSuggestion([FromBody] SuggestLanguageRequest request)
