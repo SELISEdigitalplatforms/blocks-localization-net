@@ -1,5 +1,4 @@
-﻿using Blocks.Genesis;
-using DomainService.Services;
+﻿using DomainService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
@@ -10,15 +9,10 @@ namespace Api.Controllers
     [Route("[controller]/[action]")]
     public class AssistantController : Controller
     {
-        private readonly ChangeControllerContext _changeControllerContext;
         private readonly IAssistantService _assistantService;
 
-        public AssistantController(
-            ChangeControllerContext changeControllerContext,
-            IAssistantService assistantService
-        )
+        public AssistantController(IAssistantService assistantService)
         {
-            _changeControllerContext = changeControllerContext;
             _assistantService = assistantService;
         }
 

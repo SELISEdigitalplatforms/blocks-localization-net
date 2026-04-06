@@ -39,7 +39,6 @@ namespace DomainService.Services
 
         private readonly string _tenantId = BlocksContext.GetContext()?.TenantId ?? "";
         private BaseBlocksCommand _blocksBaseCommand;
-        private string _format;
 
         public KeyManagementService(
             IKeyRepository keyRepository,
