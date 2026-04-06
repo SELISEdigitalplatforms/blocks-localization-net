@@ -34,7 +34,7 @@ namespace DomainService.Services.HelperService
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error making GET request to: {Url} ", url, ex.Message);
+                Console.WriteLine($"Error making GET request to: {url}, Exception: {ex.Message}");
                 return (null, "Operation Failed.");
             }
         }
@@ -49,7 +49,7 @@ namespace DomainService.Services.HelperService
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error making POST request to: {Url}", url);
+                Console.WriteLine($"Error making POST request to: {url}");
                 return (null, "Operation Failed.");
             }
         }

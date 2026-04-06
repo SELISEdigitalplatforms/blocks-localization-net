@@ -39,7 +39,6 @@ namespace DomainService.Services
 
         private readonly string _tenantId = BlocksContext.GetContext()?.TenantId ?? "";
         private BaseBlocksCommand _blocksBaseCommand;
-        private string _format;
 
         public KeyManagementService(
             IKeyRepository keyRepository,
@@ -872,22 +871,18 @@ namespace DomainService.Services
             }
             if (fileData.Name.EndsWith(".xlsx"))
             {
-                _format = "XLSX";
                 return await ImportExcelFile(stream, fileData);
             }
             else if (fileData.Name.EndsWith(".json"))
             {
-                _format = "JSON";
                 return await ImportJsonFile(stream, fileData);
             }
             else if (fileData.Name.EndsWith(".csv"))
             {
-                _format = "CSV";
                 return await ImportCsvFile(stream, fileData);
             }
             else if (fileData.Name.EndsWith(".xlf"))
             {
-                _format = "XLF";
                 return await ImportXlfFile(stream, fileData);
             }
 
@@ -907,7 +902,7 @@ namespace DomainService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("ImportCsvFile: Failed to import FileId:{id}, FileName: {name}, Error: {ex}", fileData.ItemId, fileData.Name, ex);
+                _logger.LogError(ex, "ImportCsvFile: Failed to import FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
                 return false;
             }
         }
@@ -1036,7 +1031,7 @@ namespace DomainService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("ImportJsonFile: Failed to import FileId:{id}, FileName: {name}, Error: {ex}", fileData.ItemId, fileData.Name, ex);
+                _logger.LogError(ex, "ImportJsonFile: Failed to import FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
                 return false;
             }
         }
@@ -1286,7 +1281,7 @@ namespace DomainService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("ImportExcelFile: Failed to import FileId:{id}, FileName: {name}, Error: {ex}", fileData.ItemId, fileData.Name, ex);
+                _logger.LogError(ex, "ImportExcelFile: Failed to import FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
                 return false;
             }
         }
@@ -1335,7 +1330,7 @@ namespace DomainService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("ImportXlfFile: Failed to import FileId:{id}, FileName: {name}, Error: {ex}", fileData.ItemId, fileData.Name, ex);
+                _logger.LogError(ex, "ImportXlfFile: Failed to import FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
                 return false;
             }
         }
@@ -2186,7 +2181,7 @@ namespace DomainService.Services
                 using (MemoryStream copyStream = new MemoryStream())
                 {
                     referenceStream.Position = 0;
-                    referenceStream.CopyTo(copyStream);
+                    await referenceStream.CopyToAsync(copyStream);
                     copyStream.Position = 0;
 
                     // Write database values into the XLF template

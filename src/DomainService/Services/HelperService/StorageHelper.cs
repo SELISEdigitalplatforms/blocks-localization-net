@@ -26,7 +26,7 @@ namespace DomainService.Services.HelperService
             //var token = await GetTokenFromContext();
 
             Stream stream = new MemoryStream();
-            stream.Write(inputStream.ToArray(), 0, inputStream.ToArray().Length);
+            await stream.WriteAsync(inputStream.ToArray(), 0, inputStream.ToArray().Length);
             stream.Seek(0, SeekOrigin.Begin);
 
             var payload = new GetPreSignedUrlForUploadRequest
