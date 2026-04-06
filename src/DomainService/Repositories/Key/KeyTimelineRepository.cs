@@ -359,19 +359,5 @@ namespace DomainService.Repositories
 
             return users.ToDictionary(u => u.ItemId, u => u);
         }
-
-        private static BlocksLanguageKey? DeserializeKey(BsonDocument doc, string fieldName)
-        {
-            if (!doc.Contains(fieldName) || doc[fieldName].IsBsonNull) return null;
-
-            try
-            {
-                return MongoDB.Bson.Serialization.BsonSerializer.Deserialize<BlocksLanguageKey>(doc[fieldName].AsBsonDocument);
-            }
-            catch
-            {
-                return null;
-            }
-        }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Blocks.Genesis;
 using DomainService.Services;
 using DomainService.Shared;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
@@ -13,7 +12,7 @@ namespace Api.Controllers
     [ApiController]
     [Route("[controller]/[action]")]
 
-    public class LanguageController : Controller
+    public class LanguageController : ControllerBase
     {
         private readonly ILanguageManagementService _languageManagementService;
         private readonly ChangeControllerContext _changeControllerContext;
