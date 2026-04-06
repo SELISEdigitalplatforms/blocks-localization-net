@@ -58,6 +58,20 @@
             <param name="query">The query parameters for filtering and pagination.</param>
             <returns>A paginated list of <see cref="T:DomainService.Services.KeyTimeline"/> objects.</returns>
         </member>
+        <member name="M:Api.Controllers.KeyController.GetLocalizationTimeline(DomainService.Services.GetLocalizationTimelineRequest)">
+            <summary>
+            Retrieves the localization-level overview timeline grouped by operation.
+            </summary>
+            <param name="query">The query parameters for filtering and pagination.</param>
+            <returns>A paginated list of operation-level timeline entries.</returns>
+        </member>
+        <member name="M:Api.Controllers.KeyController.GetTimelineByOperationId(DomainService.Services.GetTimelineByOperationIdRequest)">
+            <summary>
+            Retrieves timeline entries for a specific operation by OperationId.
+            </summary>
+            <param name="query">The query containing the OperationId and pagination parameters.</param>
+            <returns>A paginated list of <see cref="T:DomainService.Services.KeyTimeline"/> entries for the operation.</returns>
+        </member>
         <member name="M:Api.Controllers.KeyController.Get(DomainService.Services.GetKeyRequest)">
             <summary>
             Retrieves a specific key by item ID.
