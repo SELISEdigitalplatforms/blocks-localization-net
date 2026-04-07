@@ -90,7 +90,15 @@ namespace DomainService.Repositories
             if (!string.IsNullOrWhiteSpace(query.KeySearchText))
             {
                 var keyNameFilter = filterBuilder.Regex("KeyName", new BsonRegularExpression($".*{query.KeySearchText}.*", "i"));
-                matchFilters.Add(keyNameFilter);
+                var resourceValueFilter = filterBuilder.ElemMatch(x => x.Resources,
+                    Builders<Resource>.Filter.Regex(r => r.Value, new BsonRegularExpression($".*{query.KeySearchText}.*", "i")));
+                matchFilters.Add(filterBuilder.Or(keyNameFilter, resourceValueFilter));
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.SearchKey))
+            {
+                var searchKeyFilter = filterBuilder.Regex("KeyName", new BsonRegularExpression($".*{query.SearchKey}.*", "i"));
+                matchFilters.Add(searchKeyFilter);
             }
 
             if (query.ResourceSearchFilters != null && query.ResourceSearchFilters.Length > 0)
@@ -278,7 +286,33 @@ namespace DomainService.Repositories
 
         public async Task<long?> UpdateUilmResourceKeysForChangeAll(List<BlocksLanguageKey> uilmResourceKeys)
         {
+            //if (!isExternal)
+            //{
             return await UpdateUilmResourceKeys(uilmResourceKeys);
+            //}
+        //     var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+        //     var collection = dataBase.GetCollection<BlocksLanguageKey>(_collectionName);
+
+        //     List<WriteModel<BlocksLanguageKey>> bulkOps = new List<WriteModel<BlocksLanguageKey>>();
+
+        //     foreach (BlocksLanguageKey uilmResourceKey in uilmResourceKeys)
+        //     {
+        //         FilterDefinition<BlocksLanguageKey> filter = Builders<BlocksLanguageKey>.Filter.Empty;
+
+        //         UpdateDefinition<BlocksLanguageKey> update = Builders<BlocksLanguageKey>.Update
+        //             .Set(x => x.Resources, uilmResourceKey.Resources)
+        //             .Set(x => x.ModuleId, uilmResourceKey.ModuleId)
+        //             .Set(x => x.KeyName, uilmResourceKey.KeyName)
+        //             .Set(x => x.LastUpdateDate, uilmResourceKey.LastUpdateDate)
+        //             .Set(x => x.IsPartiallyTranslated, uilmResourceKey.IsPartiallyTranslated)
+        //             .SetOnInsert(x => x.ItemId, Guid.NewGuid().ToString());
+
+        //         UpdateOneModel<BlocksLanguageKey> upsertOne = new UpdateOneModel<BlocksLanguageKey>(filter, update) { IsUpsert = true };
+        //         bulkOps.Add(upsertOne);
+        //     }
+
+        //     var response = await collection.BulkWriteAsync(bulkOps);
+        //     return response?.ModifiedCount;
         }
 
         public async Task<long?> UpdateUilmResourceKeys(List<BlocksLanguageKey> uilmResourceKeys)

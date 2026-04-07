@@ -631,7 +631,28 @@ namespace DomainService.Services
             if (publishedKeys.Any())
             {
                 var mappedPublishedKeys = publishedKeys.Select(MapKeyToBlocksLanguageKey).ToList();
-                await CreateBulkKeyTimelineEntriesAsync(mappedPublishedKeys, LogFromConstants.Published, command.ProjectKey ?? "");
+                var entityIds = mappedPublishedKeys.Select(k => k.ItemId).ToList();
+                var previousPublishTimelines = await _keyTimelineRepository.GetLatestPublishTimelinesAsync(entityIds, command.ProjectKey ?? "") ?? new Dictionary<string, KeyTimeline>();
+
+                // Filter out keys with no resource changes since last publish
+                var changedKeys = mappedPublishedKeys
+                    .Where(key => HasResourceChanges(key, previousPublishTimelines))
+                    .ToList();
+
+                if (changedKeys.Any())
+                {
+                    var previousKeys = changedKeys
+                        .Where(k => previousPublishTimelines.ContainsKey(k.ItemId) && previousPublishTimelines[k.ItemId].CurrentData != null)
+                        .Select(k => previousPublishTimelines[k.ItemId].CurrentData!)
+                        .ToList();
+
+                    await CreateBulkKeyTimelineEntriesAsync(changedKeys, previousKeys, LogFromConstants.Published, command.ProjectKey ?? "");
+                }
+                else
+                {
+                    // All keys unchanged — create a single no-change publish timeline entry
+                    await CreateNoChangePublishTimelineEntryAsync(LogFromConstants.Published, command.ProjectKey ?? "");
+                }
             }
 
             if (failedKeys.Any())
@@ -1577,7 +1598,7 @@ namespace DomainService.Services
         {
             if (string.IsNullOrWhiteSpace(appId))
             {
-                appId = HandleApplicationWithoutAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, moduleName);
+                appId = HandleApplicationWithoutAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, isPartiallyTranslated, moduleName);
             }
             else
             {
@@ -1588,7 +1609,7 @@ namespace DomainService.Services
         }
 
         private string HandleApplicationWithoutAppId(List<BlocksLanguageModule> dbApplications, List<BlocksLanguageModule> uilmApplicationsToBeInserted,
-            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string moduleName)
+            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, bool isPartiallyTranslated, string moduleName, string? targetedProjectKey = null)
         {
             string appId;
             var application = dbApplications?.FirstOrDefault(x => x.ModuleName == moduleName);
@@ -2451,6 +2472,32 @@ namespace DomainService.Services
             }
         }
 
+        public async Task CreateNoChangePublishTimelineEntryAsync(string logFrom, string targetedProjectKey)
+        {
+            try
+            {
+                var context = BlocksContext.GetContext();
+                var timeline = new KeyTimeline
+                {
+                    EntityId = null,
+                    CurrentData = null,
+                    PreviousData = null,
+                    LogFrom = logFrom,
+                    UserId = context?.UserId ?? "System",
+                    CreateDate = DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    OperationId = Guid.NewGuid().ToString()
+                };
+
+                await _keyTimelineRepository.BulkSaveKeyTimelinesAsync(new List<KeyTimeline> { timeline }, targetedProjectKey);
+                _logger.LogInformation("No-change publish timeline entry created for {LogFrom}", logFrom);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to create no-change publish timeline entry: {Error}", ex.Message);
+            }
+        }
+
         private Key MapBlocksLanguageKeyToKey(BlocksLanguageKey blocksKey, string? projectKey = null)
         {
             return new Key
@@ -2482,6 +2529,36 @@ namespace DomainService.Services
                 CreateDate = key.CreateDate,
                 TenantId = _tenantId
             };
+        }
+
+        public static bool HasResourceChanges(BlocksLanguageKey currentKey, Dictionary<string, KeyTimeline> previousPublishTimelines)
+        {
+            if (!previousPublishTimelines.TryGetValue(currentKey.ItemId, out var previousTimeline) || previousTimeline.CurrentData == null)
+            {
+                return true; // No previous publish entry — treat as changed (new key)
+            }
+
+            var previousResources = previousTimeline.CurrentData.Resources;
+            var currentResources = currentKey.Resources;
+
+            if (previousResources == null && currentResources == null) return false;
+            if (previousResources == null || currentResources == null) return true;
+            if (previousResources.Length != currentResources.Length) return true;
+
+            var previousDict = previousResources.ToDictionary(r => r.Culture ?? "", r => r.Value ?? "");
+
+            foreach (var resource in currentResources)
+            {
+                var culture = resource.Culture ?? "";
+                var currentValue = resource.Value ?? "";
+
+                if (!previousDict.TryGetValue(culture, out var previousValue) || previousValue != currentValue)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public async Task<GetLanguageFileGenerationHistoryResponse> GetLanguageFileGenerationHistoryAsync(GetLanguageFileGenerationHistoryRequest request)
