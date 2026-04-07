@@ -281,6 +281,64 @@ namespace XUnitTest
         }
 
         [Fact]
+        public async Task Gets_WithSearchKey_ReturnsFilteredKeys()
+        {
+            // Arrange
+            var query = new GetKeysRequest { ProjectKey = "project-1", PageSize = 10, SearchKey = "welcome" };
+            var expectedResponse = new GetKeysQueryResponse { Keys = new List<Key> { new Key { KeyName = "WELCOME_MESSAGE" } } };
+
+            _keyManagementServiceMock
+                .Setup(x => x.GetKeysAsync(query))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Gets(query);
+
+            // Assert
+            result.Keys.Should().HaveCount(1);
+            result.Keys[0].KeyName.Should().Contain("WELCOME");
+        }
+
+        [Fact]
+        public async Task Gets_WithSearchKeyAndResourceSearchFilters_ReturnsFilteredKeys()
+        {
+            // Arrange
+            var query = new GetKeysRequest
+            {
+                ProjectKey = "project-1",
+                PageSize = 10,
+                SearchKey = "GREET",
+                ResourceSearchFilters = new[]
+                {
+                    new ResourceSearchFilter { Culture = "en", SearchText = "hello" }
+                }
+            };
+            var expectedResponse = new GetKeysQueryResponse
+            {
+                Keys = new List<Key>
+                {
+                    new Key
+                    {
+                        KeyName = "GREETING",
+                        Resources = new[] { new Resource { Culture = "en", Value = "Hello" } }
+                    }
+                }
+            };
+
+            _keyManagementServiceMock
+                .Setup(x => x.GetKeysAsync(query))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Gets(query);
+
+            // Assert
+            result.Keys.Should().HaveCount(1);
+            _keyManagementServiceMock.Verify(x => x.GetKeysAsync(It.Is<GetKeysRequest>(
+                r => r.SearchKey == "GREET" && r.ResourceSearchFilters!.Length == 1)), Times.Once);
+        }
+
+        [Fact]
         public async Task Gets_WithLastUpdateDateRange_ReturnsFilteredKeys()
         {
             // Arrange

@@ -7,6 +7,7 @@ namespace DomainService.Services
         public int PageSize { get; set; }
         public int PageNumber { get; set; }
         public string? KeySearchText { get; set; }
+        public string? SearchKey { get; set; }
         public string[]? ModuleIds { get; set; }
         public bool IsPartiallyTranslated { get; set; }
         public DateRange? CreateDateRange { get; set; }

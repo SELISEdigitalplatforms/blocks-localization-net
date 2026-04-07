@@ -1059,6 +1059,664 @@ namespace XUnitTest
         }
 
         #endregion
+
+        #region HasResourceChanges Tests
+
+        [Fact]
+        public void HasResourceChanges_NoPreviousPublishEntry_ReturnsTrue()
+        {
+            var currentKey = new BlocksLanguageKey
+            {
+                ItemId = "key-1",
+                Resources = new[] { new Resource { Culture = "en-US", Value = "Hello" } }
+            };
+            var previousTimelines = new Dictionary<string, KeyTimeline>();
+
+            var result = KeyManagementService.HasResourceChanges(currentKey, previousTimelines);
+
+            result.Should().BeTrue();
+        }
+
+        [Fact]
+        public void HasResourceChanges_PreviousEntryHasNullCurrentData_ReturnsTrue()
+        {
+            var currentKey = new BlocksLanguageKey
+            {
+                ItemId = "key-1",
+                Resources = new[] { new Resource { Culture = "en-US", Value = "Hello" } }
+            };
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline { CurrentData = null }
+            };
+
+            var result = KeyManagementService.HasResourceChanges(currentKey, previousTimelines);
+
+            result.Should().BeTrue();
+        }
+
+        [Fact]
+        public void HasResourceChanges_IdenticalResources_ReturnsFalse()
+        {
+            var currentKey = new BlocksLanguageKey
+            {
+                ItemId = "key-1",
+                Resources = new[]
+                {
+                    new Resource { Culture = "en-US", Value = "Hello" },
+                    new Resource { Culture = "fr-FR", Value = "Bonjour" }
+                }
+            };
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = new[]
+                        {
+                            new Resource { Culture = "en-US", Value = "Hello" },
+                            new Resource { Culture = "fr-FR", Value = "Bonjour" }
+                        }
+                    }
+                }
+            };
+
+            var result = KeyManagementService.HasResourceChanges(currentKey, previousTimelines);
+
+            result.Should().BeFalse();
+        }
+
+        [Fact]
+        public void HasResourceChanges_ResourceValueChanged_ReturnsTrue()
+        {
+            var currentKey = new BlocksLanguageKey
+            {
+                ItemId = "key-1",
+                Resources = new[]
+                {
+                    new Resource { Culture = "en-US", Value = "Hello World" },
+                    new Resource { Culture = "fr-FR", Value = "Bonjour" }
+                }
+            };
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = new[]
+                        {
+                            new Resource { Culture = "en-US", Value = "Hello" },
+                            new Resource { Culture = "fr-FR", Value = "Bonjour" }
+                        }
+                    }
+                }
+            };
+
+            var result = KeyManagementService.HasResourceChanges(currentKey, previousTimelines);
+
+            result.Should().BeTrue();
+        }
+
+        [Fact]
+        public void HasResourceChanges_NewCultureAdded_ReturnsTrue()
+        {
+            var currentKey = new BlocksLanguageKey
+            {
+                ItemId = "key-1",
+                Resources = new[]
+                {
+                    new Resource { Culture = "en-US", Value = "Hello" },
+                    new Resource { Culture = "fr-FR", Value = "Bonjour" },
+                    new Resource { Culture = "de-DE", Value = "Hallo" }
+                }
+            };
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = new[]
+                        {
+                            new Resource { Culture = "en-US", Value = "Hello" },
+                            new Resource { Culture = "fr-FR", Value = "Bonjour" }
+                        }
+                    }
+                }
+            };
+
+            var result = KeyManagementService.HasResourceChanges(currentKey, previousTimelines);
+
+            result.Should().BeTrue();
+        }
+
+        [Fact]
+        public void HasResourceChanges_CultureRemoved_ReturnsTrue()
+        {
+            var currentKey = new BlocksLanguageKey
+            {
+                ItemId = "key-1",
+                Resources = new[]
+                {
+                    new Resource { Culture = "en-US", Value = "Hello" }
+                }
+            };
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = new[]
+                        {
+                            new Resource { Culture = "en-US", Value = "Hello" },
+                            new Resource { Culture = "fr-FR", Value = "Bonjour" }
+                        }
+                    }
+                }
+            };
+
+            var result = KeyManagementService.HasResourceChanges(currentKey, previousTimelines);
+
+            result.Should().BeTrue();
+        }
+
+        [Fact]
+        public void HasResourceChanges_BothResourcesNull_ReturnsFalse()
+        {
+            var currentKey = new BlocksLanguageKey
+            {
+                ItemId = "key-1",
+                Resources = null
+            };
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = null
+                    }
+                }
+            };
+
+            var result = KeyManagementService.HasResourceChanges(currentKey, previousTimelines);
+
+            result.Should().BeFalse();
+        }
+
+        [Fact]
+        public void HasResourceChanges_CurrentResourcesNull_PreviousNotNull_ReturnsTrue()
+        {
+            var currentKey = new BlocksLanguageKey
+            {
+                ItemId = "key-1",
+                Resources = null
+            };
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = new[] { new Resource { Culture = "en-US", Value = "Hello" } }
+                    }
+                }
+            };
+
+            var result = KeyManagementService.HasResourceChanges(currentKey, previousTimelines);
+
+            result.Should().BeTrue();
+        }
+
+        [Fact]
+        public void HasResourceChanges_PreviousResourcesNull_CurrentNotNull_ReturnsTrue()
+        {
+            var currentKey = new BlocksLanguageKey
+            {
+                ItemId = "key-1",
+                Resources = new[] { new Resource { Culture = "en-US", Value = "Hello" } }
+            };
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = null
+                    }
+                }
+            };
+
+            var result = KeyManagementService.HasResourceChanges(currentKey, previousTimelines);
+
+            result.Should().BeTrue();
+        }
+
+        [Fact]
+        public void HasResourceChanges_EmptyResources_BothEmpty_ReturnsFalse()
+        {
+            var currentKey = new BlocksLanguageKey
+            {
+                ItemId = "key-1",
+                Resources = Array.Empty<Resource>()
+            };
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = Array.Empty<Resource>()
+                    }
+                }
+            };
+
+            var result = KeyManagementService.HasResourceChanges(currentKey, previousTimelines);
+
+            result.Should().BeFalse();
+        }
+
+        [Fact]
+        public void HasResourceChanges_NullValues_TreatedAsEmpty_ReturnsFalse()
+        {
+            var currentKey = new BlocksLanguageKey
+            {
+                ItemId = "key-1",
+                Resources = new[] { new Resource { Culture = "en-US", Value = null } }
+            };
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = new[] { new Resource { Culture = "en-US", Value = null } }
+                    }
+                }
+            };
+
+            var result = KeyManagementService.HasResourceChanges(currentKey, previousTimelines);
+
+            result.Should().BeFalse();
+        }
+
+        #endregion
+
+        #region GenerateAsync Publish Timeline Tests
+
+        [Fact]
+        public async Task GenerateAsync_PublishedKeys_SkipsUnchangedKeys()
+        {
+            // Arrange
+            var languages = new List<Language>
+            {
+                new Language { LanguageCode = "en-US", LanguageName = "English" }
+            };
+            var modules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule { ItemId = "module-id", ModuleName = "auth" }
+            };
+            var keys = new List<Key>
+            {
+                new KeyModel
+                {
+                    ItemId = "key-1",
+                    KeyName = "welcome",
+                    ModuleId = "module-id",
+                    Resources = new[] { new Resource { Culture = "en-US", Value = "Hello" } }
+                }
+            };
+
+            _languageManagementServiceMock.Setup(m => m.GetLanguagesAsync()).ReturnsAsync(languages);
+            _moduleManagementServiceMock.Setup(m => m.GetModulesAsync(It.IsAny<string>())).ReturnsAsync(modules);
+            _keyRepositoryMock.Setup(r => r.GetAllKeysByModuleAsync("module-id")).ReturnsAsync(keys);
+            _keyRepositoryMock.Setup(r => r.DeleteOldUilmFiles(It.IsAny<List<UilmFile>>())).ReturnsAsync(0L);
+            _keyRepositoryMock.Setup(r => r.SaveNewUilmFiles(It.IsAny<List<UilmFile>>())).ReturnsAsync(true);
+            _notificationServiceMock.Setup(n => n.NotifyExtensionEvent(true, It.IsAny<string>())).ReturnsAsync(true);
+
+            // Previous publish has identical resources — should be skipped
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = new[] { new Resource { Culture = "en-US", Value = "Hello" } }
+                    }
+                }
+            };
+            _keyTimelineRepositoryMock.Setup(r => r.GetLatestPublishTimelinesAsync(
+                It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(previousTimelines);
+
+            var command = new GenerateUilmFilesEvent { ModuleId = "module-id", ProjectKey = "proj" };
+
+            // Act
+            var result = await _service.GenerateAsync(command);
+
+            // Assert
+            result.Should().BeTrue();
+            // A single no-change publish timeline entry should be created
+            _keyTimelineRepositoryMock.Verify(r => r.BulkSaveKeyTimelinesAsync(
+                It.Is<List<KeyTimeline>>(t =>
+                    t.Count == 1 &&
+                    t[0].EntityId == null &&
+                    t[0].CurrentData == null &&
+                    t[0].PreviousData == null &&
+                    t[0].LogFrom == LogFromConstants.Published),
+                "proj"), Times.Once);
+        }
+
+        [Fact]
+        public async Task GenerateAsync_PublishedKeys_CreatesTimelineForChangedKeys()
+        {
+            // Arrange
+            var languages = new List<Language>
+            {
+                new Language { LanguageCode = "en-US", LanguageName = "English" }
+            };
+            var modules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule { ItemId = "module-id", ModuleName = "auth" }
+            };
+            var keys = new List<Key>
+            {
+                new KeyModel
+                {
+                    ItemId = "key-1",
+                    KeyName = "welcome",
+                    ModuleId = "module-id",
+                    Resources = new[] { new Resource { Culture = "en-US", Value = "Hello World" } }
+                }
+            };
+
+            _languageManagementServiceMock.Setup(m => m.GetLanguagesAsync()).ReturnsAsync(languages);
+            _moduleManagementServiceMock.Setup(m => m.GetModulesAsync(It.IsAny<string>())).ReturnsAsync(modules);
+            _keyRepositoryMock.Setup(r => r.GetAllKeysByModuleAsync("module-id")).ReturnsAsync(keys);
+            _keyRepositoryMock.Setup(r => r.DeleteOldUilmFiles(It.IsAny<List<UilmFile>>())).ReturnsAsync(0L);
+            _keyRepositoryMock.Setup(r => r.SaveNewUilmFiles(It.IsAny<List<UilmFile>>())).ReturnsAsync(true);
+            _notificationServiceMock.Setup(n => n.NotifyExtensionEvent(true, It.IsAny<string>())).ReturnsAsync(true);
+
+            // Previous publish has different value — should create timeline
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = new[] { new Resource { Culture = "en-US", Value = "Hello" } }
+                    }
+                }
+            };
+            _keyTimelineRepositoryMock.Setup(r => r.GetLatestPublishTimelinesAsync(
+                It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(previousTimelines);
+
+            var command = new GenerateUilmFilesEvent { ModuleId = "module-id", ProjectKey = "proj" };
+
+            // Act
+            var result = await _service.GenerateAsync(command);
+
+            // Assert
+            result.Should().BeTrue();
+            _keyTimelineRepositoryMock.Verify(r => r.BulkSaveKeyTimelinesAsync(
+                It.Is<List<KeyTimeline>>(t =>
+                    t.Count == 1 &&
+                    t[0].EntityId == "key-1" &&
+                    t[0].PreviousData != null &&
+                    t[0].PreviousData.ItemId == "key-1" &&
+                    t[0].LogFrom == LogFromConstants.Published),
+                "proj"), Times.Once);
+        }
+
+        [Fact]
+        public async Task GenerateAsync_NewKeys_CreatesTimelineWithNoPreviousData()
+        {
+            // Arrange
+            var languages = new List<Language>
+            {
+                new Language { LanguageCode = "en-US", LanguageName = "English" }
+            };
+            var modules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule { ItemId = "module-id", ModuleName = "auth" }
+            };
+            var keys = new List<Key>
+            {
+                new KeyModel
+                {
+                    ItemId = "key-new",
+                    KeyName = "new.key",
+                    ModuleId = "module-id",
+                    Resources = new[] { new Resource { Culture = "en-US", Value = "New" } }
+                }
+            };
+
+            _languageManagementServiceMock.Setup(m => m.GetLanguagesAsync()).ReturnsAsync(languages);
+            _moduleManagementServiceMock.Setup(m => m.GetModulesAsync(It.IsAny<string>())).ReturnsAsync(modules);
+            _keyRepositoryMock.Setup(r => r.GetAllKeysByModuleAsync("module-id")).ReturnsAsync(keys);
+            _keyRepositoryMock.Setup(r => r.DeleteOldUilmFiles(It.IsAny<List<UilmFile>>())).ReturnsAsync(0L);
+            _keyRepositoryMock.Setup(r => r.SaveNewUilmFiles(It.IsAny<List<UilmFile>>())).ReturnsAsync(true);
+            _notificationServiceMock.Setup(n => n.NotifyExtensionEvent(true, It.IsAny<string>())).ReturnsAsync(true);
+
+            // No previous publish entries
+            _keyTimelineRepositoryMock.Setup(r => r.GetLatestPublishTimelinesAsync(
+                It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(new Dictionary<string, KeyTimeline>());
+
+            var command = new GenerateUilmFilesEvent { ModuleId = "module-id", ProjectKey = "proj" };
+
+            // Act
+            var result = await _service.GenerateAsync(command);
+
+            // Assert
+            result.Should().BeTrue();
+            _keyTimelineRepositoryMock.Verify(r => r.BulkSaveKeyTimelinesAsync(
+                It.Is<List<KeyTimeline>>(t =>
+                    t.Count == 1 &&
+                    t[0].EntityId == "key-new" &&
+                    t[0].PreviousData == null &&
+                    t[0].LogFrom == LogFromConstants.Published),
+                "proj"), Times.Once);
+        }
+
+        [Fact]
+        public async Task GenerateAsync_MixedChangedAndUnchangedKeys_OnlyCreatesTimelineForChanged()
+        {
+            // Arrange
+            var languages = new List<Language>
+            {
+                new Language { LanguageCode = "en-US", LanguageName = "English" }
+            };
+            var modules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule { ItemId = "module-id", ModuleName = "auth" }
+            };
+            var keys = new List<Key>
+            {
+                new KeyModel
+                {
+                    ItemId = "key-changed",
+                    KeyName = "changed.key",
+                    ModuleId = "module-id",
+                    Resources = new[] { new Resource { Culture = "en-US", Value = "Updated" } }
+                },
+                new KeyModel
+                {
+                    ItemId = "key-unchanged",
+                    KeyName = "unchanged.key",
+                    ModuleId = "module-id",
+                    Resources = new[] { new Resource { Culture = "en-US", Value = "Same" } }
+                }
+            };
+
+            _languageManagementServiceMock.Setup(m => m.GetLanguagesAsync()).ReturnsAsync(languages);
+            _moduleManagementServiceMock.Setup(m => m.GetModulesAsync(It.IsAny<string>())).ReturnsAsync(modules);
+            _keyRepositoryMock.Setup(r => r.GetAllKeysByModuleAsync("module-id")).ReturnsAsync(keys);
+            _keyRepositoryMock.Setup(r => r.DeleteOldUilmFiles(It.IsAny<List<UilmFile>>())).ReturnsAsync(0L);
+            _keyRepositoryMock.Setup(r => r.SaveNewUilmFiles(It.IsAny<List<UilmFile>>())).ReturnsAsync(true);
+            _notificationServiceMock.Setup(n => n.NotifyExtensionEvent(true, It.IsAny<string>())).ReturnsAsync(true);
+
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-changed"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-changed",
+                        Resources = new[] { new Resource { Culture = "en-US", Value = "Original" } }
+                    }
+                },
+                ["key-unchanged"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-unchanged",
+                        Resources = new[] { new Resource { Culture = "en-US", Value = "Same" } }
+                    }
+                }
+            };
+            _keyTimelineRepositoryMock.Setup(r => r.GetLatestPublishTimelinesAsync(
+                It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(previousTimelines);
+
+            var command = new GenerateUilmFilesEvent { ModuleId = "module-id", ProjectKey = "proj" };
+
+            // Act
+            var result = await _service.GenerateAsync(command);
+
+            // Assert
+            result.Should().BeTrue();
+            _keyTimelineRepositoryMock.Verify(r => r.BulkSaveKeyTimelinesAsync(
+                It.Is<List<KeyTimeline>>(t =>
+                    t.Count == 1 &&
+                    t[0].EntityId == "key-changed"),
+                "proj"), Times.Once);
+        }
+
+        [Fact]
+        public async Task CreateNoChangePublishTimelineEntryAsync_CreatesEntryWithNullData()
+        {
+            // Arrange
+            _keyTimelineRepositoryMock.Setup(r => r.BulkSaveKeyTimelinesAsync(
+                It.IsAny<List<KeyTimeline>>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+
+            // Act
+            await _service.CreateNoChangePublishTimelineEntryAsync(LogFromConstants.Published, "proj");
+
+            // Assert
+            _keyTimelineRepositoryMock.Verify(r => r.BulkSaveKeyTimelinesAsync(
+                It.Is<List<KeyTimeline>>(t =>
+                    t.Count == 1 &&
+                    t[0].EntityId == null &&
+                    t[0].CurrentData == null &&
+                    t[0].PreviousData == null &&
+                    t[0].LogFrom == LogFromConstants.Published &&
+                    t[0].OperationId != null),
+                "proj"), Times.Once);
+        }
+
+        [Fact]
+        public async Task CreateNoChangePublishTimelineEntryAsync_DoesNotThrowOnError()
+        {
+            // Arrange
+            _keyTimelineRepositoryMock.Setup(r => r.BulkSaveKeyTimelinesAsync(
+                It.IsAny<List<KeyTimeline>>(), It.IsAny<string>()))
+                .ThrowsAsync(new Exception("DB error"));
+
+            // Act & Assert — should not throw
+            await _service.Invoking(s => s.CreateNoChangePublishTimelineEntryAsync(LogFromConstants.Published, "proj"))
+                .Should().NotThrowAsync();
+        }
+
+        [Fact]
+        public async Task GenerateAsync_AllUnchangedKeys_CreatesSingleNoChangeEntry()
+        {
+            // Arrange — two keys, both unchanged
+            var languages = new List<Language>
+            {
+                new Language { LanguageCode = "en-US", LanguageName = "English" }
+            };
+            var modules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule { ItemId = "module-id", ModuleName = "auth" }
+            };
+            var keys = new List<Key>
+            {
+                new KeyModel
+                {
+                    ItemId = "key-1",
+                    KeyName = "key.one",
+                    ModuleId = "module-id",
+                    Resources = new[] { new Resource { Culture = "en-US", Value = "Hello" } }
+                },
+                new KeyModel
+                {
+                    ItemId = "key-2",
+                    KeyName = "key.two",
+                    ModuleId = "module-id",
+                    Resources = new[] { new Resource { Culture = "en-US", Value = "World" } }
+                }
+            };
+
+            _languageManagementServiceMock.Setup(m => m.GetLanguagesAsync()).ReturnsAsync(languages);
+            _moduleManagementServiceMock.Setup(m => m.GetModulesAsync(It.IsAny<string>())).ReturnsAsync(modules);
+            _keyRepositoryMock.Setup(r => r.GetAllKeysByModuleAsync("module-id")).ReturnsAsync(keys);
+            _keyRepositoryMock.Setup(r => r.DeleteOldUilmFiles(It.IsAny<List<UilmFile>>())).ReturnsAsync(0L);
+            _keyRepositoryMock.Setup(r => r.SaveNewUilmFiles(It.IsAny<List<UilmFile>>())).ReturnsAsync(true);
+            _notificationServiceMock.Setup(n => n.NotifyExtensionEvent(true, It.IsAny<string>())).ReturnsAsync(true);
+
+            var previousTimelines = new Dictionary<string, KeyTimeline>
+            {
+                ["key-1"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-1",
+                        Resources = new[] { new Resource { Culture = "en-US", Value = "Hello" } }
+                    }
+                },
+                ["key-2"] = new KeyTimeline
+                {
+                    CurrentData = new BlocksLanguageKey
+                    {
+                        ItemId = "key-2",
+                        Resources = new[] { new Resource { Culture = "en-US", Value = "World" } }
+                    }
+                }
+            };
+            _keyTimelineRepositoryMock.Setup(r => r.GetLatestPublishTimelinesAsync(
+                It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(previousTimelines);
+
+            var command = new GenerateUilmFilesEvent { ModuleId = "module-id", ProjectKey = "proj" };
+
+            // Act
+            var result = await _service.GenerateAsync(command);
+
+            // Assert
+            result.Should().BeTrue();
+            // Should create exactly one no-change entry
+            _keyTimelineRepositoryMock.Verify(r => r.BulkSaveKeyTimelinesAsync(
+                It.Is<List<KeyTimeline>>(t =>
+                    t.Count == 1 &&
+                    t[0].EntityId == null &&
+                    t[0].CurrentData == null &&
+                    t[0].PreviousData == null &&
+                    t[0].LogFrom == LogFromConstants.Published),
+                "proj"), Times.Once);
+        }
+
+        #endregion
     }
 }
 

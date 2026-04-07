@@ -200,6 +200,16 @@ namespace DomainService.Repositories
                 filters.Add(filterBuilder.Eq(t => t.LogFrom, query.LogFrom));
             }
 
+            if (query.LogFromValues != null && query.LogFromValues.Any())
+            {
+                filters.Add(filterBuilder.In(t => t.LogFrom, query.LogFromValues));
+            }
+
+            if (query.ExcludeLogFromValues != null && query.ExcludeLogFromValues.Any())
+            {
+                filters.Add(filterBuilder.Nin(t => t.LogFrom, query.ExcludeLogFromValues));
+            }
+
             if (query.CreateDateRange != null)
             {
                 if (query.CreateDateRange.StartDate.HasValue)
