@@ -25,8 +25,6 @@ namespace DomainService.Services.HelperService
 
         public async Task<bool> NotifyExportEvent(bool response, string fileId, string? messageCoRelationId, string tenantId)
         {
-            //Console.WriteLine($"Notifcation Service : {UserId} -- {TenantId}");
-
             var requestData = new
             {
                 ConnectionId = messageCoRelationId,

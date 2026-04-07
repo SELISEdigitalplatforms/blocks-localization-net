@@ -21,9 +21,7 @@ namespace DomainService.Services.HelperService
 
         public async Task<bool> SaveIntoStorage(MemoryStream inputStream, string fileId, string fileName, Dictionary<string, object> metaData, string parentDirectoryId)
         {
-            _logger.LogInformation($"SaveIntoStorage: Saving file to storage -- fileId -- {fileId} -- fileName -- {fileName}");
-
-            //var token = await GetTokenFromContext();
+            _logger.LogInformation("SaveIntoStorage: Saving file to storage -- fileId -- {FileId} -- fileName -- {FileName}", fileId, fileName);
 
             Stream stream = new MemoryStream();
             await stream.WriteAsync(inputStream.ToArray(), 0, inputStream.ToArray().Length);
@@ -44,7 +42,6 @@ namespace DomainService.Services.HelperService
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Put, fileInfo?.UploadUrl) { Content = new StreamContent(stream) })
             {
                 AddAzureBlobHeaders(httpRequestMessage);
-                //var httpResponseMessage = await serviceClient.SendToHttpAsync(httpRequestMessage);
                 _httpClient = new HttpClient();
 
                 using var request = new HttpRequestMessage(HttpMethod.Put, fileInfo.UploadUrl)
@@ -71,54 +68,6 @@ namespace DomainService.Services.HelperService
                 _logger.LogError(ex.Message);
             }
         }
-
-        //public async Task<Stream> GetFileStream(FileData fileData, string token = null)
-        //{
-        //    token ??= await GetTokenFromContext();
-
-        //    var fileUrl = fileData.Url;
-
-        //    var fileDataRequest = new HttpRequestMessage(HttpMethod.Get, fileUrl);
-
-        //    if (fileData.AccessModifier == 2)
-        //    {
-        //        fileDataRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("bearer", token);
-        //    }
-
-        //    var httpResponseMessage = await serviceClient.SendToHttpAsync(fileDataRequest);
-
-        //    if (!httpResponseMessage.IsSuccessStatusCode)
-        //    {
-        //        return Stream.Null;
-        //    }
-
-        //    var memoryStream = new MemoryStream();
-
-        //    await httpResponseMessage.Content.CopyToAsync(memoryStream);
-
-        //    return memoryStream;
-        //}
-
-        //public async Task<FileData[]> GetFileInfosAsync(IEnumerable<string> filesToBeZipped, string token = null)
-        //{
-        //    token = await GetTokenFromContext();
-
-        //    var payload = new { FileIds = filesToBeZipped };
-
-        //    var fileInfos = await serviceClient.SendToHttpAsync<FileData[]>(HttpMethod.Post, appSettings.StorageServiceBaseUrl, storageServiceVersion, "StorageService/StorageQuery/GetFiles", payload, token);
-
-        //    return fileInfos;
-        //}
-
-        //private async Task<string> GetTokenFromContext()
-        //{
-        //    return await _accessTokenProviderService.GetTheAccessTokenOfAdmin(_securityContextProvider.GetSecurityContext().TenantId);
-        //}
-
-        //public class FileInfo : FileData
-        //{
-        //    public MemoryStream fileStream { get; set; }
-        //}
     }
 }
 
