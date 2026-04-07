@@ -7,6 +7,8 @@ namespace DomainService.Services.HelperService
 {
     public class NotificationService : INotificationService
     {
+        private const string RootTenantIdKey = "RootTenantId";
+
         private readonly ICryptoService _cryptoService;
         private readonly ITenants _tenants;
         private readonly IConfiguration _configuration;
@@ -47,8 +49,8 @@ namespace DomainService.Services.HelperService
                 ResponseValue = response.ToString(),
 			};
 
-            var blocksKey = _configuration["RootTenantId"];
-            var rootTenantId = _configuration["RootTenantId"];
+            var blocksKey = _configuration[RootTenantIdKey];
+            var rootTenantId = _configuration[RootTenantIdKey];
             var salt = _tenants.GetTenantByID(rootTenantId)?.TenantSalt;
             var actulalSecret = _cryptoService.Hash(rootTenantId, salt);
 
@@ -85,8 +87,8 @@ namespace DomainService.Services.HelperService
                 ResponseValue = "Successfully translated all keys"
             };
 
-            var blocksKey = _configuration["RootTenantId"];
-            var rootTenantId = _configuration["RootTenantId"];
+            var blocksKey = _configuration[RootTenantIdKey];
+            var rootTenantId = _configuration[RootTenantIdKey];
             var salt = _tenants.GetTenantByID(rootTenantId)?.TenantSalt;
             var actulalSecret = _cryptoService.Hash(rootTenantId, salt);
 
@@ -123,8 +125,8 @@ namespace DomainService.Services.HelperService
                 ResponseValue = "Successfully translated language key"
             };
 
-            var blocksKey = _configuration["RootTenantId"];
-            var rootTenantId = _configuration["RootTenantId"];
+            var blocksKey = _configuration[RootTenantIdKey];
+            var rootTenantId = _configuration[RootTenantIdKey];
             var salt = _tenants.GetTenantByID(rootTenantId)?.TenantSalt;
             var actulalSecret = _cryptoService.Hash(rootTenantId, salt);
 
@@ -163,8 +165,8 @@ namespace DomainService.Services.HelperService
                 ResponseValue = response ? "Migration completed" : "Migration failed"
             };
 
-            var blocksKey = _configuration["RootTenantId"];
-            var rootTenantId = _configuration["RootTenantId"];
+            var blocksKey = _configuration[RootTenantIdKey];
+            var rootTenantId = _configuration[RootTenantIdKey];
             var salt = _tenants.GetTenantByID(rootTenantId)?.TenantSalt;
             var actulalSecret = _cryptoService.Hash(rootTenantId, salt);
 
