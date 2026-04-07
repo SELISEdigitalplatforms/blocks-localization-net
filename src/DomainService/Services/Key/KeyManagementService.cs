@@ -1577,7 +1577,7 @@ namespace DomainService.Services
         {
             if (string.IsNullOrWhiteSpace(appId))
             {
-                appId = HandleApplicationWithoutAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, isPartiallyTranslated, moduleName);
+                appId = HandleApplicationWithoutAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, moduleName);
             }
             else
             {
@@ -1588,7 +1588,7 @@ namespace DomainService.Services
         }
 
         private string HandleApplicationWithoutAppId(List<BlocksLanguageModule> dbApplications, List<BlocksLanguageModule> uilmApplicationsToBeInserted,
-            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, bool isPartiallyTranslated, string moduleName)
+            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string moduleName)
         {
             string appId;
             var application = dbApplications?.FirstOrDefault(x => x.ModuleName == moduleName);
