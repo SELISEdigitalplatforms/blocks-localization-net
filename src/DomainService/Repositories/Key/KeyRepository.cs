@@ -382,8 +382,6 @@ namespace DomainService.Repositories
                 await dataBase.GetCollection<BlocksLanguageModule>("BlocksLanguageModules")
                     .BulkWriteAsync(bulkOpsExtUpserts);
             }
-
-            return;
         }
 
         public async Task<bool> UpdateKeysCountOfAppAsync(string appId, bool isExternal, string tenantId, string organizationId)
@@ -504,7 +502,7 @@ namespace DomainService.Repositories
             };
         }
 
-        private FilterDefinition<UilmExportedFile> GetUilmExportedFilesFilter(GetUilmExportedFilesRequest request)
+        private static FilterDefinition<UilmExportedFile> GetUilmExportedFilesFilter(GetUilmExportedFilesRequest request)
         {
             var builder = Builders<UilmExportedFile>.Filter;
             var filters = new List<FilterDefinition<UilmExportedFile>>();

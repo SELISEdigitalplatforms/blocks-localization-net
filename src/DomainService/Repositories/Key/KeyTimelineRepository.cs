@@ -145,7 +145,7 @@ namespace DomainService.Repositories
             return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
-        private FilterDefinition<KeyTimeline> GetTimelineFilter(GetKeyTimelineRequest request)
+        private static FilterDefinition<KeyTimeline> GetTimelineFilter(GetKeyTimelineRequest request)
         {
             var builder = Builders<KeyTimeline>.Filter;
             var filters = new List<FilterDefinition<KeyTimeline>>();
