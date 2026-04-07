@@ -10,5 +10,6 @@ namespace DomainService.Repositories
         Task<KeyTimeline?> GetTimelineByItemIdAsync(string itemId);
         Task<GetLocalizationTimelineResponse> GetLocalizationTimelineAsync(GetLocalizationTimelineRequest query);
         Task<GetKeyTimelineQueryResponse> GetTimelineByOperationIdAsync(GetTimelineByOperationIdRequest query);
+        Task<Dictionary<string, KeyTimeline>> GetLatestPublishTimelinesAsync(List<string> entityIds, string targetedProjectKey);
     }
 }
