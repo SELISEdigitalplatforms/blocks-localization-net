@@ -210,6 +210,74 @@ namespace XUnitTest.Repositories
         }
 
         [Fact]
+        public async Task GetAllKeysAsync_WithSearchKey_FiltersKeyName()
+        {
+            var keys = new List<Key> { new Key { ItemId = "k1", KeyName = "welcome_msg", ModuleId = "m1" } };
+            MockCursorHelper.SetupFindAsync(_keyCollection, keys);
+            MockCursorHelper.SetupCountDocuments(_keyCollection, 1);
+
+            var request = new GetKeysRequest
+            {
+                PageNumber = 0,
+                PageSize = 10,
+                SearchKey = "welcome"
+            };
+
+            var result = await _repo.GetAllKeysAsync(request);
+            result.Keys.Should().HaveCount(1);
+        }
+
+        [Fact]
+        public async Task GetAllKeysAsync_WithSearchKeyAndResourceSearchFilters_FiltersBoth()
+        {
+            var keys = new List<Key>
+            {
+                new Key
+                {
+                    ItemId = "k1",
+                    KeyName = "greeting",
+                    ModuleId = "m1",
+                    Resources = new[] { new Resource { Culture = "en", Value = "Hello" } }
+                }
+            };
+            MockCursorHelper.SetupFindAsync(_keyCollection, keys);
+            MockCursorHelper.SetupCountDocuments(_keyCollection, 1);
+
+            var request = new GetKeysRequest
+            {
+                PageNumber = 0,
+                PageSize = 10,
+                SearchKey = "greet",
+                ResourceSearchFilters = new[]
+                {
+                    new ResourceSearchFilter { Culture = "en", SearchText = "Hello" }
+                }
+            };
+
+            var result = await _repo.GetAllKeysAsync(request);
+            result.Keys.Should().HaveCount(1);
+        }
+
+        [Fact]
+        public async Task GetAllKeysAsync_WithKeySearchTextAndSearchKey_AppliesBothFilters()
+        {
+            var keys = new List<Key> { new Key { ItemId = "k1", KeyName = "test_key", ModuleId = "m1" } };
+            MockCursorHelper.SetupFindAsync(_keyCollection, keys);
+            MockCursorHelper.SetupCountDocuments(_keyCollection, 1);
+
+            var request = new GetKeysRequest
+            {
+                PageNumber = 0,
+                PageSize = 10,
+                KeySearchText = "test",
+                SearchKey = "test_key"
+            };
+
+            var result = await _repo.GetAllKeysAsync(request);
+            result.Keys.Should().HaveCount(1);
+        }
+
+        [Fact]
         public async Task GetAllKeysAsync_WithSingleModuleId_FiltersCorrectly()
         {
             var keys = new List<Key> { new Key { ItemId = "k1", KeyName = "key1", ModuleId = "m1" } };
