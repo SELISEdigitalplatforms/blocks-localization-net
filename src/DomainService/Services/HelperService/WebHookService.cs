@@ -28,14 +28,8 @@ namespace DomainService.Services.HelperService
 
         public async Task<ApiResponse> SaveWebhookAsync(BlocksWebhook webhook)
         {
-            //var validationResult = await _validator.ValidateAsync(webhook);
-
-            //if (!validationResult.IsValid)
-            //    return new ApiResponse(string.Empty, validationResult.Errors);
-
             try
             {
-                //var repoModule = await MappedIntoRepoModuleAsync(webhook);
                 await _blocksWebhookRepository.SaveAsync(webhook);
             }
             catch (Exception ex)

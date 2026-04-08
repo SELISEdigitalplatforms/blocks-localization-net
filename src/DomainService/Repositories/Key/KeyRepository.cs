@@ -90,7 +90,15 @@ namespace DomainService.Repositories
             if (!string.IsNullOrWhiteSpace(query.KeySearchText))
             {
                 var keyNameFilter = filterBuilder.Regex("KeyName", new BsonRegularExpression($".*{query.KeySearchText}.*", "i"));
-                matchFilters.Add(keyNameFilter);
+                var resourceValueFilter = filterBuilder.ElemMatch(x => x.Resources,
+                    Builders<Resource>.Filter.Regex(r => r.Value, new BsonRegularExpression($".*{query.KeySearchText}.*", "i")));
+                matchFilters.Add(filterBuilder.Or(keyNameFilter, resourceValueFilter));
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.SearchKey))
+            {
+                var searchKeyFilter = filterBuilder.Regex("KeyName", new BsonRegularExpression($".*{query.SearchKey}.*", "i"));
+                matchFilters.Add(searchKeyFilter);
             }
 
             if (query.ResourceSearchFilters != null && query.ResourceSearchFilters.Length > 0)
@@ -385,26 +393,17 @@ namespace DomainService.Repositories
             {
                 var filter = Builders<BsonDocument>.Filter.Eq("_id", uilmApplication.ItemId);
                 var update = Builders<BsonDocument>.Update.Set("Name", uilmApplication.Name);
-                //if (!isExternal)
-                //{
-                    bulkOpsInt.Add(new UpdateOneModel<BsonDocument>(filter, update));
 
-                    var upsert = Builders<BlocksLanguageModule>.Update.Set(x => x.Name, uilmApplication.Name)
-                        .SetOnInsert(x => x.ItemId, Guid.NewGuid().ToString());
-                    var filterForUpsert = Builders<BlocksLanguageModule>.Filter.Eq(x => x.ItemId, uilmApplication.ItemId);
-                    bulkOpsExtUpserts.Add(new UpdateOneModel<BlocksLanguageModule>(filterForUpsert, upsert) { IsUpsert = true });
-                //}
-                //else
-                //{
-                //    bulkOpsExt.Add(new UpdateOneModel<BsonDocument>(filter, update));
-                //}
+                bulkOpsInt.Add(new UpdateOneModel<BsonDocument>(filter, update));
+
+                var upsert = Builders<BlocksLanguageModule>.Update.Set(x => x.Name, uilmApplication.Name)
+                    .SetOnInsert(x => x.ItemId, Guid.NewGuid().ToString());
+                var filterForUpsert = Builders<BlocksLanguageModule>.Filter.Eq(x => x.ItemId, uilmApplication.ItemId);
+                bulkOpsExtUpserts.Add(new UpdateOneModel<BlocksLanguageModule>(filterForUpsert, upsert) { IsUpsert = true });
             }
 
-            //if (!isExternal)
-            //{
-                await dataBase.GetCollection<BsonDocument>("UilmApplications")
-                    .BulkWriteAsync(bulkOpsInt);
-            //}
+            await dataBase.GetCollection<BsonDocument>("UilmApplications")
+                .BulkWriteAsync(bulkOpsInt);
 
             if (bulkOpsExt.Count > 0)
             {

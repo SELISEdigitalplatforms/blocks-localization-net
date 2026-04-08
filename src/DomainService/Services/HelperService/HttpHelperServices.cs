@@ -34,7 +34,7 @@ namespace DomainService.Services.HelperService
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error making GET request to: {Url} ", url, ex.Message);
+                Console.WriteLine($"Error making GET request to: {url}, Exception: {ex.Message}");
                 return (null, "Operation Failed.");
             }
         }
@@ -49,7 +49,7 @@ namespace DomainService.Services.HelperService
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error making POST request to: {Url}", url);
+                Console.WriteLine($"Error making POST request to: {url}");
                 return (null, "Operation Failed.");
             }
         }
@@ -148,32 +148,22 @@ namespace DomainService.Services.HelperService
 
             try
             {
-                _logger.LogInformation($"Started processing the API request. MethodType: {httpRequestMessage.Method}, " +
-                    $"BaseUrl: {_httpClient.BaseAddress}, ApiName: {httpRequestMessage.RequestUri}");
-
+                _logger.LogInformation("Started processing the API request. MethodType: {MethodType}, BaseUrl: {BaseUrl}, ApiName: {ApiName}",
+                    httpRequestMessage.Method, _httpClient.BaseAddress, httpRequestMessage.RequestUri);
 
                 requestResponse = await _httpClient.SendAsync(httpRequestMessage);
 
-                // response.HttpStatusCode = requestResponse.StatusCode;
-                // response.ResponseData = await requestResponse.Content.ReadAsStringAsync();
-
-                _logger.LogInformation($"Completed processing the API request. MethodType: " +
-                    $"{httpRequestMessage.Method}, BaseUrl: {_httpClient.BaseAddress}, " +
-                    $"ApiName: {httpRequestMessage.RequestUri}" +
-                    $"SerializedResponse: {JsonSerializer.Serialize(requestResponse)}");
+                _logger.LogInformation("Completed processing the API request. MethodType: {MethodType}, BaseUrl: {BaseUrl}, ApiName: {ApiName}, SerializedResponse: {SerializedResponse}",
+                    httpRequestMessage.Method, _httpClient.BaseAddress, httpRequestMessage.RequestUri, JsonSerializer.Serialize(requestResponse));
             }
             catch (BrokenCircuitException ex)
             {
-                _logger.LogError($"Circuit breaker Exception occurred while processing the API request. " +
-                    $"MethodType: {httpRequestMessage.Method}, BaseUrl: {_httpClient.BaseAddress}, " +
-                    $"ApiName: {httpRequestMessage.RequestUri}, Reason: {ex.Message}");
-
+                _logger.LogError(ex, "Circuit breaker Exception occurred while processing the API request. MethodType: {MethodType}, BaseUrl: {BaseUrl}, ApiName: {ApiName}, Reason: {Reason}",
+                    httpRequestMessage.Method, _httpClient.BaseAddress, httpRequestMessage.RequestUri, ex.Message);
                 throw;
             }
 
             return requestResponse;
         }
-        
-
     }
 }

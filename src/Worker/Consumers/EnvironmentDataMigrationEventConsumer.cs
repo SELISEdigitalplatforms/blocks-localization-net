@@ -54,19 +54,9 @@ namespace Worker.Consumers
                         QueueName = Constants.EnvironmentDataMigrationQueue
                     };
 
-                    // await _migrationRepository.UpdateMigrationTrackerAsync(@event.TrackerId, languageServiceStatus);
                     await NotifyMigrationCompletion(@event.TrackerId, isSuccess: true);
                     _logger.LogInformation("Updated migration tracker {TrackerId} for LanguageService completion", @event.TrackerId);
                 }
-
-                // Send notification for successful migration
-                // await _keyManagementService.PublishEnvironmentDataMigrationNotification(
-                //     response: true,
-                //     messageCoRelationId: @event.TrackerId,
-                //     projectKey: @event.ProjectKey,
-                //     targetedProjectKey: @event.TargetedProjectKey);
-
-                
 
                 _logger.LogInformation("Environment data migration completed successfully from {ProjectKey} to {TargetedProjectKey}",
                     @event.ProjectKey, @event.TargetedProjectKey);
@@ -87,7 +77,6 @@ namespace Worker.Consumers
                             QueueName = Constants.EnvironmentDataMigrationQueue
                         };
 
-                        // await _migrationRepository.UpdateMigrationTrackerAsync(@event.TrackerId, languageServiceErrorStatus);
                         _logger.LogInformation("Updated migration tracker {TrackerId} with error status", @event.TrackerId);
                     }
                     catch (Exception trackerEx)

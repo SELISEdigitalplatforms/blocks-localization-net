@@ -54,7 +54,7 @@ namespace DomainService.Services
             }
             if (retryCount >= maxRetryCount)
             {
-                _logger.LogError($"SuggestTranslation -> CallAiCompletion: Maximum Retry count reached");
+                _logger.LogError("SuggestTranslation -> CallAiCompletion: Maximum Retry count reached");
                 return null;
             }
 
@@ -66,12 +66,6 @@ namespace DomainService.Services
         {
             var context = !string.IsNullOrWhiteSpace(request.ElementDetailContext) ? request.ElementDetailContext :
                 $"The requirement is to translate a user interface element of a webpage. Output only the translated text (no quotes, no explanation).";
-            //var context = !string.IsNullOrWhiteSpace(request.ElementDetailContext) ? request.ElementDetailContext: $"The requirement is to translate a user interface element of a webpage. The output should include only the text of the specified element, without any additional text or quotes.";
-            // context += request.MaxCharacterLength > 0 ? $"Ideally,it should not exceed {request.MaxCharacterLength} Characters." : "";
-            // context += !string.IsNullOrEmpty(request.ElementType) ? $"The element type in question is '{request.ElementType}'." : "";
-            // context += !string.IsNullOrEmpty(request.ElementApplicationContext) ? $"The element application context in question is '{request.ElementApplicationContext}'." : "";
-            // context += !string.IsNullOrEmpty(request.ElementDetailContext) ? $"The element detail context in question is: '{request.ElementDetailContext}'." : "";
-            //context += $"\nConsidering the above, translate the following from {request.CurrentLanguage} to {request.DestinationLanguage}:'{request.SourceText}'.";
             context += $"Translate the following from {request.CurrentLanguage} to {request.DestinationLanguage}: '{request.SourceText}'";
             return context;
         }
@@ -133,7 +127,7 @@ namespace DomainService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError($"AiCompletionCommandHandler: {ex}");
+                _logger.LogError(ex, "AiCompletionCommandHandler: Exception occurred");
             }
 
             return null;
@@ -211,10 +205,6 @@ namespace DomainService.Services
 
                 httpRequestMessage.Content = jsonContent;
             }
-            //if (streamContent != null)
-            //{
-            //    httpRequestMessage.Content = streamContent;
-            //}
 
             return httpRequestMessage;
         }
@@ -226,8 +216,8 @@ namespace DomainService.Services
 
             try
             {
-                _logger.LogInformation($"Started processing the API request. MethodType: {httpRequestMessage.Method}, " +
-                    $"BaseUrl: {_httpClient.BaseAddress}, ApiName: {httpRequestMessage.RequestUri}");
+                _logger.LogInformation("Started processing the API request. MethodType: {MethodType}, BaseUrl: {BaseUrl}, ApiName: {ApiName}",
+                    httpRequestMessage.Method, _httpClient.BaseAddress, httpRequestMessage.RequestUri);
 
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", secret);
 
@@ -236,17 +226,13 @@ namespace DomainService.Services
                 response.HttpStatusCode = requestResponse.StatusCode;
                 response.ResponseData = await requestResponse.Content.ReadAsStringAsync();
 
-                _logger.LogInformation($"Completed processing the API request. MethodType: " +
-                    $"{httpRequestMessage.Method}, BaseUrl: {_httpClient.BaseAddress}, " +
-                    $"ApiName: {httpRequestMessage.RequestUri}" +
-                    $"SerializedResponse: {JsonConvert.SerializeObject(response)}");
+                _logger.LogInformation("Completed processing the API request. MethodType: {MethodType}, BaseUrl: {BaseUrl}, ApiName: {ApiName}, SerializedResponse: {SerializedResponse}",
+                    httpRequestMessage.Method, _httpClient.BaseAddress, httpRequestMessage.RequestUri, JsonConvert.SerializeObject(response));
             }
             catch (BrokenCircuitException ex)
             {
-                _logger.LogError($"Circuit breaker Exception occurred while processing the API request. " +
-                    $"MethodType: {httpRequestMessage.Method}, BaseUrl: {_httpClient.BaseAddress}, " +
-                    $"ApiName: {httpRequestMessage.RequestUri}, Reason: {ex.Message}");
-
+                _logger.LogError(ex, "Circuit breaker Exception occurred while processing the API request. MethodType: {MethodType}, BaseUrl: {BaseUrl}, ApiName: {ApiName}, Reason: {Reason}",
+                    httpRequestMessage.Method, _httpClient.BaseAddress, httpRequestMessage.RequestUri, ex.Message);
                 throw;
             }
 
