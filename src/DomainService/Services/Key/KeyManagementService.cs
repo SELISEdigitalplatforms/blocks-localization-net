@@ -1053,7 +1053,7 @@ namespace DomainService.Services
                 var moduleName = languageJsonModel?.Module;
                 var keyName = languageJsonModel.KeyName;
 
-                appId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, 
+                appId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId,
                     isPartiallyTranslated, moduleName);
 
                 var olduilmResourceKey = await GetUilmResourceKey(appId, keyName);
@@ -1064,27 +1064,26 @@ namespace DomainService.Services
                 BlocksLanguageKey uilmResourceKey = new()
                 {
                     KeyName = keyName,
-                    Resources = languageJsonModel.Resources,
+                    Resources = mergedResources,
                     ItemId = id,
                     ModuleId = appId,
                     IsPartiallyTranslated = isPartiallyTranslated,
-                    CreateDate = DateTime.UtcNow,
+                    CreateDate = olduilmResourceKey?.CreateDate ?? DateTime.UtcNow,
                     LastUpdateDate = DateTime.UtcNow,
                     Value = string.Empty, // Value field is not exported, set to empty
-                    Routes = languageJsonModel.Routes
+                    Routes = languageJsonModel.Routes ?? olduilmResourceKey?.Routes
                 };
-
-                //var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
-                var olduilmResourceKey = await GetUilmResourceKey(uilmResourceKey.ModuleId, uilmResourceKey.KeyName);
-
-                uilmResourceKey.ItemId = string.IsNullOrWhiteSpace(uilmResourceKey.ItemId) ? Guid.NewGuid().ToString() : uilmResourceKey.ItemId;
 
                 if (olduilmResourceKey == null)
                 {
+                    // Key doesn't exist - always generate a new ItemId to avoid conflicts with non-GUID ItemIds from import
+                    uilmResourceKey.ItemId = Guid.NewGuid().ToString();
                     resourceKeysWithoutId.Add(uilmResourceKey);
                 }
                 else
                 {
+                    // Key exists - use the existing ItemId for update to ensure we update the correct record
+                    uilmResourceKey.ItemId = olduilmResourceKey.ItemId;
                     oldUilmResourceKeys.Add(olduilmResourceKey);
                     uilmResourceKeys.Add(uilmResourceKey);
                 }
