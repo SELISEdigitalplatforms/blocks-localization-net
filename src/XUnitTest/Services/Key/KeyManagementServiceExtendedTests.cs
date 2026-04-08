@@ -2455,8 +2455,8 @@ namespace XUnitTest
                 .ReturnsAsync((BlocksLanguageKey?)null); // No existing keys
 
             List<BlocksLanguageKey>? capturedKeys = null;
-            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .Callback<List<BlocksLanguageKey>, string?>((keys, _) => capturedKeys = keys)
+            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Callback((IEnumerable<BlocksLanguageKey> keys, string _) => capturedKeys = keys.ToList())
                 .Returns(Task.CompletedTask);
 
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
@@ -2490,8 +2490,8 @@ namespace XUnitTest
                 .ReturnsAsync((BlocksLanguageKey?)null);
 
             List<BlocksLanguageKey>? capturedKeys = null;
-            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .Callback<List<BlocksLanguageKey>, string?>((keys, _) => capturedKeys = keys)
+            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Callback((IEnumerable<BlocksLanguageKey> keys, string _) => capturedKeys = keys.ToList())
                 .Returns(Task.CompletedTask);
 
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
