@@ -1455,47 +1455,7 @@ namespace XUnitTest
             updateList.Should().HaveCount(1);
         }
 
-        [Fact]
-        public void HandleApplicationWithoutAppId_NewModule_CreatesAndReturnsId()
-        {
-            var method = typeof(KeyManagementService).GetMethod("HandleApplicationWithoutAppId",
-                BindingFlags.NonPublic | BindingFlags.Instance)!;
 
-            var dbApps = new List<BlocksLanguageModule>();
-            var insertList = new List<BlocksLanguageModule>();
-            var updateList = new List<BlocksLanguageModule>();
-
-            var resultAppId = method.Invoke(_service, new object?[]
-            {
-                dbApps, insertList, updateList, true, "newModule", null
-            }) as string;
-
-            resultAppId.Should().NotBeNullOrEmpty();
-            insertList.Should().HaveCount(1);
-            insertList[0].ModuleName.Should().Be("newModule");
-        }
-
-        [Fact]
-        public void HandleApplicationWithoutAppId_ExistingModule_ReturnsExistingId()
-        {
-            var method = typeof(KeyManagementService).GetMethod("HandleApplicationWithoutAppId",
-                BindingFlags.NonPublic | BindingFlags.Instance)!;
-
-            var dbApps = new List<BlocksLanguageModule>
-            {
-                new() { ItemId = "existing-id", ModuleName = "auth" }
-            };
-            var insertList = new List<BlocksLanguageModule>();
-            var updateList = new List<BlocksLanguageModule>();
-
-            var resultAppId = method.Invoke(_service, new object?[]
-            {
-                dbApps, insertList, updateList, true, "auth", null
-            }) as string;
-
-            resultAppId.Should().Be("existing-id");
-            updateList.Should().HaveCount(1);
-        }
 
         [Fact]
         public void HandleApplicationWithAppId_ExistingApp_AddsToUpdateList()

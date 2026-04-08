@@ -319,7 +319,7 @@ namespace DomainService.Repositories
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
 
-            IMongoCollection<BlocksLanguageKey> collection = dataBase.GetCollection<BlocksLanguageKey>("BlocksLanguageKeys");
+            IMongoCollection<BlocksLanguageKey> collection = dataBase.GetCollection<BlocksLanguageKey>(_collectionName);
             List<WriteModel<BlocksLanguageKey>> bulkOps = new List<WriteModel<BlocksLanguageKey>>();
 
             foreach (BlocksLanguageKey uilmResourceKey in uilmResourceKeys)
@@ -358,7 +358,7 @@ namespace DomainService.Repositories
         public async Task<List<BlocksLanguageKey>> GetUilmResourceKeys(Expression<Func<BlocksLanguageKey, bool>> expression, string tenantId)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            return await dataBase.GetCollection<BlocksLanguageKey>("BlocksLanguageKeys").Find(expression).ToListAsync();
+            return await dataBase.GetCollection<BlocksLanguageKey>(_collectionName).Find(expression).ToListAsync();
         }
 
         public async Task<List<T>> GetUilmResourceKeys<T>(Expression<Func<BlocksLanguageKey, bool>> expression)
@@ -372,13 +372,13 @@ namespace DomainService.Repositories
         public async Task InsertUilmResourceKeys(IEnumerable<BlocksLanguageKey> entities, string tenantId)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            await dataBase.GetCollection<BlocksLanguageKey>("BlocksLanguageKeys").InsertManyAsync(entities);
+            await dataBase.GetCollection<BlocksLanguageKey>(_collectionName).InsertManyAsync(entities);
         }
 
         public async Task InsertUilmResourceKeys(IEnumerable<BlocksLanguageKey> entities)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            await dataBase.GetCollection<BlocksLanguageKey>("BlocksLanguageKeys").InsertManyAsync(entities);
+            await dataBase.GetCollection<BlocksLanguageKey>(_collectionName).InsertManyAsync(entities);
         }
 
         /// <summary>
@@ -527,8 +527,6 @@ namespace DomainService.Repositories
                 await dataBase.GetCollection<BlocksLanguageModule>("BlocksLanguageModules")
                     .BulkWriteAsync(bulkOpsExtUpserts);
             }
-
-            return;
         }
 
         public async Task<bool> UpdateKeysCountOfAppAsync(string appId, bool isExternal, string tenantId, string organizationId)
@@ -552,7 +550,7 @@ namespace DomainService.Repositories
             else
             {
                 countFilter &= Builders<BsonDocument>.Filter.Eq("OrganizationId", organizationId);
-                resourceKeyCount = await dataBase.GetCollection<BsonDocument>("BlocksLanguageKeys").CountDocumentsAsync(countFilter);
+                resourceKeyCount = await dataBase.GetCollection<BsonDocument>(_collectionName).CountDocumentsAsync(countFilter);
                 await dataBase.GetCollection<BsonDocument>("BlocksLanguageApplications")
                 .UpdateOneAsync(filter, Builders<BsonDocument>.Update.Set("NumberOfKeys", resourceKeyCount));
             }
@@ -597,7 +595,7 @@ namespace DomainService.Repositories
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
             var result = new Dictionary<string, long>();
 
-            var validCollections = new List<string> { "BlocksLanguageKeys", "BlocksLanguages", "BlocksLanguageModules", "UilmFiles" };
+            var validCollections = new List<string> { _collectionName, "BlocksLanguages", "BlocksLanguageModules", "UilmFiles" };
 
             foreach (var collection in collections)
             {
@@ -649,7 +647,7 @@ namespace DomainService.Repositories
             };
         }
 
-        private FilterDefinition<UilmExportedFile> GetUilmExportedFilesFilter(GetUilmExportedFilesRequest request)
+        private static FilterDefinition<UilmExportedFile> GetUilmExportedFilesFilter(GetUilmExportedFilesRequest request)
         {
             var builder = Builders<UilmExportedFile>.Filter;
             var filters = new List<FilterDefinition<UilmExportedFile>>();
