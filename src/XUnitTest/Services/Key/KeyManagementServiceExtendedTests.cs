@@ -1167,14 +1167,16 @@ namespace XUnitTest
 
         #endregion
 
-        #region SaveUilmResourceKey (private) - Using Upsert
+        #region SaveUilmResourceKey (private) - Using Update and Insert Methods
 
         [Fact]
-        public async Task SaveUilmResourceKey_UsesUpsertForAllKeys()
+        public async Task SaveUilmResourceKey_UsesUpdateAndInsertMethods()
         {
-            // Setup the new UpsertResourceKeysWithMergeAsync method
-            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .ReturnsAsync((2L, 1L));
+            // SaveUilmResourceKey uses the old methods: UpdateUilmResourceKeysForChangeAll and InsertUilmResourceKeys
+            _keyRepositoryMock.Setup(r => r.UpdateUilmResourceKeysForChangeAll(It.IsAny<List<BlocksLanguageKey>>()))
+                .ReturnsAsync(1L);
+            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
 
@@ -1196,10 +1198,11 @@ namespace XUnitTest
             var task = method.Invoke(_service, new object?[] { updates, inserts, null }) as Task;
             await task!;
 
-            // Verify upsert is called with combined keys
-            _keyRepositoryMock.Verify(r => r.UpsertResourceKeysWithMergeAsync(
-                It.Is<IEnumerable<BlocksLanguageKey>>(keys => keys.Count() == 2), 
-                It.IsAny<string>()), Times.Once);
+            // Verify the OLD methods are called (not upsert)
+            _keyRepositoryMock.Verify(r => r.UpdateUilmResourceKeysForChangeAll(
+                It.Is<List<BlocksLanguageKey>>(keys => keys.Count == 1)), Times.Once);
+            _keyRepositoryMock.Verify(r => r.InsertUilmResourceKeys(
+                It.Is<List<BlocksLanguageKey>>(keys => keys.Count == 1), It.IsAny<string>()), Times.Once);
         }
 
         [Fact]
@@ -1223,10 +1226,11 @@ namespace XUnitTest
         }
 
         [Fact]
-        public async Task SaveUilmResourceKey_OnlyUpdates_CallsUpsert()
+        public async Task SaveUilmResourceKey_OnlyUpdates_CallsUpdateMethod()
         {
-            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .ReturnsAsync((0L, 1L));
+            // SaveUilmResourceKey uses UpdateUilmResourceKeysForChangeAll for updates
+            _keyRepositoryMock.Setup(r => r.UpdateUilmResourceKeysForChangeAll(It.IsAny<List<BlocksLanguageKey>>()))
+                .ReturnsAsync(1L);
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
 
@@ -1248,16 +1252,16 @@ namespace XUnitTest
             var task = method.Invoke(_service, new object?[] { updates, new List<BlocksLanguageKey>(), oldKeys }) as Task;
             await task!;
 
-            _keyRepositoryMock.Verify(r => r.UpsertResourceKeysWithMergeAsync(
-                It.Is<IEnumerable<BlocksLanguageKey>>(keys => keys.Count() == 1), 
-                It.IsAny<string>()), Times.Once);
+            _keyRepositoryMock.Verify(r => r.UpdateUilmResourceKeysForChangeAll(
+                It.Is<List<BlocksLanguageKey>>(keys => keys.Count == 1)), Times.Once);
         }
 
         [Fact]
-        public async Task SaveUilmResourceKey_OnlyInserts_CallsUpsert()
+        public async Task SaveUilmResourceKey_OnlyInserts_CallsInsertMethod()
         {
-            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .ReturnsAsync((1L, 0L));
+            // SaveUilmResourceKey uses InsertUilmResourceKeys for inserts
+            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
 
@@ -1275,16 +1279,16 @@ namespace XUnitTest
             var task = method.Invoke(_service, new object?[] { new List<BlocksLanguageKey>(), inserts, null }) as Task;
             await task!;
 
-            _keyRepositoryMock.Verify(r => r.UpsertResourceKeysWithMergeAsync(
-                It.Is<IEnumerable<BlocksLanguageKey>>(keys => keys.Count() == 1), 
+            _keyRepositoryMock.Verify(r => r.InsertUilmResourceKeys(
+                It.Is<List<BlocksLanguageKey>>(keys => keys.Count == 1), 
                 It.IsAny<string>()), Times.Once);
         }
 
         [Fact]
         public async Task SaveUilmResourceKey_CreatesTimelineForUpdates()
         {
-            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .ReturnsAsync((0L, 1L));
+            _keyRepositoryMock.Setup(r => r.UpdateUilmResourceKeysForChangeAll(It.IsAny<List<BlocksLanguageKey>>()))
+                .ReturnsAsync(1L);
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
 
@@ -1312,8 +1316,8 @@ namespace XUnitTest
         [Fact]
         public async Task SaveUilmResourceKey_CreatesTimelineForInserts()
         {
-            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .ReturnsAsync((1L, 0L));
+            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
 
@@ -1336,11 +1340,13 @@ namespace XUnitTest
         }
 
         [Fact]
-        public async Task SaveUilmResourceKey_UpdatesAndInserts()
+        public async Task SaveUilmResourceKey_UpdatesAndInserts_CallsBothMethods()
         {
-            // Setup the new UpsertResourceKeysWithMergeAsync method
-            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .ReturnsAsync((2L, 1L));
+            // SaveUilmResourceKey uses the separate update and insert methods
+            _keyRepositoryMock.Setup(r => r.UpdateUilmResourceKeysForChangeAll(It.IsAny<List<BlocksLanguageKey>>()))
+                .ReturnsAsync(1L);
+            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
 
@@ -1362,8 +1368,9 @@ namespace XUnitTest
             var task = method.Invoke(_service, new object?[] { updates, inserts, null }) as Task;
             await task!;
 
-            // Verify the new upsert method is called instead of separate update/insert
-            _keyRepositoryMock.Verify(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()), Times.Once);
+            // Verify both the update and insert methods are called
+            _keyRepositoryMock.Verify(r => r.UpdateUilmResourceKeysForChangeAll(It.IsAny<List<BlocksLanguageKey>>()), Times.Once);
+            _keyRepositoryMock.Verify(r => r.InsertUilmResourceKeys(It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()), Times.Once);
         }
 
         #endregion
@@ -2350,21 +2357,18 @@ namespace XUnitTest
 
         #endregion
 
-        #region UpsertResourceKeysWithMergeAsync - Concurrent Import Tests
+        #region ProcessJsonFile Tests - Using Individual Lookups and Separate Update/Insert
 
         [Fact]
-        public async Task ProcessJsonFile_BatchFetchesExistingKeys()
+        public async Task ProcessJsonFile_CallsGetUilmResourceKeyForEachKey()
         {
-            // Setup batch fetch to return existing keys
-            _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
+            // ProcessJsonFile uses GetUilmResourceKey individually (not batch)
+            _keyRepositoryMock.Setup(r => r.GetUilmResourceKey(
                 It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<BlocksLanguageKey>
-                {
-                    new() { ItemId = "existing-id", KeyName = "key1", ModuleId = "m1" }
-                });
+                .ReturnsAsync((BlocksLanguageKey?)null);
 
-            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .ReturnsAsync((1L, 1L));
+            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
 
             _keyRepositoryMock.Setup(r => r.GetUilmApplications<BlocksLanguageModule>(
                 It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageModule, bool>>>()))
@@ -2394,9 +2398,9 @@ namespace XUnitTest
             var task = method.Invoke(_service, new object[] { dbApplications, languageJsonModels }) as Task;
             await task!;
 
-            // Verify batch fetch was called (not individual lookups)
-            _keyRepositoryMock.Verify(r => r.GetUilmResourceKeys(
-                It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()), Times.Once);
+            // Verify GetUilmResourceKey was called for each key individually
+            _keyRepositoryMock.Verify(r => r.GetUilmResourceKey(
+                It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()), Times.Exactly(2));
         }
 
         [Fact]
@@ -2410,14 +2414,14 @@ namespace XUnitTest
                 Resources = new[] { new Resource { Culture = "en", Value = "Old Value" } }
             };
 
-            _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
+            _keyRepositoryMock.Setup(r => r.GetUilmResourceKey(
                 It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<BlocksLanguageKey> { existingKey });
+                .ReturnsAsync(existingKey);
 
-            BlocksLanguageKey? capturedKey = null;
-            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .Callback<IEnumerable<BlocksLanguageKey>, string?>((keys, _) => capturedKey = keys.FirstOrDefault())
-                .ReturnsAsync((0L, 1L));
+            List<BlocksLanguageKey>? capturedKeys = null;
+            _keyRepositoryMock.Setup(r => r.UpdateUilmResourceKeysForChangeAll(It.IsAny<List<BlocksLanguageKey>>()))
+                .Callback<List<BlocksLanguageKey>>(keys => capturedKeys = keys)
+                .ReturnsAsync(1L);
 
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
@@ -2439,21 +2443,21 @@ namespace XUnitTest
             await task!;
 
             // The key should use the existing DB ItemId, not the import ID
-            capturedKey.Should().NotBeNull();
-            capturedKey!.ItemId.Should().Be("existing-db-id");
+            capturedKeys.Should().NotBeNull();
+            capturedKeys!.First().ItemId.Should().Be("existing-db-id");
         }
 
         [Fact]
         public async Task ProcessJsonFile_GeneratesNewItemIdForInserts()
         {
-            _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
+            _keyRepositoryMock.Setup(r => r.GetUilmResourceKey(
                 It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<BlocksLanguageKey>()); // No existing keys
+                .ReturnsAsync((BlocksLanguageKey?)null); // No existing keys
 
-            BlocksLanguageKey? capturedKey = null;
-            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .Callback<IEnumerable<BlocksLanguageKey>, string?>((keys, _) => capturedKey = keys.FirstOrDefault())
-                .ReturnsAsync((1L, 0L));
+            List<BlocksLanguageKey>? capturedKeys = null;
+            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Callback<List<BlocksLanguageKey>, string?>((keys, _) => capturedKeys = keys)
+                .Returns(Task.CompletedTask);
 
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
@@ -2474,21 +2478,21 @@ namespace XUnitTest
             var task = method.Invoke(_service, new object[] { dbApplications, languageJsonModels }) as Task;
             await task!;
 
-            capturedKey.Should().NotBeNull();
-            capturedKey!.ItemId.Should().NotBeNullOrEmpty();
+            capturedKeys.Should().NotBeNull();
+            capturedKeys!.First().ItemId.Should().NotBeNullOrEmpty();
         }
 
         [Fact]
-        public async Task ProcessJsonFile_PassesResourcesDirectlyToUpsert()
+        public async Task ProcessJsonFile_MergesResourcesAndSavesCorrectly()
         {
-            _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
+            _keyRepositoryMock.Setup(r => r.GetUilmResourceKey(
                 It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<BlocksLanguageKey>());
+                .ReturnsAsync((BlocksLanguageKey?)null);
 
-            IEnumerable<BlocksLanguageKey>? capturedKeys = null;
-            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .Callback<IEnumerable<BlocksLanguageKey>, string?>((keys, _) => capturedKeys = keys.ToList())
-                .ReturnsAsync((1L, 0L));
+            List<BlocksLanguageKey>? capturedKeys = null;
+            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Callback<List<BlocksLanguageKey>, string?>((keys, _) => capturedKeys = keys)
+                .Returns(Task.CompletedTask);
 
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
@@ -2523,13 +2527,13 @@ namespace XUnitTest
 
         #endregion
 
-        #region Concurrent XLF Import Scenarios
+        #region Concurrent XLF Import Scenarios - Testing ProcessXlfFile
 
         [Fact]
-        public async Task ConcurrentXlfImport_UpsertHandlesRaceCondition()
+        public async Task ConcurrentXlfImport_ProcessXlfFile_UpsertHandlesRaceCondition()
         {
             // Simulate the scenario where two XLF files are imported concurrently
-            // Both should successfully merge their resources via upsert
+            // Both should successfully merge their resources via upsert using ProcessXlfFile
 
             _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
                 It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
@@ -2543,7 +2547,8 @@ namespace XUnitTest
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
 
-            var method = typeof(KeyManagementService).GetMethod("ProcessJsonFile",
+            // ProcessXlfFile uses batch fetch and upsert
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
                 BindingFlags.NonPublic | BindingFlags.Instance)!;
 
             var dbApplications = new List<BlocksLanguageModule>
@@ -2578,6 +2583,7 @@ namespace XUnitTest
         [Fact]
         public async Task XlfImport_BaseFileWithoutTranslations_CreatesKeysWithEmptyResources()
         {
+            // Testing ProcessXlfFile which uses upsert
             _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
                 It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
                 .ReturnsAsync(new List<BlocksLanguageKey>());
@@ -2590,7 +2596,7 @@ namespace XUnitTest
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
 
-            var method = typeof(KeyManagementService).GetMethod("ProcessJsonFile",
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
                 BindingFlags.NonPublic | BindingFlags.Instance)!;
 
             var dbApplications = new List<BlocksLanguageModule>
@@ -2656,10 +2662,11 @@ namespace XUnitTest
         #region SaveUilmResourceKey Logging
 
         [Fact]
-        public async Task SaveUilmResourceKey_LogsUpsertResults()
+        public async Task SaveUilmResourceKey_LogsInsertResults()
         {
-            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
-                .ReturnsAsync((5L, 3L)); // 5 upserted, 3 modified
+            // SaveUilmResourceKey uses InsertUilmResourceKeys for new keys
+            _keyRepositoryMock.Setup(r => r.InsertUilmResourceKeys(It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
 
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
@@ -2679,9 +2686,9 @@ namespace XUnitTest
             var task = method.Invoke(_service, new object?[] { new List<BlocksLanguageKey>(), inserts, null }) as Task;
             await task!;
 
-            // Verify upsert was called
-            _keyRepositoryMock.Verify(r => r.UpsertResourceKeysWithMergeAsync(
-                It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()), Times.Once);
+            // Verify insert was called
+            _keyRepositoryMock.Verify(r => r.InsertUilmResourceKeys(
+                It.IsAny<List<BlocksLanguageKey>>(), It.IsAny<string>()), Times.Once);
         }
 
         #endregion
@@ -3610,12 +3617,13 @@ namespace XUnitTest
 
         #endregion
 
-        #region XLF Import - Concurrent Import with Upsert
+        #region XLF Import - Concurrent Import with Upsert (Testing ProcessXlfFile)
 
         [Fact]
         public async Task XlfImport_ConcurrentSameKeyDifferentLanguages_BothSucceed()
         {
             // Setup for concurrent XLF imports of same key with different languages
+            // ProcessXlfFile uses batch fetch and upsert
             _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
                 It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
                 .ReturnsAsync(new List<BlocksLanguageKey>());
@@ -3628,7 +3636,7 @@ namespace XUnitTest
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
 
-            var method = typeof(KeyManagementService).GetMethod("ProcessJsonFile",
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
                 BindingFlags.NonPublic | BindingFlags.Instance)!;
 
             var dbApplications = new List<BlocksLanguageModule>
@@ -3670,6 +3678,7 @@ namespace XUnitTest
         {
             // First import: base file creates the key
             // Second import: language file adds translation
+            // Testing ProcessXlfFile which uses batch fetch and upsert
 
             var existingKeyAfterBaseImport = new BlocksLanguageKey
             {
@@ -3700,7 +3709,7 @@ namespace XUnitTest
             _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
                 .Returns(Task.CompletedTask);
 
-            var method = typeof(KeyManagementService).GetMethod("ProcessJsonFile",
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
                 BindingFlags.NonPublic | BindingFlags.Instance)!;
 
             var dbApplications = new List<BlocksLanguageModule>
