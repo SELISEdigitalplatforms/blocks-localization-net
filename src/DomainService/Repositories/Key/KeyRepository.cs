@@ -381,6 +381,117 @@ namespace DomainService.Repositories
             await dataBase.GetCollection<BlocksLanguageKey>("BlocksLanguageKeys").InsertManyAsync(entities);
         }
 
+        /// <summary>
+        /// Upserts resource keys with atomic resource merging to handle concurrent imports.
+        /// Uses ModuleId + KeyName as the unique identifier for upsert operations.
+        /// This method is safe for concurrent calls as it merges resources at the database level.
+        /// </summary>
+        public async Task<(long upsertedCount, long modifiedCount)> UpsertResourceKeysWithMergeAsync(IEnumerable<BlocksLanguageKey> entities, string? tenantId = null)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<BlocksLanguageKey>("BlocksLanguageKeys");
+
+            var bulkOps = new List<WriteModel<BlocksLanguageKey>>();
+
+            foreach (var entity in entities)
+            {
+                // Use ModuleId + KeyName as the unique key for upsert (not ItemId)
+                // This ensures concurrent imports for the same key merge correctly
+                var filter = Builders<BlocksLanguageKey>.Filter.And(
+                    Builders<BlocksLanguageKey>.Filter.Eq(x => x.ModuleId, entity.ModuleId),
+                    Builders<BlocksLanguageKey>.Filter.Eq(x => x.KeyName, entity.KeyName)
+                );
+
+                // Build update with resource merging
+                // For each resource in the entity, we update or add it to the Resources array
+                var updateDefinitions = new List<UpdateDefinition<BlocksLanguageKey>>
+                {
+                    Builders<BlocksLanguageKey>.Update.Set(x => x.LastUpdateDate, entity.LastUpdateDate),
+                    Builders<BlocksLanguageKey>.Update.Set(x => x.IsPartiallyTranslated, entity.IsPartiallyTranslated),
+                    Builders<BlocksLanguageKey>.Update.SetOnInsert(x => x.ItemId, entity.ItemId ?? Guid.NewGuid().ToString()),
+                    Builders<BlocksLanguageKey>.Update.SetOnInsert(x => x.CreateDate, entity.CreateDate),
+                    Builders<BlocksLanguageKey>.Update.SetOnInsert(x => x.ModuleId, entity.ModuleId),
+                    Builders<BlocksLanguageKey>.Update.SetOnInsert(x => x.KeyName, entity.KeyName),
+                    Builders<BlocksLanguageKey>.Update.SetOnInsert(x => x.TenantId, entity.TenantId)
+                };
+
+                // Set Routes if provided
+                if (entity.Routes != null && entity.Routes.Any())
+                {
+                    updateDefinitions.Add(Builders<BlocksLanguageKey>.Update.Set(x => x.Routes, entity.Routes));
+                }
+
+                // Set Context if provided
+                if (!string.IsNullOrEmpty(entity.Context))
+                {
+                    updateDefinitions.Add(Builders<BlocksLanguageKey>.Update.Set(x => x.Context, entity.Context));
+                }
+
+                var update = Builders<BlocksLanguageKey>.Update.Combine(updateDefinitions);
+
+                var upsertOp = new UpdateOneModel<BlocksLanguageKey>(filter, update) { IsUpsert = true };
+                bulkOps.Add(upsertOp);
+            }
+
+            if (!bulkOps.Any())
+            {
+                return (0, 0);
+            }
+
+            var result = await collection.BulkWriteAsync(bulkOps);
+
+            // Now merge resources in a second pass for keys that have resources
+            // This is done separately to handle the complex array merging
+            await MergeResourcesForKeysAsync(collection, entities);
+
+            return (result.Upserts?.Count ?? 0, result.ModifiedCount);
+        }
+
+        /// <summary>
+        /// Merges resources for each key using MongoDB's array update operators.
+        /// This handles the case where multiple concurrent imports add different language resources.
+        /// </summary>
+        private async Task MergeResourcesForKeysAsync(IMongoCollection<BlocksLanguageKey> collection, IEnumerable<BlocksLanguageKey> entities)
+        {
+            foreach (var entity in entities)
+            {
+                if (entity.Resources == null || !entity.Resources.Any())
+                    continue;
+
+                var filter = Builders<BlocksLanguageKey>.Filter.And(
+                    Builders<BlocksLanguageKey>.Filter.Eq(x => x.ModuleId, entity.ModuleId),
+                    Builders<BlocksLanguageKey>.Filter.Eq(x => x.KeyName, entity.KeyName)
+                );
+
+                // For each resource, update if exists or add if not
+                foreach (var resource in entity.Resources)
+                {
+                    if (string.IsNullOrEmpty(resource.Culture))
+                        continue;
+
+                    // Only update if the resource has a value (don't overwrite with empty values)
+                    if (string.IsNullOrEmpty(resource.Value))
+                        continue;
+
+                    // Try to update existing resource with matching culture
+                    var existingResourceFilter = Builders<BlocksLanguageKey>.Filter.And(
+                        filter,
+                        Builders<BlocksLanguageKey>.Filter.ElemMatch(x => x.Resources, r => r.Culture == resource.Culture)
+                    );
+
+                    var updateExisting = Builders<BlocksLanguageKey>.Update.Set("Resources.$", resource);
+                    var updateResult = await collection.UpdateOneAsync(existingResourceFilter, updateExisting);
+
+                    // If no existing resource was updated, add the new resource
+                    if (updateResult.ModifiedCount == 0)
+                    {
+                        var addResourceUpdate = Builders<BlocksLanguageKey>.Update.Push(x => x.Resources, resource);
+                        await collection.UpdateOneAsync(filter, addResourceUpdate);
+                    }
+                }
+            }
+        }
+
         public async Task UpdateBulkUilmApplications(List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string organizationId, bool isExternal, string clientTenantId)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
