@@ -3736,5 +3736,643 @@ namespace XUnitTest
         }
 
         #endregion
+
+        #region ProcessXlfFile (private - XLF-specific processing)
+
+        [Fact]
+        public async Task ProcessXlfFile_EmptyList_DoesNotCallUpsert()
+        {
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var dbApplications = new List<BlocksLanguageModule>();
+            var languageJsonModels = new List<LanguageJsonModel>();
+
+            var task = method.Invoke(_service, new object[] { dbApplications, languageJsonModels }) as Task;
+            await task!;
+
+            _keyRepositoryMock.Verify(r => r.UpsertResourceKeysWithMergeAsync(
+                It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task ProcessXlfFile_BatchFetchesExistingKeys()
+        {
+            // Setup batch fetch to return existing keys
+            _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
+                It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
+                .ReturnsAsync(new List<BlocksLanguageKey>
+                {
+                    new() { ItemId = "existing-id", KeyName = "key1", ModuleId = "m1" }
+                });
+
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((1L, 1L));
+
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Returns(Task.CompletedTask);
+
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var dbApplications = new List<BlocksLanguageModule>
+            {
+                new() { ItemId = "m1", ModuleName = "auth" }
+            };
+            var languageJsonModels = new List<LanguageJsonModel>
+            {
+                new() { _id = "1", ModuleId = "m1", Module = "auth", KeyName = "key1", 
+                    Resources = new[] { new Resource { Culture = "de", Value = "Hallo" } } },
+                new() { _id = "2", ModuleId = "m1", Module = "auth", KeyName = "key2", 
+                    Resources = new[] { new Resource { Culture = "de", Value = "Welt" } } }
+            };
+
+            var task = method.Invoke(_service, new object[] { dbApplications, languageJsonModels }) as Task;
+            await task!;
+
+            // Verify batch fetch was called (not individual lookups for each key)
+            _keyRepositoryMock.Verify(r => r.GetUilmResourceKeys(
+                It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task ProcessXlfFile_UsesExistingItemIdForUpdates()
+        {
+            var existingKey = new BlocksLanguageKey 
+            { 
+                ItemId = "existing-db-id", 
+                KeyName = "key1", 
+                ModuleId = "m1",
+                Resources = new[] { new Resource { Culture = "en", Value = "Hello" } }
+            };
+
+            _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
+                It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
+                .ReturnsAsync(new List<BlocksLanguageKey> { existingKey });
+
+            IEnumerable<BlocksLanguageKey>? capturedKeys = null;
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Callback<IEnumerable<BlocksLanguageKey>, string?>((keys, _) => capturedKeys = keys.ToList())
+                .ReturnsAsync((0L, 1L));
+
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Returns(Task.CompletedTask);
+
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var dbApplications = new List<BlocksLanguageModule>
+            {
+                new() { ItemId = "m1", ModuleName = "auth" }
+            };
+            var languageJsonModels = new List<LanguageJsonModel>
+            {
+                new() { _id = "import-id-from-xlf", ModuleId = "m1", Module = "auth", KeyName = "key1", 
+                    Resources = new[] { new Resource { Culture = "de", Value = "Hallo" } } }
+            };
+
+            var task = method.Invoke(_service, new object[] { dbApplications, languageJsonModels }) as Task;
+            await task!;
+
+            // The key should use the existing DB ItemId, not the import ID from XLF
+            capturedKeys.Should().NotBeNull();
+            capturedKeys!.First().ItemId.Should().Be("existing-db-id");
+        }
+
+        [Fact]
+        public async Task ProcessXlfFile_GeneratesNewItemIdForInserts()
+        {
+            _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
+                It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
+                .ReturnsAsync(new List<BlocksLanguageKey>()); // No existing keys
+
+            IEnumerable<BlocksLanguageKey>? capturedKeys = null;
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Callback<IEnumerable<BlocksLanguageKey>, string?>((keys, _) => capturedKeys = keys.ToList())
+                .ReturnsAsync((1L, 0L));
+
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Returns(Task.CompletedTask);
+
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var dbApplications = new List<BlocksLanguageModule>
+            {
+                new() { ItemId = "m1", ModuleName = "auth" }
+            };
+            var languageJsonModels = new List<LanguageJsonModel>
+            {
+                new() { _id = null, ModuleId = "m1", Module = "auth", KeyName = "newKey", 
+                    Resources = new[] { new Resource { Culture = "de", Value = "Neu" } } }
+            };
+
+            var task = method.Invoke(_service, new object[] { dbApplications, languageJsonModels }) as Task;
+            await task!;
+
+            capturedKeys.Should().NotBeNull();
+            capturedKeys!.First().ItemId.Should().NotBeNullOrEmpty();
+        }
+
+        [Fact]
+        public async Task ProcessXlfFile_PassesResourcesDirectlyToUpsert_NoPreMerge()
+        {
+            _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
+                It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
+                .ReturnsAsync(new List<BlocksLanguageKey>());
+
+            IEnumerable<BlocksLanguageKey>? capturedKeys = null;
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Callback<IEnumerable<BlocksLanguageKey>, string?>((keys, _) => capturedKeys = keys.ToList())
+                .ReturnsAsync((1L, 0L));
+
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Returns(Task.CompletedTask);
+
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            // XLF import with only German translation
+            var resources = new[] { new Resource { Culture = "de-DE", Value = "Hallo" } };
+
+            var dbApplications = new List<BlocksLanguageModule>
+            {
+                new() { ItemId = "m1", ModuleName = "auth" }
+            };
+            var languageJsonModels = new List<LanguageJsonModel>
+            {
+                new() { _id = "1", ModuleId = "m1", Module = "auth", KeyName = "greeting", Resources = resources }
+            };
+
+            var task = method.Invoke(_service, new object[] { dbApplications, languageJsonModels }) as Task;
+            await task!;
+
+            // Resources should be passed as-is to upsert (no pre-merge in ProcessXlfFile)
+            capturedKeys.Should().NotBeNull();
+            var key = capturedKeys!.First();
+            key.Resources.Should().HaveCount(1);
+            key.Resources.Should().Contain(r => r.Culture == "de-DE" && r.Value == "Hallo");
+        }
+
+        [Fact]
+        public async Task ProcessXlfFile_SeparatesExistingAndNewKeysForTimeline()
+        {
+            var existingKey = new BlocksLanguageKey 
+            { 
+                ItemId = "existing-id", 
+                KeyName = "existingKey", 
+                ModuleId = "m1" 
+            };
+
+            _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
+                It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
+                .ReturnsAsync(new List<BlocksLanguageKey> { existingKey });
+
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((1L, 1L));
+
+            var timelineEntries = new List<KeyTimeline>();
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Callback<KeyTimeline>(t => timelineEntries.Add(t))
+                .Returns(Task.CompletedTask);
+
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var dbApplications = new List<BlocksLanguageModule>
+            {
+                new() { ItemId = "m1", ModuleName = "auth" }
+            };
+            var languageJsonModels = new List<LanguageJsonModel>
+            {
+                // Existing key - should be tracked as update
+                new() { _id = "1", ModuleId = "m1", Module = "auth", KeyName = "existingKey", 
+                    Resources = new[] { new Resource { Culture = "de", Value = "Aktualisiert" } } },
+                // New key - should be tracked as insert
+                new() { _id = "2", ModuleId = "m1", Module = "auth", KeyName = "newKey", 
+                    Resources = new[] { new Resource { Culture = "de", Value = "Neu" } } }
+            };
+
+            var task = method.Invoke(_service, new object[] { dbApplications, languageJsonModels }) as Task;
+            await task!;
+
+            // Should have timeline entries for both update and insert
+            timelineEntries.Should().HaveCount(2);
+        }
+
+        [Fact]
+        public async Task ProcessXlfFile_HandlesNewModule()
+        {
+            _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
+                It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
+                .ReturnsAsync(new List<BlocksLanguageKey>());
+
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((1L, 0L));
+
+            _keyRepositoryMock.Setup(r => r.InsertUilmApplications(It.IsAny<List<BlocksLanguageModule>>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
+
+            _keyRepositoryMock.Setup(r => r.UpdateKeysCountOfAppAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
+
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Returns(Task.CompletedTask);
+
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var dbApplications = new List<BlocksLanguageModule>(); // Empty - no existing modules
+            var languageJsonModels = new List<LanguageJsonModel>
+            {
+                new() { _id = "1", ModuleId = null, Module = "newModule", KeyName = "key1", 
+                    Resources = new[] { new Resource { Culture = "de", Value = "Test" } } }
+            };
+
+            var task = method.Invoke(_service, new object[] { dbApplications, languageJsonModels }) as Task;
+            await task!;
+
+            // Should insert the new module
+            _keyRepositoryMock.Verify(r => r.InsertUilmApplications(
+                It.Is<List<BlocksLanguageModule>>(modules => modules.Any(m => m.ModuleName == "newModule")), 
+                It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task ProcessXlfFile_ConcurrentImport_BothCallUpsert()
+        {
+            _keyRepositoryMock.Setup(r => r.GetUilmResourceKeys(
+                It.IsAny<System.Linq.Expressions.Expression<Func<BlocksLanguageKey, bool>>>(), It.IsAny<string>()))
+                .ReturnsAsync(new List<BlocksLanguageKey>());
+
+            var upsertCallCount = 0;
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .Callback(() => upsertCallCount++)
+                .ReturnsAsync((1L, 0L));
+
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Returns(Task.CompletedTask);
+
+            var method = typeof(KeyManagementService).GetMethod("ProcessXlfFile",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var dbApplications = new List<BlocksLanguageModule>
+            {
+                new() { ItemId = "m1", ModuleName = "auth" }
+            };
+
+            // Simulate concurrent XLF imports for same key with different languages
+            var germanXlf = new List<LanguageJsonModel>
+            {
+                new() { _id = "1", ModuleId = "m1", Module = "auth", KeyName = "greeting", 
+                    Resources = new[] { new Resource { Culture = "de-DE", Value = "Guten Tag" } } }
+            };
+
+            var frenchXlf = new List<LanguageJsonModel>
+            {
+                new() { _id = "1", ModuleId = "m1", Module = "auth", KeyName = "greeting", 
+                    Resources = new[] { new Resource { Culture = "fr-FR", Value = "Bonjour" } } }
+            };
+
+            // Simulate concurrent imports
+            var task1 = method.Invoke(_service, new object[] { dbApplications, germanXlf }) as Task;
+            var task2 = method.Invoke(_service, new object[] { dbApplications, frenchXlf }) as Task;
+
+            await Task.WhenAll(task1!, task2!);
+
+            // Both imports should have called upsert
+            upsertCallCount.Should().Be(2);
+        }
+
+        #endregion
+
+        #region SaveXlfResourceKeys (private - XLF-specific saving with upsert)
+
+        [Fact]
+        public async Task SaveXlfResourceKeys_EmptyLists_DoesNotCallUpsert()
+        {
+            var method = typeof(KeyManagementService).GetMethod("SaveXlfResourceKeys",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var task = method.Invoke(_service, new object?[] { 
+                new List<BlocksLanguageKey>(), 
+                new List<BlocksLanguageKey>(), 
+                null 
+            }) as Task;
+            await task!;
+
+            _keyRepositoryMock.Verify(r => r.UpsertResourceKeysWithMergeAsync(
+                It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task SaveXlfResourceKeys_CombinesUpdatesAndInserts()
+        {
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((2L, 1L));
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Returns(Task.CompletedTask);
+
+            var updates = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k1", KeyName = "key1", ModuleId = "m1" }
+            };
+            var inserts = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k2", KeyName = "key2", ModuleId = "m1" }
+            };
+
+            var method = typeof(KeyManagementService).GetMethod("SaveXlfResourceKeys",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var task = method.Invoke(_service, new object?[] { updates, inserts, null }) as Task;
+            await task!;
+
+            // Verify upsert is called with combined keys (2 total)
+            _keyRepositoryMock.Verify(r => r.UpsertResourceKeysWithMergeAsync(
+                It.Is<IEnumerable<BlocksLanguageKey>>(keys => keys.Count() == 2), 
+                It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task SaveXlfResourceKeys_CreatesTimelineForUpdates_WithPreviousData()
+        {
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((0L, 1L));
+
+            KeyTimeline? capturedTimeline = null;
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Callback<KeyTimeline>(t => capturedTimeline = t)
+                .Returns(Task.CompletedTask);
+
+            var oldKey = new BlocksLanguageKey 
+            { 
+                ItemId = "k1", 
+                KeyName = "key1", 
+                ModuleId = "m1",
+                Resources = new[] { new Resource { Culture = "en", Value = "Old" } }
+            };
+            var newKey = new BlocksLanguageKey 
+            { 
+                ItemId = "k1", 
+                KeyName = "key1", 
+                ModuleId = "m1",
+                Resources = new[] { new Resource { Culture = "de", Value = "Neu" } }
+            };
+
+            var method = typeof(KeyManagementService).GetMethod("SaveXlfResourceKeys",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var task = method.Invoke(_service, new object?[] { 
+                new List<BlocksLanguageKey> { newKey }, 
+                new List<BlocksLanguageKey>(), 
+                new List<BlocksLanguageKey> { oldKey } 
+            }) as Task;
+            await task!;
+
+            capturedTimeline.Should().NotBeNull();
+            capturedTimeline!.PreviousData.Should().NotBeNull();
+            capturedTimeline.PreviousData!.ItemId.Should().Be("k1");
+            capturedTimeline.LogFrom.Should().Contain("Import");
+        }
+
+        [Fact]
+        public async Task SaveXlfResourceKeys_CreatesTimelineForInserts_WithNullPreviousData()
+        {
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((1L, 0L));
+
+            KeyTimeline? capturedTimeline = null;
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Callback<KeyTimeline>(t => capturedTimeline = t)
+                .Returns(Task.CompletedTask);
+
+            var newKey = new BlocksLanguageKey 
+            { 
+                ItemId = "k1", 
+                KeyName = "newKey", 
+                ModuleId = "m1",
+                Resources = new[] { new Resource { Culture = "de", Value = "Neu" } }
+            };
+
+            var method = typeof(KeyManagementService).GetMethod("SaveXlfResourceKeys",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var task = method.Invoke(_service, new object?[] { 
+                new List<BlocksLanguageKey>(), 
+                new List<BlocksLanguageKey> { newKey }, 
+                null 
+            }) as Task;
+            await task!;
+
+            capturedTimeline.Should().NotBeNull();
+            capturedTimeline!.PreviousData.Should().BeNull();
+            capturedTimeline.LogFrom.Should().Contain("Insert");
+        }
+
+        [Fact]
+        public async Task SaveXlfResourceKeys_TimelineExceptionSwallowed()
+        {
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((1L, 0L));
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .ThrowsAsync(new Exception("timeline error"));
+
+            var newKey = new BlocksLanguageKey 
+            { 
+                ItemId = "k1", 
+                KeyName = "key1", 
+                ModuleId = "m1" 
+            };
+
+            var method = typeof(KeyManagementService).GetMethod("SaveXlfResourceKeys",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var task = method.Invoke(_service, new object?[] { 
+                new List<BlocksLanguageKey>(), 
+                new List<BlocksLanguageKey> { newKey }, 
+                null 
+            }) as Task;
+
+            // Should not throw - timeline errors are swallowed
+            await task!;
+        }
+
+        [Fact]
+        public async Task SaveXlfResourceKeys_OnlyUpdates_CallsUpsert()
+        {
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((0L, 1L));
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Returns(Task.CompletedTask);
+
+            var updates = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k1", KeyName = "key1", ModuleId = "m1" }
+            };
+            var oldKeys = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k1", KeyName = "key1", ModuleId = "m1" }
+            };
+
+            var method = typeof(KeyManagementService).GetMethod("SaveXlfResourceKeys",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var task = method.Invoke(_service, new object?[] { updates, new List<BlocksLanguageKey>(), oldKeys }) as Task;
+            await task!;
+
+            _keyRepositoryMock.Verify(r => r.UpsertResourceKeysWithMergeAsync(
+                It.Is<IEnumerable<BlocksLanguageKey>>(keys => keys.Count() == 1), 
+                It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task SaveXlfResourceKeys_OnlyInserts_CallsUpsert()
+        {
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((1L, 0L));
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Returns(Task.CompletedTask);
+
+            var inserts = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k1", KeyName = "key1", ModuleId = "m1" }
+            };
+
+            var method = typeof(KeyManagementService).GetMethod("SaveXlfResourceKeys",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var task = method.Invoke(_service, new object?[] { new List<BlocksLanguageKey>(), inserts, null }) as Task;
+            await task!;
+
+            _keyRepositoryMock.Verify(r => r.UpsertResourceKeysWithMergeAsync(
+                It.Is<IEnumerable<BlocksLanguageKey>>(keys => keys.Count() == 1), 
+                It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task SaveXlfResourceKeys_MultipleKeys_CreatesTimelineForEach()
+        {
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((2L, 1L));
+
+            var timelineEntries = new List<KeyTimeline>();
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Callback<KeyTimeline>(t => timelineEntries.Add(t))
+                .Returns(Task.CompletedTask);
+
+            var updates = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k1", KeyName = "key1", ModuleId = "m1" }
+            };
+            var inserts = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k2", KeyName = "key2", ModuleId = "m1" },
+                new() { ItemId = "k3", KeyName = "key3", ModuleId = "m1" }
+            };
+            var oldKeys = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k1", KeyName = "key1", ModuleId = "m1" }
+            };
+
+            var method = typeof(KeyManagementService).GetMethod("SaveXlfResourceKeys",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var task = method.Invoke(_service, new object?[] { updates, inserts, oldKeys }) as Task;
+            await task!;
+
+            // Should have timeline entries for 1 update + 2 inserts = 3 total
+            timelineEntries.Should().HaveCount(3);
+        }
+
+        [Fact]
+        public async Task SaveXlfResourceKeys_UsesUilmImportUpdateLogFrom_ForUpdates()
+        {
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((0L, 1L));
+
+            KeyTimeline? capturedTimeline = null;
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Callback<KeyTimeline>(t => capturedTimeline = t)
+                .Returns(Task.CompletedTask);
+
+            var updates = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k1", KeyName = "key1", ModuleId = "m1" }
+            };
+            var oldKeys = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k1", KeyName = "key1", ModuleId = "m1" }
+            };
+
+            var method = typeof(KeyManagementService).GetMethod("SaveXlfResourceKeys",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var task = method.Invoke(_service, new object?[] { updates, new List<BlocksLanguageKey>(), oldKeys }) as Task;
+            await task!;
+
+            capturedTimeline.Should().NotBeNull();
+            // Should use UilmImportUpdate constant for updates
+            capturedTimeline!.LogFrom.Should().Contain("Update");
+        }
+
+        [Fact]
+        public async Task SaveXlfResourceKeys_UsesUilmImportInsertLogFrom_ForInserts()
+        {
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((1L, 0L));
+
+            KeyTimeline? capturedTimeline = null;
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Callback<KeyTimeline>(t => capturedTimeline = t)
+                .Returns(Task.CompletedTask);
+
+            var inserts = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k1", KeyName = "key1", ModuleId = "m1" }
+            };
+
+            var method = typeof(KeyManagementService).GetMethod("SaveXlfResourceKeys",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var task = method.Invoke(_service, new object?[] { new List<BlocksLanguageKey>(), inserts, null }) as Task;
+            await task!;
+
+            capturedTimeline.Should().NotBeNull();
+            // Should use UilmImportInsert constant for inserts
+            capturedTimeline!.LogFrom.Should().Contain("Insert");
+        }
+
+        [Fact]
+        public async Task SaveXlfResourceKeys_SharesOperationId_AcrossAllTimelines()
+        {
+            _keyRepositoryMock.Setup(r => r.UpsertResourceKeysWithMergeAsync(It.IsAny<IEnumerable<BlocksLanguageKey>>(), It.IsAny<string>()))
+                .ReturnsAsync((2L, 0L));
+
+            var timelineEntries = new List<KeyTimeline>();
+            _keyTimelineRepositoryMock.Setup(t => t.SaveKeyTimelineAsync(It.IsAny<KeyTimeline>()))
+                .Callback<KeyTimeline>(t => timelineEntries.Add(t))
+                .Returns(Task.CompletedTask);
+
+            var inserts = new List<BlocksLanguageKey>
+            {
+                new() { ItemId = "k1", KeyName = "key1", ModuleId = "m1" },
+                new() { ItemId = "k2", KeyName = "key2", ModuleId = "m1" }
+            };
+
+            var method = typeof(KeyManagementService).GetMethod("SaveXlfResourceKeys",
+                BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            var task = method.Invoke(_service, new object?[] { new List<BlocksLanguageKey>(), inserts, null }) as Task;
+            await task!;
+
+            // All timelines should share the same operation ID
+            timelineEntries.Should().HaveCount(2);
+            var operationIds = timelineEntries.Select(t => t.OperationId).Distinct().ToList();
+            operationIds.Should().HaveCount(1);
+            operationIds[0].Should().NotBeNullOrEmpty();
+        }
+
+        #endregion
     }
 }
