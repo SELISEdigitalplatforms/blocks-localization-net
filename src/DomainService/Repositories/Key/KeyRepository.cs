@@ -1,6 +1,5 @@
 ﻿using Blocks.Genesis;
 using DomainService.Services;
-using DomainService.Shared.Entities;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Linq.Expressions;
@@ -11,6 +10,7 @@ namespace DomainService.Repositories
     {
         private readonly IDbContextProvider _dbContextProvider;
         private const string _collectionName = "BlocksLanguageKeys";
+        private const string BlocksLanguageModulesCollection = "BlocksLanguageModules";
 
         public KeyRepository(IDbContextProvider dbContextProvider)
         {
@@ -451,7 +451,7 @@ namespace DomainService.Repositories
         /// Merges resources for each key using MongoDB's array update operators.
         /// This handles the case where multiple concurrent imports add different language resources.
         /// </summary>
-        private async Task MergeResourcesForKeysAsync(IMongoCollection<BlocksLanguageKey> collection, IEnumerable<BlocksLanguageKey> entities)
+        private static async Task MergeResourcesForKeysAsync(IMongoCollection<BlocksLanguageKey> collection, IEnumerable<BlocksLanguageKey> entities)
         {
             foreach (var entity in entities)
             {
@@ -518,13 +518,13 @@ namespace DomainService.Repositories
 
             if (bulkOpsExt.Count > 0)
             {
-                await dataBase.GetCollection<BsonDocument>("BlocksLanguageModules")
+                await dataBase.GetCollection<BsonDocument>(BlocksLanguageModulesCollection)
                     .BulkWriteAsync(bulkOpsExt);
             }
 
             if (bulkOpsExtUpserts.Count > 0)
             {
-                await dataBase.GetCollection<BlocksLanguageModule>("BlocksLanguageModules")
+                await dataBase.GetCollection<BlocksLanguageModule>(BlocksLanguageModulesCollection)
                     .BulkWriteAsync(bulkOpsExtUpserts);
             }
         }
@@ -561,13 +561,13 @@ namespace DomainService.Repositories
         public async Task InsertUilmApplications(List<BlocksLanguageModule> uilmApplicationsToBeInserted, string clientTenantId)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            await dataBase.GetCollection<BlocksLanguageModule>("BlocksLanguageModules").InsertManyAsync(uilmApplicationsToBeInserted);
+            await dataBase.GetCollection<BlocksLanguageModule>(BlocksLanguageModulesCollection).InsertManyAsync(uilmApplicationsToBeInserted);
         }
 
         public async Task InsertUilmApplications(IEnumerable<BlocksLanguageModule> entities)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
-            await dataBase.GetCollection<BlocksLanguageModule>("BlocksLanguageModules").InsertManyAsync(entities);
+            await dataBase.GetCollection<BlocksLanguageModule>(BlocksLanguageModulesCollection).InsertManyAsync(entities);
         }
 
         public async Task<List<T>> GetUilmApplications<T>(Expression<Func<BlocksLanguageModule, bool>> expression)
