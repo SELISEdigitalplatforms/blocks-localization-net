@@ -1046,34 +1046,12 @@ namespace DomainService.Services
             var uilmApplicationsToBeInserted = new List<BlocksLanguageModule>();
             var uilmApplicationsToBeUpdated = new List<BlocksLanguageModule>();
 
-            // Collect all keys to be upserted - we don't need to separate insert/update anymore
-            // The upsert operation handles both cases atomically with resource merging
-            var allResourceKeys = new List<BlocksLanguageKey>();
             var resourceKeysWithoutId = new List<BlocksLanguageKey>();
             var uilmResourceKeys = new List<BlocksLanguageKey>();
             var oldUilmResourceKeys = new List<BlocksLanguageKey>();
 
-            // Batch fetch existing keys to reduce DB round trips
-            var keyIdentifiers = languageJsonModels
-                .Select(m => new { ModuleId = m.ModuleId, KeyName = m.KeyName })
-                .Distinct()
-                .ToList();
-
-            // Get all existing keys in one query for timeline tracking
-            var existingKeysDict = new Dictionary<string, BlocksLanguageKey>();
-            if (keyIdentifiers.Any())
-            {
-                var moduleIds = keyIdentifiers.Select(k => k.ModuleId).Distinct().ToList();
-                var existingKeys = await _keyRepository.GetUilmResourceKeys(
-                    x => moduleIds.Contains(x.ModuleId), 
-                    _blocksBaseCommand?.ClientTenantId);
-
-                foreach (var key in existingKeys)
-                {
-                    var lookupKey = $"{key.ModuleId}|{key.KeyName}";
-                    existingKeysDict.TryAdd(lookupKey, key);
-                }
-            }
+            // var uilmAppTimeLines = new List<BlocksLanguageManagerTimeline>();
+            // var uilmResourceKeyTimeLines = new List<BlocksLanguageManagerTimeline>();
 
             foreach (var languageJsonModel in languageJsonModels)
             {
@@ -1082,33 +1060,45 @@ namespace DomainService.Services
                 var isPartiallyTranslated = languageJsonModel.IsPartiallyTranslated;
                 var moduleName = languageJsonModel?.Module;
                 var keyName = languageJsonModel.KeyName;
+                //var type = languageJsonModel.Type;
+
+
+                //            var model = new LanguageJsonModel
+                //            {
+                //                _id = resourceKey.ItemId,
+                //                ModuleId = resourceKey.ModuleId,
+                //                Value = resourceKey.Value,
+                //                KeyName = resourceKey.KeyName,
+                //                Resources = resourceKey.Resources.Where(x => identifiers.Contains(x.Culture)).ToArray()
+                //TenantId = resourceKey.TenantId,
+                //                IsPartiallyTranslated = resourceKey.IsPartiallyTranslated,
+                //                Routes = resourceKey.Routes
+                //            };
+                //var uilmAppTimeLine = GetBlocksLanguageManagerTimeline();
 
                 appId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, isPartiallyTranslated,
                     moduleName);
 
-                // Look up existing key from pre-fetched dictionary
-                var lookupKey = $"{appId}|{keyName}";
-                existingKeysDict.TryGetValue(lookupKey, out var olduilmResourceKey);
+                //uilmAppTimeLines.Add(uilmAppTimeLine);
 
-                // Build the resource key - resources will be merged atomically by the upsert
-                // We pass the new resources only; the DB-level merge handles combining with existing
                 BlocksLanguageKey uilmResourceKey = new()
                 {
                     KeyName = keyName,
-                    Resources = languageJsonModel.Resources, // Don't merge here - let upsert handle it atomically
-                    ItemId = olduilmResourceKey?.ItemId ?? id ?? Guid.NewGuid().ToString(),
+                    Resources = languageJsonModel.Resources,
+                    ItemId = id,
                     ModuleId = appId,
                     IsPartiallyTranslated = isPartiallyTranslated,
-                    CreateDate = olduilmResourceKey?.CreateDate ?? DateTime.UtcNow,
+                    CreateDate = DateTime.UtcNow,
                     LastUpdateDate = DateTime.UtcNow,
-                    Value = string.Empty,
-                    Routes = languageJsonModel.Routes ?? olduilmResourceKey?.Routes,
-                    TenantId = _tenantId
+                    Value = string.Empty, // Value field is not exported, set to empty
+                    Routes = languageJsonModel.Routes
                 };
 
-                allResourceKeys.Add(uilmResourceKey);
+                //var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
+                var olduilmResourceKey = await GetUilmResourceKey(uilmResourceKey.ModuleId, uilmResourceKey.KeyName);
 
-                // Track for timeline - separate into existing vs new for proper logging
+                uilmResourceKey.ItemId = string.IsNullOrWhiteSpace(uilmResourceKey.ItemId) ? Guid.NewGuid().ToString() : uilmResourceKey.ItemId;
+
                 if (olduilmResourceKey == null)
                 {
                     resourceKeysWithoutId.Add(uilmResourceKey);
@@ -1118,6 +1108,8 @@ namespace DomainService.Services
                     oldUilmResourceKeys.Add(olduilmResourceKey);
                     uilmResourceKeys.Add(uilmResourceKey);
                 }
+                //FormatUilmResouceKeyTimeline(uilmResourceKeyTimeLine, olduilmResourceKey, uilmResourceKey);
+                //uilmResourceKeyTimeLines.Add(uilmResourceKeyTimeLine);
             }
 
             await SaveUilmResourceKey(uilmResourceKeys, resourceKeysWithoutId, oldUilmResourceKeys);
@@ -1125,6 +1117,9 @@ namespace DomainService.Services
             var validUilmApplicationsToBeInserted = uilmApplicationsToBeInserted.Where(x => x != null && x.ModuleName != null).DistinctBy(x => x.ModuleName).ToList();
             var validUilmApplicationsToBeUpdated = uilmApplicationsToBeUpdated.Where(x => x != null && x.ModuleName != null).DistinctBy(x => x.ModuleName).ToList();
             await SaveUilmApplication(validUilmApplicationsToBeInserted, validUilmApplicationsToBeUpdated);
+
+            // uilmResourceKeyTimeLines.AddRange(uilmAppTimeLines.Where(x => x?.CurrentData?.UilmApplication?.ModuleName != null).DistinctBy(x => x.CurrentData.UilmApplication.ModuleName).ToList());
+            //await _uilmRepository.SaveBlocksLanguageManagerTimeLines(uilmResourceKeyTimeLines);
         }
 
         private async Task<List<BlocksLanguageModule>> GetLanguageApplications(List<string> appIds = null)
@@ -1328,7 +1323,7 @@ namespace DomainService.Services
 
                 var languageJsonModels = ExtractModelsFromXlf(stream, mappedLanguageCode, isBaseFile, dbLanguages);
                 var dbApplications = await GetLanguageApplications(null);
-                await ProcessJsonFile(dbApplications, languageJsonModels);
+                await ProcessXlfFile(dbApplications, languageJsonModels);
 
                 _logger.LogInformation("ImportXlfFile: Successfully imported FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
                 return true;
@@ -1567,6 +1562,143 @@ namespace DomainService.Services
             return languageJsonModels.Values.ToList();
         }
 
+        /// <summary>
+        /// Processes XLF file data using atomic upsert operations for concurrent import safety.
+        /// This is a separate function from ProcessJsonFile to handle XLF-specific requirements.
+        /// </summary>
+        private async Task ProcessXlfFile(List<BlocksLanguageModule> dbApplications, List<LanguageJsonModel> languageJsonModels)
+        {
+            var uilmApplicationsToBeInserted = new List<BlocksLanguageModule>();
+            var uilmApplicationsToBeUpdated = new List<BlocksLanguageModule>();
+
+            // Collect all keys to be upserted - we don't need to separate insert/update anymore
+            // The upsert operation handles both cases atomically with resource merging
+            var allResourceKeys = new List<BlocksLanguageKey>();
+            var resourceKeysWithoutId = new List<BlocksLanguageKey>();
+            var uilmResourceKeys = new List<BlocksLanguageKey>();
+            var oldUilmResourceKeys = new List<BlocksLanguageKey>();
+
+            // Batch fetch existing keys to reduce DB round trips
+            var keyIdentifiers = languageJsonModels
+                .Select(m => new { ModuleId = m.ModuleId, KeyName = m.KeyName })
+                .Distinct()
+                .ToList();
+
+            // Get all existing keys in one query for timeline tracking
+            var existingKeysDict = new Dictionary<string, BlocksLanguageKey>();
+            if (keyIdentifiers.Any())
+            {
+                var moduleIds = keyIdentifiers.Select(k => k.ModuleId).Distinct().ToList();
+                var existingKeys = await _keyRepository.GetUilmResourceKeys(
+                    x => moduleIds.Contains(x.ModuleId), 
+                    _blocksBaseCommand?.ClientTenantId);
+
+                foreach (var key in existingKeys)
+                {
+                    var lookupKey = $"{key.ModuleId}|{key.KeyName}";
+                    existingKeysDict.TryAdd(lookupKey, key);
+                }
+            }
+
+            foreach (var languageJsonModel in languageJsonModels)
+            {
+                var id = languageJsonModel._id;
+                var appId = languageJsonModel.ModuleId;
+                var isPartiallyTranslated = languageJsonModel.IsPartiallyTranslated;
+                var moduleName = languageJsonModel?.Module;
+                var keyName = languageJsonModel.KeyName;
+
+                appId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, isPartiallyTranslated,
+                    moduleName);
+
+                // Look up existing key from pre-fetched dictionary
+                var lookupKey = $"{appId}|{keyName}";
+                existingKeysDict.TryGetValue(lookupKey, out var olduilmResourceKey);
+
+                // Build the resource key - resources will be merged atomically by the upsert
+                // We pass the new resources only; the DB-level merge handles combining with existing
+                BlocksLanguageKey uilmResourceKey = new()
+                {
+                    KeyName = keyName,
+                    Resources = languageJsonModel.Resources, // Don't merge here - let upsert handle it atomically
+                    ItemId = olduilmResourceKey?.ItemId ?? id ?? Guid.NewGuid().ToString(),
+                    ModuleId = appId,
+                    IsPartiallyTranslated = isPartiallyTranslated,
+                    CreateDate = olduilmResourceKey?.CreateDate ?? DateTime.UtcNow,
+                    LastUpdateDate = DateTime.UtcNow,
+                    Value = string.Empty,
+                    Routes = languageJsonModel.Routes ?? olduilmResourceKey?.Routes,
+                    TenantId = _tenantId
+                };
+
+                allResourceKeys.Add(uilmResourceKey);
+
+                // Track for timeline - separate into existing vs new for proper logging
+                if (olduilmResourceKey == null)
+                {
+                    resourceKeysWithoutId.Add(uilmResourceKey);
+                }
+                else
+                {
+                    oldUilmResourceKeys.Add(olduilmResourceKey);
+                    uilmResourceKeys.Add(uilmResourceKey);
+                }
+            }
+
+            await SaveXlfResourceKeys(uilmResourceKeys, resourceKeysWithoutId, oldUilmResourceKeys);
+
+            var validUilmApplicationsToBeInserted = uilmApplicationsToBeInserted.Where(x => x != null && x.ModuleName != null).DistinctBy(x => x.ModuleName).ToList();
+            var validUilmApplicationsToBeUpdated = uilmApplicationsToBeUpdated.Where(x => x != null && x.ModuleName != null).DistinctBy(x => x.ModuleName).ToList();
+            await SaveUilmApplication(validUilmApplicationsToBeInserted, validUilmApplicationsToBeUpdated);
+        }
+
+        /// <summary>
+        /// Saves XLF resource keys using atomic upsert operations for concurrent import safety.
+        /// This is a separate function from SaveUilmResourceKey to handle XLF-specific requirements.
+        /// </summary>
+        private async Task SaveXlfResourceKeys(List<BlocksLanguageKey> uilmResourceKeys, List<BlocksLanguageKey> resourceKeysWithoutId, List<BlocksLanguageKey> oldUilmResourceKeys = null)
+        {
+            var importOperationId = Guid.NewGuid().ToString();
+
+            // Combine all keys and use upsert with merge to handle concurrent imports safely
+            var allKeys = new List<BlocksLanguageKey>();
+            allKeys.AddRange(uilmResourceKeys);
+            allKeys.AddRange(resourceKeysWithoutId);
+
+            if (allKeys.Any())
+            {
+                // Use upsert with resource merging - this is atomic and handles concurrent imports
+                var (upsertedCount, modifiedCount) = await _keyRepository.UpsertResourceKeysWithMergeAsync(allKeys, _blocksBaseCommand?.ClientTenantId);
+
+                // Create timeline entries for all keys
+                foreach (var resourceKey in uilmResourceKeys)
+                {
+                    try
+                    {
+                        await CreateKeyTimelineEntryAsync(oldUilmResourceKeys?.FirstOrDefault(x => x.ItemId == resourceKey.ItemId), resourceKey, LogFromConstants.UilmImportUpdate, importOperationId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError("Failed to create timeline entry for updated Key {KeyId} during XLF import: {Error}", resourceKey.ItemId, ex.Message);
+                    }
+                }
+
+                foreach (var resourceKey in resourceKeysWithoutId)
+                {
+                    try
+                    {
+                        await CreateKeyTimelineEntryAsync(null, resourceKey, LogFromConstants.UilmImportInsert, importOperationId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError("Failed to create timeline entry for new Key {KeyId} during XLF import: {Error}", resourceKey.ItemId, ex.Message);
+                    }
+                }
+
+                _logger.LogInformation("SaveXlfResourceKeys: Upserted {UpsertedCount} keys, Modified {ModifiedCount} keys", upsertedCount, modifiedCount);
+            }
+        }
+
         private async Task ProcessExcelCells(IXLWorksheet worksheet, Dictionary<string, string> columns, Dictionary<string, string> languages,
             List<BlocksLanguageKey> uilmResourceKeys)
         {
@@ -1584,30 +1716,8 @@ namespace DomainService.Services
 
             _logger.LogInformation("ImportExcelFile: {Excelrows} UilmResourceKeys Found!", excelRows - 1);
 
-            // First pass: collect all module IDs and key names for batch lookup
-            var keyIdentifiers = new List<(string ModuleId, string KeyName)>();
-            for (int i = 2; i <= excelRows; i++)
-            {
-                string moduleId = worksheet.Cell(i, columns["ModuleId"]).Value.ToString();
-                string keyName = worksheet.Cell(i, columns["KeyName"]).Value.ToString();
-                keyIdentifiers.Add((moduleId, keyName));
-            }
-
-            // Batch fetch existing keys to reduce DB round trips
-            var existingKeysDict = new Dictionary<string, BlocksLanguageKey>();
-            var distinctModuleIds = keyIdentifiers.Select(k => k.ModuleId).Distinct().ToList();
-            if (distinctModuleIds.Any())
-            {
-                var existingKeys = await _keyRepository.GetUilmResourceKeys(
-                    x => distinctModuleIds.Contains(x.ModuleId),
-                    _blocksBaseCommand?.ClientTenantId);
-
-                foreach (var key in existingKeys)
-                {
-                    var lookupKey = $"{key.ModuleId}|{key.KeyName}";
-                    existingKeysDict.TryAdd(lookupKey, key);
-                }
-            }
+            //var uilmAppTimeLines = new List<BlocksLanguageManagerTimeline>();
+            //var uilmResourceKeyTimeLines = new List<BlocksLanguageManagerTimeline>();
 
             for (int i = 2; i <= excelRows; i++)
             {
@@ -1615,8 +1725,16 @@ namespace DomainService.Services
                 string moduleId = worksheet.Cell(i, columns["ModuleId"]).Value.ToString();
                 string moduleName = worksheet.Cell(i, columns["Module"]).Value.ToString();
                 string keyName = worksheet.Cell(i, columns["KeyName"]).Value.ToString();
+                // Note: Resources column is not required as resources are populated from language columns
+                //string moduleName = worksheet.Cell(i, columns["module"]).Value.ToString();
+                //string type = worksheet.Cell(i, columns["type"]).Value.ToString();
 
+                //var uilmAppTimeLine = GetBlocksLanguageManagerTimeline();
+
+                //moduleId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, moduleId, moduleName, moduleName);
                 moduleId = HandleUilmApplication(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, moduleId, false, moduleName);
+
+                //uilmAppTimeLines.Add(uilmAppTimeLine);
 
                 BlocksLanguageKey uilmResourceKey = new()
                 {
@@ -1624,8 +1742,7 @@ namespace DomainService.Services
                     ItemId = id,
                     ModuleId = moduleId,
                     LastUpdateDate = DateTime.UtcNow,
-                    CreateDate = DateTime.UtcNow,
-                    TenantId = _tenantId
+                    CreateDate = DateTime.UtcNow
                 };
 
                 uilmResourceKey.Resources = new Resource[cultures.Count];
@@ -1636,28 +1753,41 @@ namespace DomainService.Services
                     string resourceValue = worksheet.Cell(i, lang.Value).Value.ToString();
                     int characterLength = 0;
 
+                    var key = lang.Key + "_CharacterLength";
+                    //if (lang.Key != defaultLanguage && languages.ContainsKey(key))
+                    //{
+                    //    characterLength = AssignCharacterLengthValue(worksheet, languages, i, key);
+                    //}
+
                     uilmResourceKey.Resources[j++] = (new Resource() { Culture = lang.Key, Value = resourceValue, CharacterLength = characterLength });
                 }
 
-                // Look up existing key from pre-fetched dictionary
-                var lookupKey = $"{moduleId}|{keyName}";
-                existingKeysDict.TryGetValue(lookupKey, out var olduilmResourceKey);
+                //var uilmResourceKeyTimeLine = GetBlocksLanguageManagerTimeline();
+
+                var olduilmResourceKey = await GetUilmResourceKey(uilmResourceKey.ModuleId, uilmResourceKey.KeyName);
+
+                uilmResourceKey.ItemId = string.IsNullOrWhiteSpace(uilmResourceKey.ItemId) ? Guid.NewGuid().ToString() : uilmResourceKey.ItemId;
 
                 if (olduilmResourceKey == null)
                 {
-                    uilmResourceKey.ItemId = Guid.NewGuid().ToString();
                     resourceKeysWithoutId.Add(uilmResourceKey);
                 }
                 else
                 {
-                    uilmResourceKey.ItemId = olduilmResourceKey.ItemId;
+                    uilmResourceKey.ItemId = string.IsNullOrWhiteSpace(olduilmResourceKey.ItemId) ? uilmResourceKey.ItemId : olduilmResourceKey.ItemId;
                     oldUilmResourceKeys.Add(olduilmResourceKey);
                     uilmResourceKeys.Add(uilmResourceKey);
                 }
+
+                //FormatUilmResouceKeyTimeline(uilmResourceKeyTimeLine, olduilmResourceKey, uilmResourceKey);
+                //uilmResourceKeyTimeLines.Add(uilmResourceKeyTimeLine);
             }
 
             await SaveUilmResourceKey(uilmResourceKeys, resourceKeysWithoutId, oldUilmResourceKeys);
             await SaveUilmApplication(uilmApplicationsToBeInserted.DistinctBy(x => x.ModuleName).ToList(), uilmApplicationsToBeUpdated.DistinctBy(x => x.ModuleName).ToList());
+
+            //uilmResourceKeyTimeLines?.AddRange(uilmAppTimeLines?.DistinctBy(x => x.CurrentData?.UilmApplication?.ModuleName)?.ToList());
+            //await _uilmRepository.SaveBlocksLanguageManagerTimeLines(uilmResourceKeyTimeLines);
         }
 
         private string HandleUilmApplication(List<BlocksLanguageModule> dbApplications, List<BlocksLanguageModule> uilmApplicationsToBeInserted,
@@ -1857,24 +1987,18 @@ namespace DomainService.Services
 
         private async Task SaveUilmResourceKey(List<BlocksLanguageKey> uilmResourceKeys, List<BlocksLanguageKey> resourceKeysWithoutId, List<BlocksLanguageKey> oldUilmResourceKeys = null)
         {
-            var importOperationId = Guid.NewGuid().ToString();
-
-            // Combine all keys and use upsert with merge to handle concurrent imports safely
-            var allKeys = new List<BlocksLanguageKey>();
-            allKeys.AddRange(uilmResourceKeys);
-            allKeys.AddRange(resourceKeysWithoutId);
-
-            if (allKeys.Any())
+            if (uilmResourceKeys.Any())
             {
-                // Use upsert with resource merging - this is atomic and handles concurrent imports
-                var (upsertedCount, modifiedCount) = await _keyRepository.UpsertResourceKeysWithMergeAsync(allKeys, _blocksBaseCommand?.ClientTenantId);
+                long? updateCount = 0;
 
-                // Create timeline entries for all keys
+                updateCount = await _keyRepository.UpdateUilmResourceKeysForChangeAll(uilmResourceKeys);
+
+                // Create timeline entries for updated keys
                 foreach (var resourceKey in uilmResourceKeys)
                 {
                     try
                     {
-                        await CreateKeyTimelineEntryAsync(oldUilmResourceKeys?.FirstOrDefault(x => x.ItemId == resourceKey.ItemId), resourceKey, LogFromConstants.UilmImportUpdate, importOperationId);
+                        await CreateKeyTimelineEntryAsync(oldUilmResourceKeys.FirstOrDefault(x => x.ItemId == resourceKey.ItemId), resourceKey, "UilmImport.Update");
                     }
                     catch (Exception ex)
                     {
@@ -1882,11 +2006,21 @@ namespace DomainService.Services
                     }
                 }
 
+                _logger.LogInformation("SaveUilmResourceKey: Updated UilmResourceKeys:{count}", updateCount);
+            }
+            if (resourceKeysWithoutId.Any())
+            {
+                //if (!_blocksBaseCommand?.IsExternal)
+                //{
+                await _keyRepository.InsertUilmResourceKeys(resourceKeysWithoutId, _blocksBaseCommand?.ClientTenantId);
+                //}
+
+                // Create timeline entries for inserted keys
                 foreach (var resourceKey in resourceKeysWithoutId)
                 {
                     try
                     {
-                        await CreateKeyTimelineEntryAsync(null, resourceKey, LogFromConstants.UilmImportInsert, importOperationId);
+                        await CreateKeyTimelineEntryAsync(null, resourceKey, "UilmImport.Insert");
                     }
                     catch (Exception ex)
                     {
@@ -1894,7 +2028,7 @@ namespace DomainService.Services
                     }
                 }
 
-                _logger.LogInformation("SaveUilmResourceKey: Upserted {UpsertedCount} keys, Modified {ModifiedCount} keys", upsertedCount, modifiedCount);
+                _logger.LogInformation("SaveUilmResourceKey: Inserted UilmResourceKeys:{count}", resourceKeysWithoutId.Count);
             }
         }
 
