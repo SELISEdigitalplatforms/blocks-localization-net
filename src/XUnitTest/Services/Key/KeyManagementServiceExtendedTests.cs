@@ -1460,7 +1460,7 @@ namespace XUnitTest
 
             var resultAppId = method.Invoke(_service, new object?[]
             {
-                dbApps, insertList, updateList, true, "newModule"
+                dbApps, insertList, updateList, true, "newModule", null
             }) as string;
 
             resultAppId.Should().NotBeNullOrEmpty();
@@ -1483,7 +1483,7 @@ namespace XUnitTest
 
             var resultAppId = method.Invoke(_service, new object?[]
             {
-                dbApps, insertList, updateList, true, "auth"
+                dbApps, insertList, updateList, true, "auth", null
             }) as string;
 
             resultAppId.Should().Be("existing-id");

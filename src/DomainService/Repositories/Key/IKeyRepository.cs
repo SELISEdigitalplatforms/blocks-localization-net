@@ -8,7 +8,7 @@ namespace DomainService.Repositories
     {
         Task SaveKeyAsync(BlocksLanguageKey key);
         Task<BlocksLanguageKey> GetKeyByNameAsync(string KeyName, string moduleId);
-        Task<GetKeysQueryResponse> GetAllKeysAsync(GetKeysRequest query);
+        Task<GetKeysQueryResponse> GetAllKeysAsync(GetKeysRequest request);
         Task<List<Key>> GetAllKeysByModuleAsync(string moduleId);
         Task<bool> SaveNewUilmFiles(List<UilmFile> uilmfiles);
         Task<long> DeleteOldUilmFiles(List<UilmFile> uilmfiles);

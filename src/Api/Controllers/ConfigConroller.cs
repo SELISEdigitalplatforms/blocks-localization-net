@@ -1,9 +1,7 @@
 using Blocks.Genesis;
-using DomainService.Repositories;
 using DomainService.Services.HelperService;
 using DomainService.Shared;
 using DomainService.Shared.Entities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
@@ -14,7 +12,7 @@ namespace Api.Controllers
     
     [ApiController]
     [Route("[controller]/[action]")]
-    public class ConfigController : Controller
+    public class ConfigController : ControllerBase
     {
         private readonly ChangeControllerContext _changeControllerContext;
         private readonly IWebHookService _webHookService;

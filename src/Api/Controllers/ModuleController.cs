@@ -14,7 +14,7 @@ namespace Api.Controllers
     [ApiController]
     [Route("[controller]/[action]")]
 
-    public class ModuleController : Controller
+    public class ModuleController : ControllerBase
     {
         private readonly IModuleManagementService _moduleManagementService;
         private readonly ChangeControllerContext _changeControllerContext;

@@ -31,22 +31,6 @@ namespace DomainService.Services
                     return existingKey == null;
                 })
                 .WithMessage("KeyName and ModuleId combination must not already exist for this key.");
-
-            //// Validate Value
-            //RuleFor(key => key.Value)
-            //    .NotEmpty().WithMessage("Value is required.")
-            //    .MaximumLength(500).WithMessage("Value can be up to 500 characters long.");
-
-            //// Validate Translations
-            //RuleFor(key => key.Translations)
-            //    .Must(translations => translations != null && translations.Count > 0)
-            //    .WithMessage("Translations must contain at least one entry.");
-
-            //// Validate Routes
-            //RuleFor(key => key.Routes)
-            //    .Must(routes => routes != null && routes.Count > 0)
-            //    .WithMessage("Routes must contain at least one route.")
-            //    .ForEach(route => route.NotEmpty().WithMessage("Each route must be non-empty."));
         }
     }
 }

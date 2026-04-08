@@ -1,14 +1,9 @@
 using Api.Controllers;
-using Blocks.Genesis;
 using DomainService.Services;
-using DomainService.Shared;
-using DomainService.Shared.Entities;
 using FluentAssertions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using System.Net;
-using Xunit;
 
 namespace XUnitTest
 {
@@ -22,12 +17,7 @@ namespace XUnitTest
             _assistantServiceMock = new Mock<IAssistantService>();
 
             // Create a loose mock that allows any method calls without throwing
-            var changeControllerContextMock = new Mock<ChangeControllerContext>(MockBehavior.Loose, null, null, null);
-            
-            _controller = new AssistantController(
-                changeControllerContextMock.Object,
-                _assistantServiceMock.Object
-            )
+            _controller = new AssistantController(_assistantServiceMock.Object)
             {
                 ControllerContext = new ControllerContext()
             };

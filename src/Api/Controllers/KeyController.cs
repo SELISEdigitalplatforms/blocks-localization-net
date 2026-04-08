@@ -1,9 +1,6 @@
-﻿using Azure.Core;
-using Blocks.Genesis;
+﻿using Blocks.Genesis;
 using DomainService.Services;
 using DomainService.Shared;
-using DomainService.Shared.Events;
-using DomainService.Utilities;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
@@ -19,7 +16,7 @@ namespace Api.Controllers
     [ApiController]
     [Route("[controller]/[action]")]
 
-    public class KeyController : Controller
+    public class KeyController : ControllerBase
     {
         private readonly IKeyManagementService _keyManagementService;
         private readonly ChangeControllerContext _changeControllerContext;
@@ -238,7 +235,6 @@ namespace Api.Controllers
         [ProtectedEndPoint]
         public async Task<IActionResult> GenerateUilmFile([FromBody] GenerateUilmFilesRequest request)
         {
-            //if (request == null) return BadRequest();
             if (request == null) return BadRequest(new BaseMutationResponse());
             _changeControllerContext.ChangeContext(request);
             await _keyManagementService.SendGenerateUilmFilesEvent(request);
@@ -308,7 +304,6 @@ namespace Api.Controllers
         [ProtectedEndPoint]
         public async Task<IActionResult> UilmImport([FromBody] UilmImportRequest request)
         {
-            //if (request == null) return BadRequest();
             if (request == null) return BadRequest(new BaseMutationResponse());
             _changeControllerContext.ChangeContext(request);
             if (string.IsNullOrWhiteSpace(request.ProjectKey))
