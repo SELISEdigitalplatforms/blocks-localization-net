@@ -64,7 +64,7 @@ namespace DomainService.Services.HelperService
             var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
                  requestData, url, headers);
 
-            return result1 == null ? false : result1.isSuccess;
+            return result1 != null && result1.isSuccess;
         }
 
         public async Task<bool> NotifyTranslateAllEvent(bool response, string? messageCoRelationId)
@@ -102,7 +102,7 @@ namespace DomainService.Services.HelperService
             var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
                  requestData, url, headers);
 
-            return result1 == null ? false : result1.isSuccess;
+            return result1 != null && result1.isSuccess;
         }
 
         public async Task<bool> NotifyTranslateBlocksLanguageKeyEvent(bool response, string? messageCoRelationId)
@@ -140,7 +140,7 @@ namespace DomainService.Services.HelperService
             var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
                  requestData, url, headers);
 
-            return result1 == null ? false : result1.isSuccess;
+            return result1 != null && result1.isSuccess;
         }
 
         public async Task<bool> NotifyEnvironmentDataMigrationEvent(bool response, string? messageCoRelationId, string projectKey, string targetedProjectKey)
@@ -180,7 +180,7 @@ namespace DomainService.Services.HelperService
             var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
                  requestData, url, headers);
 
-            return result1 == null ? false : result1.isSuccess;
+            return result1 != null && result1.isSuccess;
         }
 
         public async Task<bool> NotifyExtensionEvent(bool response, string projectKey) {
@@ -218,7 +218,7 @@ namespace DomainService.Services.HelperService
             var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
                  requestData, url, headers);
 
-            return result1 == null ? false : result1.isSuccess;
+            return result1 != null && result1.isSuccess;
         }
     }
 }
