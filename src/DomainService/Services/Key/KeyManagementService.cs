@@ -37,8 +37,9 @@ namespace DomainService.Services
         private readonly StorageHelper _storageHelperService;
         private readonly INotificationService _notificationService;
 
-        private readonly string _tenantId = BlocksContext.GetContext()?.TenantId ?? "";
         private BaseBlocksCommand _blocksBaseCommand;
+        private readonly string _tenantId = BlocksContext.GetContext()?.TenantId ?? "";
+        private const string DateTimeFormat = "yyyyMMddHHmmss";
 
         public KeyManagementService(
             IKeyRepository keyRepository,
@@ -1997,7 +1998,7 @@ namespace DomainService.Services
             }
             var xlsxStream = new MemoryStream();
             workBook.SaveAs(xlsxStream);
-            var fileName = "uilm_xlsx_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".xlsx";
+            var fileName = "uilm_xlsx_" + DateTime.Now.ToString(DateTimeFormat) + ".xlsx";
             return await SaveUilmFile(fileId, fileName, xlsxStream);
         }
 
@@ -2069,7 +2070,7 @@ namespace DomainService.Services
             }
             var fileBytes = Encoding.UTF8.GetBytes(jsonString);
             var jsonStream = new MemoryStream(fileBytes.ToArray());
-            var JsonFileName = "uilm_json_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".json";
+            var JsonFileName = "uilm_json_" + DateTime.Now.ToString(DateTimeFormat) + ".json";
             return await SaveUilmFile(fileId, JsonFileName, jsonStream);
         }
 
@@ -2093,7 +2094,7 @@ namespace DomainService.Services
                 _logger.LogError("GenerateAndWriteFile: Csv Stream is null");
                 return false;
             }
-            var csvFileName = "uilm_csv_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".csv";
+            var csvFileName = "uilm_csv_" + DateTime.Now.ToString(DateTimeFormat) + ".csv";
             return await SaveUilmFile(fileId, csvFileName, stream);
         }
 
@@ -2122,7 +2123,7 @@ namespace DomainService.Services
                 var exportStreamFileMap = await GetLanguageStreamMapFromTemplate(languages, stream, resourceKeys);
 
                 var zipStream = CreateZipStream(exportStreamFileMap);
-                var xlfZipFileName = "uilm_xlf_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip";
+                var xlfZipFileName = "uilm_xlf_" + DateTime.Now.ToString(DateTimeFormat) + ".zip";
 
                 return await SaveUilmFile(fileId, xlfZipFileName, zipStream);
             }
