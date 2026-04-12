@@ -881,36 +881,6 @@ namespace XUnitTest
 
         #endregion
 
-        #region MapBlocksLanguageKeyToKey (private)
-
-        [Fact]
-        public void MapBlocksLanguageKeyToKey_MapsCorrectly()
-        {
-            var method = GetInstanceMethod("MapBlocksLanguageKeyToKey");
-            var blocksKey = new BlocksLanguageKey
-            {
-                ItemId = "k1",
-                KeyName = "welcome",
-                ModuleId = "m1",
-                Resources = new[] { new Resource { Culture = "en", Value = "Welcome" } },
-                Routes = new List<string> { "/home" },
-                IsPartiallyTranslated = true,
-                CreateDate = DateTime.UtcNow.AddDays(-1),
-                LastUpdateDate = DateTime.UtcNow
-            };
-
-            var result = method.Invoke(_service, new object?[] { blocksKey, "proj-key" }) as KeyModel;
-
-            result.Should().NotBeNull();
-            result!.ItemId.Should().Be("k1");
-            result.KeyName.Should().Be("welcome");
-            result.ModuleId.Should().Be("m1");
-            result.ProjectKey.Should().Be("proj-key");
-            result.IsNewKey.Should().BeFalse();
-        }
-
-        #endregion
-
         #region MapKeyToBlocksLanguageKey (private)
 
         [Fact]

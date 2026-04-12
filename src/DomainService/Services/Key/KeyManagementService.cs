@@ -118,7 +118,7 @@ namespace DomainService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error while saving BlocksLanguage {errorMessage} : {StackTrace}", ex.Message, ex.StackTrace);
+                _logger.LogError("Error while saving BlocksLanguage {ErrorMessage} : {StackTrace}", ex.Message, ex.StackTrace);
                 return new ApiResponse(ex.Message);
             }
 
@@ -493,7 +493,7 @@ namespace DomainService.Services
 
             if (string.IsNullOrEmpty(languageName))
             {
-                _logger.LogError("ChangeAll: No language name found for languageCode {misssingResourceCulture}", missingResource.Culture);
+                _logger.LogError("ChangeAll: No language name found for languageCode {MisssingResourceCulture}", missingResource.Culture);
                 return;
             }
 
@@ -700,7 +700,7 @@ namespace DomainService.Services
             return uilmfiles;
         }
 
-        private void AssignResourceKeysToDictionary(
+        private static void AssignResourceKeysToDictionary(
            List<Key> resourceKeys,
            Language language,
            Dictionary<string, object> dictionary)
@@ -754,7 +754,7 @@ namespace DomainService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error in AssignToDictionary, keyPath: {keyPath},  exception: {ex}", keyPath, JsonConvert.SerializeObject(ex));
+                _logger.LogError("Error in AssignToDictionary, keyPath: {KeyPath},  exception: {Ex}", keyPath, JsonConvert.SerializeObject(ex));
             }
         }
 
@@ -903,7 +903,7 @@ namespace DomainService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "ImportCsvFile: Failed to import FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                _logger.LogError(ex, "ImportCsvFile: Failed to import FileId:{Id}, FileName: {Name}", fileData.ItemId, fileData.Name);
                 return false;
             }
         }
@@ -1031,7 +1031,7 @@ namespace DomainService.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "ImportJsonFile: Failed to import FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                _logger.LogError(ex, "ImportJsonFile: Failed to import FileId:{Id}, FileName: {Name}", fileData.ItemId, fileData.Name);
                 return false;
             }
         }
@@ -1142,14 +1142,14 @@ namespace DomainService.Services
             });
             if (fileData is null)
             {
-                _logger.LogError("ImportUilmFile: File data is null with the file Id: {id}", fileId);
+                _logger.LogError("ImportUilmFile: File data is null with the file Id: {Id}", fileId);
                 return (null, null);
             }
 
             var stream = await GetFileStream(fileData);
             if (stream is null)
             {
-                _logger.LogError("ImportUilmFile: File stream is null with the file Id: {id}", fileId);
+                _logger.LogError("ImportUilmFile: File stream is null with the file Id: {Id}", fileId);
                 return (null, null);
             }
 
@@ -1158,7 +1158,7 @@ namespace DomainService.Services
             return (fileData, stream);
         }
 
-        private async Task<Stream> GetFileStream(FileResponse fileData)
+        private static async Task<Stream> GetFileStream(FileResponse fileData)
         {
 
             using var httpClient = new HttpClient();
@@ -1211,7 +1211,7 @@ namespace DomainService.Services
 
                 if (columns.Count == 0)
                 {
-                    _logger.LogError("ImportExcelFile: No column found in the excel FileId: {id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                    _logger.LogError("ImportExcelFile: No column found in the excel FileId: {Id}, FileName: {Name}", fileData.ItemId, fileData.Name);
                     return false;
                 }
 
@@ -1223,19 +1223,19 @@ namespace DomainService.Services
                 var missingColumns = requiredColumns.Where(col => !columns.ContainsKey(col)).ToList();
                 if (missingColumns.Any())
                 {
-                    _logger.LogError("ImportExcelFile: Missing required columns {MissingColumns} in FileId: {id}, FileName: {name}", string.Join(", ", missingColumns), fileData.ItemId, fileData.Name);
+                    _logger.LogError("ImportExcelFile: Missing required columns {MissingColumns} in FileId: {Id}, FileName: {Name}", string.Join(", ", missingColumns), fileData.ItemId, fileData.Name);
                     return false;
                 }
 
                 await ProcessExcelCells(worksheet, columns, languages, blocksLanguageKeys);
 
-                _logger.LogInformation("ImportExcelFile: Successfully imported FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                _logger.LogInformation("ImportExcelFile: Successfully imported FileId:{Id}, FileName: {Name}", fileData.ItemId, fileData.Name);
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "ImportExcelFile: Failed to import FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                _logger.LogError(ex, "ImportExcelFile: Failed to import FileId:{Id}, FileName: {Name}", fileData.ItemId, fileData.Name);
                 return false;
             }
         }
@@ -1279,12 +1279,12 @@ namespace DomainService.Services
                 var dbApplications = await GetLanguageApplications(null);
                 await ProcessXlfFile(dbApplications, languageJsonModels);
 
-                _logger.LogInformation("ImportXlfFile: Successfully imported FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                _logger.LogInformation("ImportXlfFile: Successfully imported FileId:{Id}, FileName: {Name}", fileData.ItemId, fileData.Name);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "ImportXlfFile: Failed to import FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                _logger.LogError(ex, "ImportXlfFile: Failed to import FileId:{Id}, FileName: {Name}", fileData.ItemId, fileData.Name);
                 return false;
             }
         }
@@ -1403,8 +1403,6 @@ namespace DomainService.Services
             foreach (var fileElement in fileElements)
             {
                 var sourceLanguageFromXml = fileElement.Attribute("source-language")?.Value;
-                // Map source language to database language code
-                var sourceLanguage = MapToDbLanguageCode(sourceLanguageFromXml, dbLanguages) ?? sourceLanguageFromXml;
 
                 // Use target language from filename if provided (already mapped), otherwise fall back to XML attribute and map it
                 var targetLanguage = targetLanguageFromFileName ??
@@ -1430,7 +1428,6 @@ namespace DomainService.Services
                     var targetElement = transUnit.Element(ns + "target");
                     var noteElements = transUnit.Elements(ns + "note");
 
-                    var sourceValue = sourceElement?.Value;
                     var targetValue = targetElement?.Value;
                     var targetState = targetElement?.Attribute("state")?.Value;
 
@@ -1699,13 +1696,7 @@ namespace DomainService.Services
                 {
                     string resourceValue = worksheet.Cell(i, lang.Value).Value.ToString();
                     int characterLength = 0;
-
-                    var key = lang.Key + "_CharacterLength";
-                    //if (lang.Key != defaultLanguage && languages.ContainsKey(key))
-                    //{
-                    //    characterLength = AssignCharacterLengthValue(worksheet, languages, i, key);
-                    //}
-
+                    
                     uilmResourceKey.Resources[j++] = (new Resource() { Culture = lang.Key, Value = resourceValue, CharacterLength = characterLength });
                 }
 
@@ -2633,23 +2624,6 @@ namespace DomainService.Services
             {
                 _logger.LogError("Failed to create no-change publish timeline entry: {Error}", ex.Message);
             }
-        }
-
-        private Key MapBlocksLanguageKeyToKey(BlocksLanguageKey blocksKey, string? projectKey = null)
-        {
-            return new Key
-            {
-                ItemId = blocksKey.ItemId,
-                KeyName = blocksKey.KeyName,
-                ModuleId = blocksKey.ModuleId,
-                Resources = blocksKey.Resources,
-                Routes = blocksKey.Routes,
-                IsPartiallyTranslated = blocksKey.IsPartiallyTranslated,
-                IsNewKey = false, // Will be set appropriately in calling context
-                LastUpdateDate = blocksKey.LastUpdateDate,
-                CreateDate = blocksKey.CreateDate,
-                ProjectKey = projectKey
-            };
         }
 
         private BlocksLanguageKey MapKeyToBlocksLanguageKey(Key key)

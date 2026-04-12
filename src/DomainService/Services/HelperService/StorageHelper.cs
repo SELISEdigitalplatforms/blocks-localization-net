@@ -36,7 +36,7 @@ namespace DomainService.Services.HelperService
             };
             var fileInfo = await _storageDriverService.GetPerSignedUrlForUploadAsync(payload);// serviceClient.SendToHttpAsync<FileData>(HttpMethod.Post, appSettings.StorageServiceBaseUrl, storageServiceVersion, "StorageService/StorageQuery/GetPreSignedUrlForUpload", payload, token);
 
-            _logger.LogInformation("SaveIntoStorage: Upload url - {url}", fileInfo?.UploadUrl);
+            _logger.LogInformation("SaveIntoStorage: Upload url - {Url}", fileInfo?.UploadUrl);
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Put, fileInfo?.UploadUrl) { Content = new StreamContent(stream) })
             {
