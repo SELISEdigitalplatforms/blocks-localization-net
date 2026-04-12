@@ -36,6 +36,7 @@ namespace XUnitTest
         private readonly Mock<IServiceProvider> _serviceProviderMock;
         private readonly StorageHelper _storageHelper;
         private readonly Mock<INotificationService> _notificationServiceMock;
+        private readonly Mock<IGlossaryRepository> _glossaryRepositoryMock;
         private readonly KeyManagementService _service;
 
         public KeyManagementServiceExtendedTests()
@@ -54,6 +55,7 @@ namespace XUnitTest
             var storageLoggerMock = new Mock<ILogger<StorageHelper>>();
             _storageHelper = new StorageHelper(storageLoggerMock.Object, _storageDriverServiceMock.Object);
             _notificationServiceMock = new Mock<INotificationService>();
+            _glossaryRepositoryMock = new Mock<IGlossaryRepository>();
 
             _service = new KeyManagementService(
                 _keyRepositoryMock.Object,
@@ -68,7 +70,8 @@ namespace XUnitTest
                 _storageDriverServiceMock.Object,
                 _storageHelper,
                 _serviceProviderMock.Object,
-                _notificationServiceMock.Object
+                _notificationServiceMock.Object,
+                _glossaryRepositoryMock.Object
             );
         }
 

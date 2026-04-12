@@ -36,6 +36,7 @@ namespace DomainService.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly StorageHelper _storageHelperService;
         private readonly INotificationService _notificationService;
+        private readonly IGlossaryRepository _glossaryRepository;
 
         private readonly string _tenantId = BlocksContext.GetContext()?.TenantId ?? "";
         private BaseBlocksCommand _blocksBaseCommand;
@@ -53,7 +54,8 @@ namespace DomainService.Services
             IStorageDriverService storageDriverService,
             StorageHelper storageHelperService,
             IServiceProvider serviceProvider,
-            INotificationService notificationService
+            INotificationService notificationService,
+            IGlossaryRepository glossaryRepository
             )
         {
             _keyRepository = keyRepository;
@@ -69,6 +71,7 @@ namespace DomainService.Services
             _storageHelperService = storageHelperService;
             _serviceProvider = serviceProvider;
             _notificationService = notificationService;
+            _glossaryRepository = glossaryRepository;
         }
 
         public async Task<ApiResponse> SaveKeyAsync(Key key)
@@ -219,6 +222,7 @@ namespace DomainService.Services
             repoKey.Resources = key.Resources;
             repoKey.IsPartiallyTranslated = key.IsPartiallyTranslated;
             repoKey.Routes = key.Routes;
+            repoKey.GlossaryIds = key.GlossaryIds;
             repoKey.Context = key.Context;
 
             return repoKey;
@@ -272,6 +276,70 @@ namespace DomainService.Services
         {
             var key = await _keyRepository.GetByIdAsync(request.ItemId);
             return key;
+        }
+
+        public async Task<GetSuggestedGlossariesResponse> GetSuggestedGlossariesAsync(GetSuggestedGlossariesRequest request)
+        {
+            var response = new GetSuggestedGlossariesResponse();
+
+            var key = await _keyRepository.GetByIdAsync(request.ItemId);
+            if (key?.Resources == null || key.Resources.Length == 0)
+                return response;
+
+            var resourceValues = key.Resources
+                .Where(r => !string.IsNullOrWhiteSpace(r.Value))
+                .Select(r => r.Value)
+                .ToList();
+
+            if (resourceValues.Count == 0)
+                return response;
+
+            var glossariesRequest = new GetGlossariesRequest
+            {
+                PageNumber = 0,
+                PageSize = 100
+            };
+            var glossariesResult = await _glossaryRepository.GetAllAsync(glossariesRequest);
+
+            if (glossariesResult?.Items == null || glossariesResult.Items.Count == 0)
+                return response;
+
+            var matched = new List<Glossary>();
+
+            foreach (var glossary in glossariesResult.Items)
+            {
+                if (matched.Count >= request.MaxResults)
+                    break;
+
+                var isMatch = false;
+
+                foreach (var resourceValue in resourceValues)
+                {
+                    if (!string.IsNullOrWhiteSpace(glossary.Name) &&
+                        System.Text.RegularExpressions.Regex.IsMatch(
+                            resourceValue, System.Text.RegularExpressions.Regex.Escape(glossary.Name),
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                    {
+                        isMatch = true;
+                        break;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(glossary.Context) &&
+                        System.Text.RegularExpressions.Regex.IsMatch(
+                            resourceValue, System.Text.RegularExpressions.Regex.Escape(glossary.Context),
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                    {
+                        isMatch = true;
+                        break;
+                    }
+                }
+
+                if (isMatch)
+                    matched.Add(glossary);
+            }
+
+            response.SuggestedGlossaries = matched;
+            return response;
         }
 
         public async Task<BaseMutationResponse> DeleteAsysnc(DeleteKeyRequest request)
