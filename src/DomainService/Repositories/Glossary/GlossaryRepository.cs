@@ -59,6 +59,18 @@ namespace DomainService.Repositories
             return await collection.Find(filter).FirstOrDefaultAsync();
         }
 
+        public async Task<List<Glossary>> GetByIdsAsync(List<string> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return new List<Glossary>();
+
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<Glossary>(_collectionName);
+            var filter = Builders<Glossary>.Filter.In(g => g.ItemId, ids);
+
+            return await collection.Find(filter).ToListAsync();
+        }
+
         public async Task SaveAsync(BlocksGlossary glossary)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");

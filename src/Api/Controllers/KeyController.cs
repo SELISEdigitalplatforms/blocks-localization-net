@@ -176,6 +176,15 @@ namespace Api.Controllers
             return result;
         }
 
+        [HttpGet]
+        [ProtectedEndPoint]
+        public async Task<GetSuggestedGlossariesResponse> GetSuggestedGlossaries([FromQuery] GetSuggestedGlossariesRequest request)
+        {
+            if (request == null) BadRequest(new BaseMutationResponse());
+            _changeControllerContext.ChangeContext(request);
+            return await _keyManagementService.GetSuggestedGlossariesAsync(request);
+        }
+
         /// <summary>
         /// Deletes a specific key by item ID.
         /// </summary>
