@@ -61,9 +61,9 @@ namespace DomainService.Services.HelperService
                 { "Secret", actulalSecret}
             };
 
-            var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
+            var (result1, _) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
                  requestData, url, headers);
-
+    
             return result1 != null && result1.isSuccess;
         }
 
@@ -99,7 +99,7 @@ namespace DomainService.Services.HelperService
                 { "Secret", actulalSecret}
             };
 
-            var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
+            var (result1, _) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
                  requestData, url, headers);
 
             return result1 != null && result1.isSuccess;
@@ -137,7 +137,7 @@ namespace DomainService.Services.HelperService
                 { "Secret", actulalSecret}
             };
 
-            var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
+            var (result1, _) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
                  requestData, url, headers);
 
             return result1 != null && result1.isSuccess;
@@ -177,7 +177,7 @@ namespace DomainService.Services.HelperService
                 { "Secret", actulalSecret}
             };
 
-            var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
+            var (result1, _) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
                  requestData, url, headers);
 
             return result1 != null && result1.isSuccess;
@@ -215,7 +215,7 @@ namespace DomainService.Services.HelperService
                 { "Secret", actulalSecret}
             };
 
-            var (result1, result2) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
+            var (result1, _) = await _httpHelperServices.MakeHttpPostRequest<NotificationResponse>(
                  requestData, url, headers);
 
             return result1 != null && result1.isSuccess;
