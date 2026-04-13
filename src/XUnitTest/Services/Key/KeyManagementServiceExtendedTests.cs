@@ -1424,8 +1424,6 @@ namespace XUnitTest
             updateList.Should().HaveCount(1);
         }
 
-
-        /*
         [Fact]
         public void HandleApplicationWithAppId_ExistingApp_AddsToUpdateList()
         {
@@ -1441,7 +1439,7 @@ namespace XUnitTest
 
             method.Invoke(_service, new object?[]
             {
-                dbApps, insertList, updateList, "m1", true, "auth_updated"
+                dbApps, insertList, updateList, "m1", "auth_updated"
             });
 
             updateList.Should().HaveCount(1);
@@ -1459,13 +1457,12 @@ namespace XUnitTest
 
             method.Invoke(_service, new object?[]
             {
-                dbApps, insertList, updateList, "new-id", true, "newModule"
+                dbApps, insertList, updateList, "new-id", "newModule"
             });
 
             insertList.Should().HaveCount(1);
             insertList[0].ItemId.Should().Be("new-id");
         }
-        */
         #endregion
 
         #region GetUilmResourceKey (private)
