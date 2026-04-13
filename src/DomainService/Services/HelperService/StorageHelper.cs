@@ -34,8 +34,7 @@ namespace DomainService.Services.HelperService
                 ParentDirectoryId = parentDirectoryId,
                 Tags = "[\"File\"]",
             };
-            var fileInfo = await _storageDriverService.GetPerSignedUrlForUploadAsync(payload);// serviceClient.SendToHttpAsync<FileData>(HttpMethod.Post, appSettings.StorageServiceBaseUrl, storageServiceVersion, "StorageService/StorageQuery/GetPreSignedUrlForUpload", payload, token);
-
+            var fileInfo = await _storageDriverService.GetPerSignedUrlForUploadAsync(payload);
             _logger.LogInformation("SaveIntoStorage: Upload url - {Url}", fileInfo?.UploadUrl);
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Put, fileInfo?.UploadUrl) { Content = new StreamContent(stream) })
