@@ -1108,11 +1108,9 @@ namespace XUnitTest
                 });
 
             var method = GetInstanceMethod("GetLanguageResourceKeys");
-            var task = method.Invoke(_service, new object?[]
-            {
-                new List<string> { "app1" }, default(DateTime), default(DateTime)
-            }) as Task<List<BlocksLanguageKey>>;
-
+            var task = method.Invoke(_service, new object?[] { new List<string> { "app1" } }) 
+                as Task<List<BlocksLanguageKey>>;
+            
             var result = await task!;
             result.Should().HaveCount(1);
         }
@@ -1129,11 +1127,9 @@ namespace XUnitTest
                 });
 
             var method = GetInstanceMethod("GetLanguageResourceKeys");
-            var task = method.Invoke(_service, new object?[]
-            {
-                null, default(DateTime), default(DateTime)
-            }) as Task<List<BlocksLanguageKey>>;
-
+            var task = method.Invoke(_service, new object?[] { null }) 
+                as Task<List<BlocksLanguageKey>>;
+            
             var result = await task!;
             result.Should().HaveCount(2);
         }
@@ -1428,8 +1424,6 @@ namespace XUnitTest
             updateList.Should().HaveCount(1);
         }
 
-
-
         [Fact]
         public void HandleApplicationWithAppId_ExistingApp_AddsToUpdateList()
         {
@@ -1445,7 +1439,7 @@ namespace XUnitTest
 
             method.Invoke(_service, new object?[]
             {
-                dbApps, insertList, updateList, "m1", true, "auth_updated"
+                dbApps, insertList, updateList, "m1", "auth_updated"
             });
 
             updateList.Should().HaveCount(1);
@@ -1463,13 +1457,12 @@ namespace XUnitTest
 
             method.Invoke(_service, new object?[]
             {
-                dbApps, insertList, updateList, "new-id", true, "newModule"
+                dbApps, insertList, updateList, "new-id", "newModule"
             });
 
             insertList.Should().HaveCount(1);
             insertList[0].ItemId.Should().Be("new-id");
         }
-
         #endregion
 
         #region GetUilmResourceKey (private)

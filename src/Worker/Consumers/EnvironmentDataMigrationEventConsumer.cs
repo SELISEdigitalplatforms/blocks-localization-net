@@ -30,7 +30,6 @@ namespace Worker.Consumers
 
         public async Task Consume(EnvironmentDataMigrationEvent @event)
         {
-            var startTime = DateTime.UtcNow;
             try
             {
                 _logger.LogInformation("Starting environment data migration from {ProjectKey} to {TargetedProjectKey}. OverwriteExisting: {ShouldOverwrite}",

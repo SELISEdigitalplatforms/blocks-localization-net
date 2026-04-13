@@ -203,7 +203,7 @@ namespace DomainService.Services
 
             if (errors.Any())
             {
-                var errorMessage = $"Bulk save completed with {errors.Count} errors out of {keys.Count} keys:\n" + string.Join("\n", errors);
+                var errorMessage = string.Format("Bulk save completed with {0} errors out of {1} keys:\n{2}", errors.Count, keys.Count, string.Join("\n", errors));
                 return new ApiResponse(errorMessage);
             }
 
@@ -635,7 +635,7 @@ namespace DomainService.Services
                 }
             }
 
-            _logger.LogInformation($"ChangeAll: Uilm Resource key updated: {updateCount}");
+            _logger.LogInformation("ChangeAll: Uilm Resource key updated: {UpdateCount}", updateCount);
         }
 
         public async Task<bool> GenerateAsync(GenerateUilmFilesEvent command)
@@ -750,7 +750,7 @@ namespace DomainService.Services
                 Dictionary<string, object> dictionary = new Dictionary<string, object>();
                 if (language.LanguageCode == "key")
                 {
-                    AssignResourceKeysToDictionaryForKeyMode(resourceKeys, keyLang, dictionary);
+                    AssignResourceKeysToDictionaryForKeyMode(resourceKeys, dictionary);
                 }
                 else
                 {
@@ -783,9 +783,9 @@ namespace DomainService.Services
                 dictionary[reosurceKey.KeyName] = resourceValue;
             });
         }
+
         private void AssignResourceKeysToDictionaryForKeyMode(
            List<Key> resourceKeys,
-           Language language,
            Dictionary<string, object> dictionary)
         {
             resourceKeys.ForEach((Key resourceKey) =>
@@ -967,7 +967,7 @@ namespace DomainService.Services
                 var dbApplications = await GetLanguageApplications(null);
                 await ProcessJsonFile(dbApplications, languageJsonModels);
 
-                _logger.LogInformation("ImportCsvFile: Successfully imported FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                _logger.LogInformation("ImportCsvFile: Successfully imported FileId:{Id}, FileName: {Name}", fileData.ItemId, fileData.Name);
                 return true;
             }
             catch (Exception ex)
@@ -1094,7 +1094,7 @@ namespace DomainService.Services
                 var dbApplications = await GetLanguageApplications(null);
                 await ProcessJsonFile(dbApplications, languageJsonModels);
 
-                _logger.LogInformation("ImportJsonFile: Successfully imported FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                _logger.LogInformation("ImportJsonFile: Successfully imported FileId:{Id}, FileName: {Name}", fileData.ItemId, fileData.Name);
 
                 return true;
             }
@@ -1471,8 +1471,6 @@ namespace DomainService.Services
 
             foreach (var fileElement in fileElements)
             {
-                var sourceLanguageFromXml = fileElement.Attribute("source-language")?.Value;
-
                 // Use target language from filename if provided (already mapped), otherwise fall back to XML attribute and map it
                 var targetLanguage = targetLanguageFromFileName ??
                     MapToDbLanguageCode(fileElement.Attribute("target-language")?.Value, dbLanguages) ??
@@ -1493,7 +1491,6 @@ namespace DomainService.Services
 
                     // Extract ItemId from trans-unit id (format: ItemId_Culture)
 
-                    var sourceElement = transUnit.Element(ns + "source");
                     var targetElement = transUnit.Element(ns + "target");
                     var noteElements = transUnit.Elements(ns + "note");
 
@@ -1501,7 +1498,6 @@ namespace DomainService.Services
                     var targetState = targetElement?.Attribute("state")?.Value;
 
                     // Extract metadata from notes
-                    string moduleId = null;
                     var routes = new List<string>();
                     int characterLength = 0;
 
@@ -1722,9 +1718,7 @@ namespace DomainService.Services
         private async Task ProcessExcelCells(IXLWorksheet worksheet, Dictionary<string, string> columns, Dictionary<string, string> languages,
             List<BlocksLanguageKey> uilmResourceKeys)
         {
-            //List<Language> languageSetting = await _languageManagementService.GetLanguagesAsync();
             List<BlocksLanguageKey> oldUilmResourceKeys = new List<BlocksLanguageKey>();
-
             List<BlocksLanguageModule> dbApplications = await _moduleManagementService.GetModulesAsync();
 
             var uilmApplicationsToBeInserted = new List<BlocksLanguageModule>();
@@ -1732,13 +1726,9 @@ namespace DomainService.Services
 
             var resourceKeysWithoutId = new List<BlocksLanguageKey>();
             var cultures = languages.Where(x => !x.Key.Contains("_CharacterLength")).ToDictionary(x => x.Key, y => y.Value);
-
             var excelRows = worksheet.RowsUsed().Count();
 
             _logger.LogInformation("ImportExcelFile: {Excelrows} UilmResourceKeys Found!", excelRows - 1);
-
-            //var uilmAppTimeLines = new List<BlocksLanguageManagerTimeline>();
-            //var uilmResourceKeyTimeLines = new List<BlocksLanguageManagerTimeline>();
 
             for (int i = 2; i <= excelRows; i++)
             {
@@ -1795,18 +1785,18 @@ namespace DomainService.Services
         {
             if (string.IsNullOrWhiteSpace(appId))
             {
-                appId = HandleApplicationWithoutAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, isPartiallyTranslated, moduleName);
+                appId = HandleApplicationWithoutAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, moduleName);
             }
             else
             {
-                HandleApplicationWithAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, isPartiallyTranslated, moduleName);
+                HandleApplicationWithAppId(dbApplications, uilmApplicationsToBeInserted, uilmApplicationsToBeUpdated, appId, moduleName);
             }
 
             return appId;
         }
 
         private string HandleApplicationWithoutAppId(List<BlocksLanguageModule> dbApplications, List<BlocksLanguageModule> uilmApplicationsToBeInserted,
-            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, bool isPartiallyTranslated, string moduleName, string? targetedProjectKey = null)
+            List<BlocksLanguageModule> uilmApplicationsToBeUpdated, string moduleName)
         {
             string appId;
             var application = dbApplications?.FirstOrDefault(x => x.ModuleName == moduleName);
@@ -1845,7 +1835,7 @@ namespace DomainService.Services
         }
 
         private void HandleApplicationWithAppId(List<BlocksLanguageModule> dbApplications, List<BlocksLanguageModule> uilmApplicationsToBeInserted, List<BlocksLanguageModule> uilmApplicationsToBeUpdated,
-            string appId, bool isPartiallyTranslated, string moduleName)
+            string appId, string moduleName)
         {
             var application = dbApplications?.FirstOrDefault(x => x.ItemId == appId);
             if (application != null)
@@ -1949,7 +1939,7 @@ namespace DomainService.Services
                     }
                 }
 
-                _logger.LogInformation("SaveUilmResourceKey: Updated UilmResourceKeys:{count}", updateCount);
+                _logger.LogInformation("SaveUilmResourceKey: Updated UilmResourceKeys:{Count}", updateCount);
             }
             if (resourceKeysWithoutId.Any())
             {
@@ -1968,7 +1958,7 @@ namespace DomainService.Services
                     }
                 }
 
-                _logger.LogInformation("SaveUilmResourceKey: Inserted UilmResourceKeys:{count}", resourceKeysWithoutId.Count);
+                _logger.LogInformation("SaveUilmResourceKey: Inserted UilmResourceKeys:{Count}", resourceKeysWithoutId.Count);
             }
         }
 
@@ -2018,7 +2008,7 @@ namespace DomainService.Services
         {
             var languageSettings = await GetLanguageSetting();
             var languageApplications = await GetLanguageApplications(request.AppIds);
-            var languageResourceKeys = await GetLanguageResourceKeys(request.AppIds, request.StartDate, request.EndDate);
+            var languageResourceKeys = await GetLanguageResourceKeys(request.AppIds);
 
             switch (request.OutputType)
             {
@@ -2358,7 +2348,7 @@ namespace DomainService.Services
         }
 
 
-        private async Task<List<BlocksLanguageKey>> GetLanguageResourceKeys(List<string> appIds = null, DateTime startDate = default, DateTime endDate = default)
+        private async Task<List<BlocksLanguageKey>> GetLanguageResourceKeys(List<string> appIds = null)
         {
             List<BlocksLanguageKey> resourceKeys = null;
 
