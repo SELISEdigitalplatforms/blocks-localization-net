@@ -49,12 +49,12 @@ jobs:
             RESPONSE=$(curl -sS \
               -H "Authorization: token ${{ secrets.SELISE_GITHUB_PAT }}" \
               -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&base=main&head=${{ github.repository_owner }}:fix/sso-app-role&sort=updated&direction=desc&per_page=1")
+              "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&base=main&head=${{ github.repository_owner }}:hotfix/tenant-cache&sort=updated&direction=desc&per_page=1")
             PR_NUMBER=$(echo "$RESPONSE" | jq -r '.[0] | select(.merged_at != null) | .number')
           fi
 
           echo "Final PR_NUMBER=$PR_NUMBER"
-          echo "pr_number=15" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
   test-job:
     if: ${{ needs.initialization.outputs.envvalue1 == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
