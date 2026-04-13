@@ -2012,7 +2012,7 @@ namespace DomainService.Services
         {
             var languageSettings = await GetLanguageSetting();
             var languageApplications = await GetLanguageApplications(request.AppIds);
-            var languageResourceKeys = await GetLanguageResourceKeys(request.AppIds, request.StartDate, request.EndDate);
+            var languageResourceKeys = await GetLanguageResourceKeys(request.AppIds);
 
             switch (request.OutputType)
             {
@@ -2352,7 +2352,7 @@ namespace DomainService.Services
         }
 
 
-        private async Task<List<BlocksLanguageKey>> GetLanguageResourceKeys(List<string> appIds = null, DateTime startDate = default, DateTime endDate = default)
+        private async Task<List<BlocksLanguageKey>> GetLanguageResourceKeys(List<string> appIds = null)
         {
             List<BlocksLanguageKey> resourceKeys = null;
 

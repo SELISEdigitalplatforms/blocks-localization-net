@@ -1108,11 +1108,9 @@ namespace XUnitTest
                 });
 
             var method = GetInstanceMethod("GetLanguageResourceKeys");
-            var task = method.Invoke(_service, new object?[]
-            {
-                new List<string> { "app1" }, default(DateTime), default(DateTime)
-            }) as Task<List<BlocksLanguageKey>>;
-
+            var task = method.Invoke(_service, new object?[] { new List<string> { "app1" } }) 
+                as Task<List<BlocksLanguageKey>>;
+            
             var result = await task!;
             result.Should().HaveCount(1);
         }
@@ -1129,11 +1127,9 @@ namespace XUnitTest
                 });
 
             var method = GetInstanceMethod("GetLanguageResourceKeys");
-            var task = method.Invoke(_service, new object?[]
-            {
-                null, default(DateTime), default(DateTime)
-            }) as Task<List<BlocksLanguageKey>>;
-
+            var task = method.Invoke(_service, new object?[] { null }) 
+                as Task<List<BlocksLanguageKey>>;
+            
             var result = await task!;
             result.Should().HaveCount(2);
         }
