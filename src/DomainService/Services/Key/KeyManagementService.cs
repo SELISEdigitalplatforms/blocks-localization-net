@@ -967,7 +967,7 @@ namespace DomainService.Services
                 var dbApplications = await GetLanguageApplications(null);
                 await ProcessJsonFile(dbApplications, languageJsonModels);
 
-                _logger.LogInformation("ImportCsvFile: Successfully imported FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                _logger.LogInformation("ImportCsvFile: Successfully imported FileId:{Id}, FileName: {Name}", fileData.ItemId, fileData.Name);
                 return true;
             }
             catch (Exception ex)
@@ -1094,7 +1094,7 @@ namespace DomainService.Services
                 var dbApplications = await GetLanguageApplications(null);
                 await ProcessJsonFile(dbApplications, languageJsonModels);
 
-                _logger.LogInformation("ImportJsonFile: Successfully imported FileId:{id}, FileName: {name}", fileData.ItemId, fileData.Name);
+                _logger.LogInformation("ImportJsonFile: Successfully imported FileId:{Id}, FileName: {Name}", fileData.ItemId, fileData.Name);
 
                 return true;
             }
@@ -1471,8 +1471,6 @@ namespace DomainService.Services
 
             foreach (var fileElement in fileElements)
             {
-                var sourceLanguageFromXml = fileElement.Attribute("source-language")?.Value;
-
                 // Use target language from filename if provided (already mapped), otherwise fall back to XML attribute and map it
                 var targetLanguage = targetLanguageFromFileName ??
                     MapToDbLanguageCode(fileElement.Attribute("target-language")?.Value, dbLanguages) ??
@@ -1493,7 +1491,6 @@ namespace DomainService.Services
 
                     // Extract ItemId from trans-unit id (format: ItemId_Culture)
 
-                    var sourceElement = transUnit.Element(ns + "source");
                     var targetElement = transUnit.Element(ns + "target");
                     var noteElements = transUnit.Elements(ns + "note");
 
@@ -1501,7 +1498,6 @@ namespace DomainService.Services
                     var targetState = targetElement?.Attribute("state")?.Value;
 
                     // Extract metadata from notes
-                    string moduleId = null;
                     var routes = new List<string>();
                     int characterLength = 0;
 
@@ -1943,7 +1939,7 @@ namespace DomainService.Services
                     }
                 }
 
-                _logger.LogInformation("SaveUilmResourceKey: Updated UilmResourceKeys:{count}", updateCount);
+                _logger.LogInformation("SaveUilmResourceKey: Updated UilmResourceKeys:{Count}", updateCount);
             }
             if (resourceKeysWithoutId.Any())
             {
@@ -1962,7 +1958,7 @@ namespace DomainService.Services
                     }
                 }
 
-                _logger.LogInformation("SaveUilmResourceKey: Inserted UilmResourceKeys:{count}", resourceKeysWithoutId.Count);
+                _logger.LogInformation("SaveUilmResourceKey: Inserted UilmResourceKeys:{Count}", resourceKeysWithoutId.Count);
             }
         }
 
