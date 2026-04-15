@@ -53,6 +53,10 @@ namespace Worker
 
             services.AddSingleton<IAssistantService, AssistantService>();
 
+            services.AddSingleton<IGlossaryManagementService, GlossaryManagementService>();
+            services.AddSingleton<IGlossaryRepository, GlossaryRepository>();
+            services.AddSingleton<IValidator<Glossary>, GlossaryValidator>();
+
             services.RegisterBlocksStorageServices();
             services.AddSingleton<DmsArtifactBuilderFactory>();
             services.AddTransient<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();

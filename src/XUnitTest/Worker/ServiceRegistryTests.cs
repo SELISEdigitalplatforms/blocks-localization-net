@@ -63,6 +63,10 @@ namespace XUnitTest
 
             AssertRegistration<IAssistantService, AssistantService>(services, ServiceLifetime.Singleton);
 
+            AssertRegistration<IGlossaryManagementService, GlossaryManagementService>(services, ServiceLifetime.Singleton);
+            AssertRegistration<IGlossaryRepository, GlossaryRepository>(services, ServiceLifetime.Singleton);
+            AssertRegistration<IValidator<Glossary>, GlossaryValidator>(services, ServiceLifetime.Singleton);
+
             AssertRegistration<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>(services, ServiceLifetime.Transient);
 
             AssertRegistration<INotificationService, NotificationService>(services, ServiceLifetime.Singleton);
