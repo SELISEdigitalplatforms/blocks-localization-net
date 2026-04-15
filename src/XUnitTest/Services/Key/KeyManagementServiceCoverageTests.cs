@@ -64,7 +64,8 @@ namespace XUnitTest
                 _storageDriverServiceMock.Object,
                 _storageHelper,
                 _serviceProviderMock.Object,
-                _notificationServiceMock.Object
+                _notificationServiceMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
         }
 

@@ -36,6 +36,7 @@ namespace XUnitTest
         private readonly Mock<IServiceProvider> _serviceProviderMock;
         private readonly StorageHelper _storageHelper;
         private readonly Mock<INotificationService> _notificationServiceMock;
+        private readonly Mock<IGlossaryRepository> _glossaryRepositoryMock;
         private readonly KeyManagementService _service;
 
         public KeyManagementServiceExtendedTests()
@@ -54,6 +55,7 @@ namespace XUnitTest
             var storageLoggerMock = new Mock<ILogger<StorageHelper>>();
             _storageHelper = new StorageHelper(storageLoggerMock.Object, _storageDriverServiceMock.Object);
             _notificationServiceMock = new Mock<INotificationService>();
+            _glossaryRepositoryMock = new Mock<IGlossaryRepository>();
 
             _service = new KeyManagementService(
                 _keyRepositoryMock.Object,
@@ -68,7 +70,8 @@ namespace XUnitTest
                 _storageDriverServiceMock.Object,
                 _storageHelper,
                 _serviceProviderMock.Object,
-                _notificationServiceMock.Object
+                _notificationServiceMock.Object,
+                _glossaryRepositoryMock.Object
             );
         }
 
@@ -881,36 +884,6 @@ namespace XUnitTest
 
         #endregion
 
-        #region MapBlocksLanguageKeyToKey (private)
-
-        [Fact]
-        public void MapBlocksLanguageKeyToKey_MapsCorrectly()
-        {
-            var method = GetInstanceMethod("MapBlocksLanguageKeyToKey");
-            var blocksKey = new BlocksLanguageKey
-            {
-                ItemId = "k1",
-                KeyName = "welcome",
-                ModuleId = "m1",
-                Resources = new[] { new Resource { Culture = "en", Value = "Welcome" } },
-                Routes = new List<string> { "/home" },
-                IsPartiallyTranslated = true,
-                CreateDate = DateTime.UtcNow.AddDays(-1),
-                LastUpdateDate = DateTime.UtcNow
-            };
-
-            var result = method.Invoke(_service, new object?[] { blocksKey, "proj-key" }) as KeyModel;
-
-            result.Should().NotBeNull();
-            result!.ItemId.Should().Be("k1");
-            result.KeyName.Should().Be("welcome");
-            result.ModuleId.Should().Be("m1");
-            result.ProjectKey.Should().Be("proj-key");
-            result.IsNewKey.Should().BeFalse();
-        }
-
-        #endregion
-
         #region MapKeyToBlocksLanguageKey (private)
 
         [Fact]
@@ -1135,11 +1108,9 @@ namespace XUnitTest
                 });
 
             var method = GetInstanceMethod("GetLanguageResourceKeys");
-            var task = method.Invoke(_service, new object?[]
-            {
-                new List<string> { "app1" }, default(DateTime), default(DateTime)
-            }) as Task<List<BlocksLanguageKey>>;
-
+            var task = method.Invoke(_service, new object?[] { new List<string> { "app1" } }) 
+                as Task<List<BlocksLanguageKey>>;
+            
             var result = await task!;
             result.Should().HaveCount(1);
         }
@@ -1156,11 +1127,9 @@ namespace XUnitTest
                 });
 
             var method = GetInstanceMethod("GetLanguageResourceKeys");
-            var task = method.Invoke(_service, new object?[]
-            {
-                null, default(DateTime), default(DateTime)
-            }) as Task<List<BlocksLanguageKey>>;
-
+            var task = method.Invoke(_service, new object?[] { null }) 
+                as Task<List<BlocksLanguageKey>>;
+            
             var result = await task!;
             result.Should().HaveCount(2);
         }
@@ -1456,48 +1425,6 @@ namespace XUnitTest
         }
 
         [Fact]
-        public void HandleApplicationWithoutAppId_NewModule_CreatesAndReturnsId()
-        {
-            var method = typeof(KeyManagementService).GetMethod("HandleApplicationWithoutAppId",
-                BindingFlags.NonPublic | BindingFlags.Instance)!;
-
-            var dbApps = new List<BlocksLanguageModule>();
-            var insertList = new List<BlocksLanguageModule>();
-            var updateList = new List<BlocksLanguageModule>();
-
-            var resultAppId = method.Invoke(_service, new object?[]
-            {
-                dbApps, insertList, updateList, true, "newModule", null
-            }) as string;
-
-            resultAppId.Should().NotBeNullOrEmpty();
-            insertList.Should().HaveCount(1);
-            insertList[0].ModuleName.Should().Be("newModule");
-        }
-
-        [Fact]
-        public void HandleApplicationWithoutAppId_ExistingModule_ReturnsExistingId()
-        {
-            var method = typeof(KeyManagementService).GetMethod("HandleApplicationWithoutAppId",
-                BindingFlags.NonPublic | BindingFlags.Instance)!;
-
-            var dbApps = new List<BlocksLanguageModule>
-            {
-                new() { ItemId = "existing-id", ModuleName = "auth" }
-            };
-            var insertList = new List<BlocksLanguageModule>();
-            var updateList = new List<BlocksLanguageModule>();
-
-            var resultAppId = method.Invoke(_service, new object?[]
-            {
-                dbApps, insertList, updateList, true, "auth", null
-            }) as string;
-
-            resultAppId.Should().Be("existing-id");
-            updateList.Should().HaveCount(1);
-        }
-
-        [Fact]
         public void HandleApplicationWithAppId_ExistingApp_AddsToUpdateList()
         {
             var method = typeof(KeyManagementService).GetMethod("HandleApplicationWithAppId",
@@ -1512,7 +1439,7 @@ namespace XUnitTest
 
             method.Invoke(_service, new object?[]
             {
-                dbApps, insertList, updateList, "m1", true, "auth_updated"
+                dbApps, insertList, updateList, "m1", "auth_updated"
             });
 
             updateList.Should().HaveCount(1);
@@ -1530,13 +1457,12 @@ namespace XUnitTest
 
             method.Invoke(_service, new object?[]
             {
-                dbApps, insertList, updateList, "new-id", true, "newModule"
+                dbApps, insertList, updateList, "new-id", "newModule"
             });
 
             insertList.Should().HaveCount(1);
             insertList[0].ItemId.Should().Be("new-id");
         }
-
         #endregion
 
         #region GetUilmResourceKey (private)

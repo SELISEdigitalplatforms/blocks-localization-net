@@ -9,7 +9,6 @@ namespace DomainService.Services.HelperService
     {
         private readonly ILogger<StorageHelper> _logger;
         private readonly IStorageDriverService _storageDriverService;
-        private HttpClient _httpClient;
 
         public StorageHelper(
             ILogger<StorageHelper> logger,
@@ -35,14 +34,13 @@ namespace DomainService.Services.HelperService
                 ParentDirectoryId = parentDirectoryId,
                 Tags = "[\"File\"]",
             };
-            var fileInfo = await _storageDriverService.GetPerSignedUrlForUploadAsync(payload);// serviceClient.SendToHttpAsync<FileData>(HttpMethod.Post, appSettings.StorageServiceBaseUrl, storageServiceVersion, "StorageService/StorageQuery/GetPreSignedUrlForUpload", payload, token);
-
-            _logger.LogInformation("SaveIntoStorage: Upload url - {url}", fileInfo?.UploadUrl);
+            var fileInfo = await _storageDriverService.GetPerSignedUrlForUploadAsync(payload);
+            _logger.LogInformation("SaveIntoStorage: Upload url - {Url}", fileInfo?.UploadUrl);
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Put, fileInfo?.UploadUrl) { Content = new StreamContent(stream) })
             {
                 AddAzureBlobHeaders(httpRequestMessage);
-                _httpClient = new HttpClient();
+                HttpClient httpClient = new HttpClient();
 
                 using var request = new HttpRequestMessage(HttpMethod.Put, fileInfo.UploadUrl)
                 {
@@ -51,7 +49,7 @@ namespace DomainService.Services.HelperService
 
                 request.Headers.Add("x-ms-blob-type", "BlockBlob");
 
-                var httpResponseMessage = await _httpClient.SendAsync(request);
+                var httpResponseMessage = await httpClient.SendAsync(request);
                 stream.Close();
                 return httpResponseMessage.IsSuccessStatusCode;
             }

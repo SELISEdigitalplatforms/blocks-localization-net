@@ -30,7 +30,6 @@ namespace Worker.Consumers
 
         public async Task Consume(EnvironmentDataMigrationEvent @event)
         {
-            var startTime = DateTime.UtcNow;
             try
             {
                 _logger.LogInformation("Starting environment data migration from {ProjectKey} to {TargetedProjectKey}. OverwriteExisting: {ShouldOverwrite}",
@@ -45,15 +44,6 @@ namespace Worker.Consumers
                 // Update migration tracker for LanguageService completion
                 if (!string.IsNullOrEmpty(@event.TrackerId))
                 {
-                    var languageServiceStatus = new ServiceMigrationStatus
-                    {
-                        ShouldOverWriteExistingData = @event.ShouldOverWriteExistingData,
-                        IsCompleted = true,
-                        StartedAt = startTime,
-                        CompletedAt = DateTime.UtcNow,
-                        QueueName = Constants.EnvironmentDataMigrationQueue
-                    };
-
                     await NotifyMigrationCompletion(@event.TrackerId, isSuccess: true);
                     _logger.LogInformation("Updated migration tracker {TrackerId} for LanguageService completion", @event.TrackerId);
                 }
@@ -68,15 +58,6 @@ namespace Worker.Consumers
                 {
                     try
                     {
-                        var languageServiceErrorStatus = new ServiceMigrationStatus
-                        {
-                            ShouldOverWriteExistingData = @event.ShouldOverWriteExistingData,
-                            IsCompleted = false,
-                            StartedAt = startTime,
-                            ErrorMessage = ex.Message,
-                            QueueName = Constants.EnvironmentDataMigrationQueue
-                        };
-
                         _logger.LogInformation("Updated migration tracker {TrackerId} with error status", @event.TrackerId);
                     }
                     catch (Exception trackerEx)
