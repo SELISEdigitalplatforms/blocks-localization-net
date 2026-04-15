@@ -14,6 +14,7 @@ SELISE `<blocks />` Localization is a .NET-based service for centralized localiz
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
 - [Installation](#installation)
+- [Environment Variables](#environment-variables)
 
 ## Feature
 
@@ -182,3 +183,39 @@ From the repository root:
 docker build -f Dockerfile -t blocks-localization-api --build-arg git_branch=Development .
 docker build -f worker.Dockerfile -t blocks-localization-worker --build-arg git_branch=Development .
 ```
+
+## Environment Variables
+
+### Essentials
+
+| Variable | Description |
+|---|---|
+| `BlocksSecret__CacheConnectionString` | Cache connection string |
+| `BlocksSecret__MessageConnectionString` | Message broker connection string |
+| `BlocksSecret__LogConnectionString` | Log store connection string |
+| `BlocksSecret__MetricConnectionString` | Metric store connection string |
+| `BlocksSecret__TraceConnectionString` | Trace store connection string |
+| `BlocksSecret__LogDatabaseName` | Log database name |
+| `BlocksSecret__MetricDatabaseName` | Metric database name |
+| `BlocksSecret__TraceDatabaseName` | Trace database name |
+| `BlocksSecret__DatabaseConnectionString` | Primary database connection string |
+| `BlocksSecret__RootDatabaseName` | Root database name |
+| `BlocksSecret__EnableHsts` | Enable HSTS |
+
+### KeyVault Alternatives
+
+If you want to access these environment variables from KeyVault, add the following variables instead:
+
+| Variable |
+|---|
+| `CacheConnectionString` |
+| `MessageConnectionString` |
+| `LogConnectionString` |
+| `MetricConnectionString` |
+| `TraceConnectionString` |
+| `LogDatabaseName` |
+| `MetricDatabaseName` |
+| `TraceDatabaseName` |
+| `DatabaseConnectionString` |
+| `RootDatabaseName` |
+| `EnableHsts` |
