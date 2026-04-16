@@ -585,7 +585,9 @@ namespace DomainService.Services
                 ElementDetailContext = resourceKey.Context,
                 SourceText = defaultResource?.Value,
                 DestinationLanguage = languageName,
-                CurrentLanguage = languageSetting?.FirstOrDefault(x => x.LanguageCode == request.DefaultLanguage).LanguageName
+                CurrentLanguage = languageSetting?.FirstOrDefault(x => x.LanguageCode == request.DefaultLanguage).LanguageName,
+                GlossaryIds = resourceKey.GlossaryIds,
+                DestinationLanguageCode = missingResource.Culture
             };
         }
 
