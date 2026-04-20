@@ -98,7 +98,7 @@ namespace DomainService.Services
                     line += $", Type: {glossary.Type}";
                 if (!string.IsNullOrWhiteSpace(glossary.Context))
                     line += $", Context: {glossary.Context}";
-                line += ". Transliterate in destination language unless specific word exist for it in that language.";
+                //line += ". Transliterate in destination language unless specific word exist for it in that language.";
                 glossaryLines.Add(line);
             }
 
