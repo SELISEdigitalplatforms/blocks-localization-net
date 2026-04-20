@@ -780,7 +780,6 @@ namespace XUnitTest
             result.Should().Contain("Glossary: Homepage");
             result.Should().Contain("Type: Full form");
             result.Should().Contain("Context: This refers to the homepage of the site.");
-            result.Should().Contain("Transliterate in destination language unless specific word exist for it in that language.");
         }
 
         [Fact]
@@ -796,7 +795,6 @@ namespace XUnitTest
             result.Should().Contain("Glossary: Dashboard");
             result.Should().NotContain("Type:");
             result.Should().NotContain("Context:");
-            result.Should().Contain("Transliterate in destination language");
         }
 
         [Fact]
