@@ -57,7 +57,8 @@ namespace XUnitTest
                 storageDriverServiceMock.Object,
                 storageHelper,
                 Mock.Of<IServiceProvider>(),
-                notificationServiceMock.Object
+                notificationServiceMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
         }
 
@@ -198,7 +199,8 @@ namespace XUnitTest
             var resourceKey = new BlocksLanguageKey
             {
                 KeyName = "welcome",
-                Context = "button"
+                Context = "button",
+                GlossaryIds = new List<string> { "glossary-1", "glossary-2" }
             };
 
             var defaultResource = new Resource { Culture = "en-US", Value = "Hello" };
@@ -210,6 +212,39 @@ namespace XUnitTest
             query.CurrentLanguage.Should().Be("English");
             query.ElementDetailContext.Should().Be("button");
             query.SourceText.Should().Be("Hello");
+            query.GlossaryIds.Should().BeEquivalentTo(new List<string> { "glossary-1", "glossary-2" });
+            query.DestinationLanguageCode.Should().Be("fr-FR");
+        }
+
+        [Fact]
+        public void ConstructQuery_WithNullGlossaryIds_SetsNullGlossaryIds()
+        {
+            var request = new TranslateAllEvent
+            {
+                DefaultLanguage = "en-US",
+                ProjectKey = "proj"
+            };
+
+            var languageSetting = new List<Language>
+            {
+                new Language { LanguageCode = "en-US", LanguageName = "English" },
+                new Language { LanguageCode = "fr-FR", LanguageName = "French" }
+            };
+
+            var resourceKey = new BlocksLanguageKey
+            {
+                KeyName = "welcome",
+                Context = "button",
+                GlossaryIds = null
+            };
+
+            var defaultResource = new Resource { Culture = "en-US", Value = "Hello" };
+            var missingResource = new Resource { Culture = "fr-FR" };
+
+            var query = KeyManagementService.ConstructQuery(request, resourceKey, defaultResource, missingResource, "French", languageSetting);
+
+            query.GlossaryIds.Should().BeNull();
+            query.DestinationLanguageCode.Should().Be("fr-FR");
         }
     }
 }

@@ -61,6 +61,10 @@ namespace Api
             services.AddSingleton<IWebHookService, WebHookService>();
             services.AddSingleton<IBlocksWebhookRepository, BlocksWebhookRepository>();
 
+            services.AddSingleton<IGlossaryManagementService, GlossaryManagementService>();
+            services.AddSingleton<IGlossaryRepository, GlossaryRepository>();
+            services.AddSingleton<IValidator<Glossary>, GlossaryValidator>();
+
         }
     }
 }

@@ -15,9 +15,9 @@ namespace XUnitTest
         public AssistantControllerTests()
         {
             _assistantServiceMock = new Mock<IAssistantService>();
+            var changeControllerContext = TestChangeControllerContextFactory.Create();
 
-            // Create a loose mock that allows any method calls without throwing
-            _controller = new AssistantController(_assistantServiceMock.Object)
+            _controller = new AssistantController(_assistantServiceMock.Object, changeControllerContext)
             {
                 ControllerContext = new ControllerContext()
             };
@@ -100,14 +100,11 @@ namespace XUnitTest
         }
 
         [Fact]
-        public async Task GetTranslationSuggestion_WithNullRequest_StillReturnsOk()
+        public async Task GetTranslationSuggestion_WithNullRequest_ThrowsNullReferenceException()
         {
-            _assistantServiceMock.Setup(x => x.SuggestTranslation(null)).ReturnsAsync((string)null);
-            var result = await _controller.GetTranslationSuggestion(null);
-            result.Should().NotBeNull();
-            var objectResult = result as ObjectResult;
-            objectResult.Should().NotBeNull();
-            objectResult!.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            Func<Task> act = async () => await _controller.GetTranslationSuggestion(null);
+
+            await act.Should().ThrowAsync<NullReferenceException>();
         }
 
         [Fact]

@@ -1,3 +1,4 @@
+using DomainService.Repositories;
 using DomainService.Services;
 using DomainService.Shared.Entities;
 using FluentAssertions;
@@ -56,7 +57,8 @@ namespace XUnitTest
                 _loggerMock.Object,
                 _configurationMock.Object,
                 _httpClient,
-                _localizationSecretMock.Object
+                _localizationSecretMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
         }
 
@@ -73,7 +75,7 @@ namespace XUnitTest
                 CurrentLanguage = "en"
             };
 
-            var result = _assistantService.GenerateSuggestTranslationContext(request);
+            var result = AssistantService.GenerateSuggestTranslationContext(request);
 
             result.Should().Contain("submit");
             result.Should().Contain("Translate the following from en to es: 'Submit'");
@@ -90,7 +92,7 @@ namespace XUnitTest
                 CurrentLanguage = "en"
             };
 
-            var result = _assistantService.GenerateSuggestTranslationContext(request);
+            var result = AssistantService.GenerateSuggestTranslationContext(request);
 
             result.Should().Contain("translate a user interface element", because: "default context should be used");
             result.Should().Contain("Translate the following from en to fr: 'Welcome'");
@@ -107,7 +109,7 @@ namespace XUnitTest
                 CurrentLanguage = "en"
             };
 
-            var result = _assistantService.GenerateSuggestTranslationContext(request);
+            var result = AssistantService.GenerateSuggestTranslationContext(request);
 
             result.Should().Contain("translate a user interface element");
             result.Should().Contain("Translate the following from en to de: 'Hello'");
@@ -124,7 +126,7 @@ namespace XUnitTest
                 CurrentLanguage = "en"
             };
 
-            var result = _assistantService.GenerateSuggestTranslationContext(request);
+            var result = AssistantService.GenerateSuggestTranslationContext(request);
 
             result.Should().Contain("Button for form submission");
             result.Should().Contain("Translate the following from en to ja: 'Save Changes'");
@@ -139,7 +141,7 @@ namespace XUnitTest
         {
             var aiText = "\"Translated: Enviar\"";
 
-            var result = _assistantService.FormatAiTextForSuggestTranslation(aiText);
+            var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
             result.Should().Be("Enviar");
         }
@@ -149,7 +151,7 @@ namespace XUnitTest
         {
             var aiText = "\"Bienvenue\"";
 
-            var result = _assistantService.FormatAiTextForSuggestTranslation(aiText);
+            var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
             result.Should().Be("Bienvenue");
         }
@@ -159,7 +161,7 @@ namespace XUnitTest
         {
             var aiText = "'Hello World'";
 
-            var result = _assistantService.FormatAiTextForSuggestTranslation(aiText);
+            var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
             result.Should().Be("Hello World");
         }
@@ -169,7 +171,7 @@ namespace XUnitTest
         {
             var aiText = "  \n\tBonjour\t\n  ";
 
-            var result = _assistantService.FormatAiTextForSuggestTranslation(aiText);
+            var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
             result.Should().Be("Bonjour");
         }
@@ -179,7 +181,7 @@ namespace XUnitTest
         {
             string? aiText = null;
 
-            var result = _assistantService.FormatAiTextForSuggestTranslation(aiText);
+            var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
             result.Should().BeEmpty();
         }
@@ -189,7 +191,7 @@ namespace XUnitTest
         {
             var aiText = "";
 
-            var result = _assistantService.FormatAiTextForSuggestTranslation(aiText);
+            var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
             result.Should().BeEmpty();
         }
@@ -199,7 +201,7 @@ namespace XUnitTest
         {
             var aiText = "   ";
 
-            var result = _assistantService.FormatAiTextForSuggestTranslation(aiText);
+            var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
             result.Should().BeEmpty();
         }
@@ -209,7 +211,7 @@ namespace XUnitTest
         {
             var aiText = "Translation: Hello: World";
 
-            var result = _assistantService.FormatAiTextForSuggestTranslation(aiText);
+            var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
             result.Should().Be("Hello");
         }
@@ -219,7 +221,7 @@ namespace XUnitTest
         {
             var aiText = "Translation:";
 
-            var result = _assistantService.FormatAiTextForSuggestTranslation(aiText);
+            var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
             result.Should().BeEmpty();
         }
@@ -229,7 +231,7 @@ namespace XUnitTest
         {
             var aiText = "\"Test'Value\"";
 
-            var result = _assistantService.FormatAiTextForSuggestTranslation(aiText);
+            var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
             result.Should().Be("TestValue");
         }
@@ -378,7 +380,8 @@ namespace XUnitTest
                 _loggerMock.Object,
                 _configurationMock.Object,
                 httpClient,
-                _localizationSecretMock.Object
+                _localizationSecretMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
 
             var request = new HttpRequestMessage(HttpMethod.Get, "http://test.com/api");
@@ -408,7 +411,8 @@ namespace XUnitTest
                 _loggerMock.Object,
                 _configurationMock.Object,
                 httpClient,
-                _localizationSecretMock.Object
+                _localizationSecretMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
 
             var request = new HttpRequestMessage(HttpMethod.Get, "http://test.com/api");
@@ -432,7 +436,8 @@ namespace XUnitTest
                 _loggerMock.Object,
                 configMock.Object,
                 _httpClient,
-                _localizationSecretMock.Object
+                _localizationSecretMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
 
             var request = new AiCompletionRequest("Test message", 0.5);
@@ -452,7 +457,8 @@ namespace XUnitTest
                 _loggerMock.Object,
                 configMock.Object,
                 _httpClient,
-                _localizationSecretMock.Object
+                _localizationSecretMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
 
             var request = new AiCompletionRequest("Test message", 0.5);
@@ -471,7 +477,8 @@ namespace XUnitTest
                 _loggerMock.Object,
                 _configurationMock.Object,
                 _httpClient,
-                localizationSecretMock.Object
+                localizationSecretMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
 
             var request = new AiCompletionRequest("Test message", 0.5);
@@ -490,7 +497,8 @@ namespace XUnitTest
                 _loggerMock.Object,
                 _configurationMock.Object,
                 _httpClient,
-                localizationSecretMock.Object
+                localizationSecretMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
 
             var request = new AiCompletionRequest("Test message", 0.5);
@@ -533,7 +541,8 @@ namespace XUnitTest
                 _loggerMock.Object,
                 _configurationMock.Object,
                 _httpClient,
-                _localizationSecretMock.Object
+                _localizationSecretMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
 
             service.Should().NotBeNull();
@@ -563,7 +572,8 @@ namespace XUnitTest
                 _loggerMock.Object,
                 _configurationMock.Object,
                 httpClient,
-                _localizationSecretMock.Object
+                _localizationSecretMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
 
             var request = new HttpRequestMessage(HttpMethod.Post, "http://test.com/api");
@@ -597,7 +607,8 @@ namespace XUnitTest
                 _loggerMock.Object,
                 _configurationMock.Object,
                 httpClient,
-                _localizationSecretMock.Object
+                _localizationSecretMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
 
             var request = new HttpRequestMessage(HttpMethod.Get, "http://test.com/api");
@@ -632,7 +643,8 @@ namespace XUnitTest
                 _loggerMock.Object,
                 configMock.Object,
                 _httpClient,
-                localizationSecretMock.Object
+                localizationSecretMock.Object,
+                Mock.Of<IGlossaryRepository>()
             );
 
             var request = new AiCompletionRequest("Test", 0.5);
@@ -749,6 +761,230 @@ namespace XUnitTest
             request.ElementType.Should().Be("button");
             request.ElementApplicationContext.Should().Be("checkout");
             request.MaxCharacterLength.Should().Be(50);
+        }
+
+        #endregion
+
+        #region BuildGlossaryContext Tests
+
+        [Fact]
+        public void BuildGlossaryContext_WithAllFields_ReturnsFormattedContext()
+        {
+            var glossaries = new List<Glossary>
+            {
+                new Glossary { Name = "Homepage", Type = "Full form", Context = "This refers to the homepage of the site.", Language = null }
+            };
+
+            var result = AssistantService.BuildGlossaryContext(glossaries, "Bengali");
+
+            result.Should().Contain("Glossary: Homepage");
+            result.Should().Contain("Type: Full form");
+            result.Should().Contain("Context: This refers to the homepage of the site.");
+        }
+
+        [Fact]
+        public void BuildGlossaryContext_WithMissingOptionalFields_OmitsTypeAndContext()
+        {
+            var glossaries = new List<Glossary>
+            {
+                new Glossary { Name = "Dashboard", Type = null, Context = null, Language = null }
+            };
+
+            var result = AssistantService.BuildGlossaryContext(glossaries, "French");
+
+            result.Should().Contain("Glossary: Dashboard");
+            result.Should().NotContain("Type:");
+            result.Should().NotContain("Context:");
+        }
+
+        [Fact]
+        public void BuildGlossaryContext_WithEmptyType_OmitsType()
+        {
+            var glossaries = new List<Glossary>
+            {
+                new Glossary { Name = "Settings", Type = "", Context = "App settings page", Language = null }
+            };
+
+            var result = AssistantService.BuildGlossaryContext(glossaries, "Spanish");
+
+            result.Should().Contain("Glossary: Settings");
+            result.Should().NotContain("Type:");
+            result.Should().Contain("Context: App settings page");
+        }
+
+        [Fact]
+        public void BuildGlossaryContext_IncludesAllGlossaries_RegardlessOfLanguageField()
+        {
+            var glossaries = new List<Glossary>
+            {
+                new Glossary { Name = "About", Language = "Bengali", Type = "Full form", Context = "About page" },
+                new Glossary { Name = "Contact", Language = "French", Type = "Full form", Context = "Contact page" }
+            };
+
+            var result = AssistantService.BuildGlossaryContext(glossaries, "Bengali");
+
+            result.Should().Contain("Glossary: About");
+            result.Should().Contain("Glossary: Contact");
+        }
+
+        [Fact]
+        public void BuildGlossaryContext_WithNullLanguage_AlwaysIncludes()
+        {
+            var glossaries = new List<Glossary>
+            {
+                new Glossary { Name = "Menu", Language = null, Type = "Phrase", Context = "Navigation menu" }
+            };
+
+            var result = AssistantService.BuildGlossaryContext(glossaries, "German");
+
+            result.Should().Contain("Glossary: Menu");
+            result.Should().Contain("Type: Phrase");
+        }
+
+        [Fact]
+        public void BuildGlossaryContext_WithEmptyLanguage_AlwaysIncludes()
+        {
+            var glossaries = new List<Glossary>
+            {
+                new Glossary { Name = "Profile", Language = "", Type = null, Context = "User profile" }
+            };
+
+            var result = AssistantService.BuildGlossaryContext(glossaries, "Japanese");
+
+            result.Should().Contain("Glossary: Profile");
+        }
+
+        [Fact]
+        public void BuildGlossaryContext_WithEmptyList_ReturnsEmpty()
+        {
+            var result = AssistantService.BuildGlossaryContext(new List<Glossary>(), "English");
+
+            result.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void BuildGlossaryContext_WithNullList_ReturnsEmpty()
+        {
+            var result = AssistantService.BuildGlossaryContext(null, "English");
+
+            result.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void BuildGlossaryContext_IncludesGlossaryWithDifferentLanguageField()
+        {
+            var glossaries = new List<Glossary>
+            {
+                new Glossary { Name = "Test", Language = "French", Type = "Full form", Context = "Test context" }
+            };
+
+            var result = AssistantService.BuildGlossaryContext(glossaries, "Bengali");
+
+            result.Should().Contain("Glossary: Test");
+        }
+
+        [Fact]
+        public void BuildGlossaryContext_WithMultipleGlossaries_ReturnsNewlineSeparated()
+        {
+            var glossaries = new List<Glossary>
+            {
+                new Glossary { Name = "Home", Language = null, Type = "Full form", Context = "Home page" },
+                new Glossary { Name = "About", Language = null, Type = "Phrase", Context = "About section" }
+            };
+
+            var result = AssistantService.BuildGlossaryContext(glossaries, "Bengali");
+
+            result.Should().Contain("Glossary: Home");
+            result.Should().Contain("Glossary: About");
+            result.Should().Contain("\n");
+        }
+
+        [Fact]
+        public void BuildGlossaryContext_IncludesGlossary_WithSpecificLanguageField()
+        {
+            var glossaries = new List<Glossary>
+            {
+                new Glossary { Name = "Test", Language = "bengali", Type = null, Context = null }
+            };
+
+            var result = AssistantService.BuildGlossaryContext(glossaries, "Bengali");
+
+            result.Should().Contain("Glossary: Test");
+        }
+
+        #endregion
+
+        #region GenerateSuggestTranslationContext With Glossary Tests
+
+        [Fact]
+        public void GenerateSuggestTranslationContext_WithGlossaryContext_InsertsBeforeTranslateInstruction()
+        {
+            var request = new SuggestLanguageRequest
+            {
+                SourceText = "About",
+                DestinationLanguage = "Bengali",
+                CurrentLanguage = "English"
+            };
+            var glossaryContext = "Glossary: About, Type: Full form, Context: This refers to the homepage of the site. Transliterate in destination language unless specific word exist for it in that language.";
+
+            var result = AssistantService.GenerateSuggestTranslationContext(request, glossaryContext);
+
+            result.Should().Contain("translate a user interface element");
+            result.Should().Contain(glossaryContext);
+            result.Should().Contain("Translate the following from English to Bengali: 'About'");
+            // Glossary context should appear between default context and translate instruction
+            var glossaryIndex = result.IndexOf(glossaryContext);
+            var translateIndex = result.IndexOf("Translate the following");
+            glossaryIndex.Should().BeLessThan(translateIndex);
+        }
+
+        [Fact]
+        public void GenerateSuggestTranslationContext_WithNullGlossaryContext_SkipsGlossary()
+        {
+            var request = new SuggestLanguageRequest
+            {
+                SourceText = "Hello",
+                DestinationLanguage = "French",
+                CurrentLanguage = "English"
+            };
+
+            var result = AssistantService.GenerateSuggestTranslationContext(request, null);
+
+            result.Should().Contain("translate a user interface element");
+            result.Should().Contain("Translate the following from English to French: 'Hello'");
+        }
+
+        [Fact]
+        public void GenerateSuggestTranslationContext_WithEmptyGlossaryContext_SkipsGlossary()
+        {
+            var request = new SuggestLanguageRequest
+            {
+                SourceText = "Submit",
+                DestinationLanguage = "Spanish",
+                CurrentLanguage = "English"
+            };
+
+            var result = AssistantService.GenerateSuggestTranslationContext(request, "");
+
+            result.Should().NotContain("\n\n");
+        }
+
+        [Fact]
+        public void GenerateSuggestTranslationContext_WithGlossaryAndElementDetailContext_UsesElementDetailContext()
+        {
+            var request = new SuggestLanguageRequest
+            {
+                ElementDetailContext = "Custom context for button",
+                SourceText = "Save",
+                DestinationLanguage = "German",
+                CurrentLanguage = "English"
+            };
+            var glossaryContext = "Glossary: Save, Type: Phrase, Context: Save button. Transliterate in destination language unless specific word exist for it in that language.";
+
+            var result = AssistantService.GenerateSuggestTranslationContext(request, glossaryContext);
+
+            result.Should().Contain("Custom context for button");
+            result.Should().Contain(glossaryContext);
         }
 
         #endregion
