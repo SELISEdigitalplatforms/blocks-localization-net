@@ -1,6 +1,8 @@
-﻿namespace DomainService.Services
+﻿using Blocks.Genesis;
+
+namespace DomainService.Services
 {
-    public class SuggestLanguageRequest
+    public class SuggestLanguageRequest : IProjectKey
     {
         public string? ElementType { get; set; }
         public string? ElementApplicationContext { get; set; }
@@ -12,5 +14,6 @@
         public string CurrentLanguage { get; set; }
         public List<string>? GlossaryIds { get; set; }
         public string? DestinationLanguageCode { get; set; }
+        public string? ProjectKey { get; set; }
     }
 }
