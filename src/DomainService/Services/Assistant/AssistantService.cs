@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Polly.CircuitBreaker;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -52,6 +53,7 @@ namespace DomainService.Services
             var aiCompletionRequest = new AiCompletionRequest(context, query.Temperature);
 
             var aiText = await AiCompletion(aiCompletionRequest);
+            // var aiText = await CallAIAgent("", context);  
 
             var maxRetryCount = 3;
             var retryCount = 0;
@@ -272,6 +274,97 @@ namespace DomainService.Services
             }
 
             return response;
+        }
+
+        private async Task<string> CallAIAgent(string projectKey, string message, string widgetId = "")
+        {
+            try
+            {
+                var apiBaseUrl = _configuration["ApiBaseUrl"];
+
+                // 1. Initiate
+                var initiateUrl = $"{apiBaseUrl}/blocksai-api/v1/conversation/initiate?widget_id={widgetId}";
+                var request = new HttpRequestMessage(HttpMethod.Get, initiateUrl);
+                request.Headers.Add("X-Blocks-Key", projectKey);
+
+                var response = await _httpClient.SendAsync(request);
+                response.EnsureSuccessStatusCode();
+
+                var initiateJson = await response.Content.ReadAsStringAsync();
+                var initiateData = JsonConvert.DeserializeObject<Dictionary<string, string>>(initiateJson)
+                    ?? throw new Exception("Invalid initiate response");
+
+                var websocketPath = initiateData["websocket_url"];
+                var token = initiateData["token"];
+
+                if (string.IsNullOrEmpty(websocketPath) || string.IsNullOrEmpty(token))
+                    throw new Exception("Missing websocket_url or token");
+
+                // 2. WebSocket connect
+                var wsUrl =
+                    $"{apiBaseUrl}/blocksai-api/v1{websocketPath}" +
+                    $"?token={token}&x_blocks_key={projectKey}&pg=true&send_event=true";
+
+                wsUrl = wsUrl.Replace("https://", "wss://").Replace("http://", "ws://");
+
+                using var ws = new ClientWebSocket();
+                await ws.ConnectAsync(new Uri(wsUrl), CancellationToken.None);
+
+                // 3. Send user message
+                var payload = JsonConvert.SerializeObject(new { message });
+                var bytes = Encoding.UTF8.GetBytes(payload);
+
+                await ws.SendAsync(
+                    new ArraySegment<byte>(bytes),
+                    WebSocketMessageType.Text,
+                    true,
+                    CancellationToken.None
+                );
+
+                // 4. Receive events
+                var buffer = new byte[16 * 1024];
+
+                while (ws.State == WebSocketState.Open)
+                {
+                    var result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+                    if (result.MessageType == WebSocketMessageType.Close)
+                        break;
+
+                    var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
+
+                    Dictionary<string, object> evt;
+                    try
+                    {
+                        evt = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    if (evt == null || !evt.TryGetValue("type", out var typeVal))
+                        continue;
+
+                    var type = typeVal?.ToString();
+
+                    // 5. Final response event - Return only the message content
+                    if (type == "chat_response" && evt.TryGetValue("message", out var msgVal))
+                    {
+                        await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", CancellationToken.None);
+                        return msgVal?.ToString();
+                    }
+
+                    // other events: typing, tool_call, status, etc → ignore
+                }
+
+                throw new Exception("chat_response event not received");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CallAIAgent: Exception occurred");
+                return null;
+            }
         }
     }
 }
