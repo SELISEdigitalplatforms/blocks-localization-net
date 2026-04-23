@@ -1011,6 +1011,111 @@ namespace XUnitTest
         }
     }
 
+    public class OutputGeneratorCatchBranchTests
+    {
+        private static (List<BlocksLanguage> langs, List<BlocksLanguageModule> mods) EmptyCollections()
+            => (new List<BlocksLanguage> { new BlocksLanguage { LanguageCode = "en-US", LanguageName = "English" } },
+                new List<BlocksLanguageModule>());
+
+        private static void VerifyLogErrorCalled<T>(Mock<ILogger<T>> loggerMock)
+        {
+            loggerMock.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.IsAny<It.IsAnyType>(),
+                    It.IsAny<Exception?>(),
+                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+                Times.AtLeastOnce);
+        }
+
+        [Fact]
+        public async Task Json_GenerateAsync_NullResourceKeys_HitsCatchAndLogsError()
+        {
+            var loggerMock = new Mock<ILogger<XlsxOutputGeneratorService>>();
+            var service = new JsonOutputGeneratorService(loggerMock.Object);
+            var (langs, mods) = EmptyCollections();
+
+            var result = await service.GenerateAsync<string>(langs, mods, null!, "en-US");
+
+            result.Should().BeNull();
+            VerifyLogErrorCalled(loggerMock);
+        }
+
+        [Fact]
+        public async Task Csv_GenerateAsync_NullResourceKeys_HitsCatchAndLogsError()
+        {
+            var loggerMock = new Mock<ILogger<CsvOutputGeneratorService>>();
+            var service = new CsvOutputGeneratorService(loggerMock.Object);
+            var (langs, mods) = EmptyCollections();
+
+            var result = await service.GenerateAsync<MemoryStream>(langs, mods, null!, "en-US");
+
+            result.Should().BeNull();
+            VerifyLogErrorCalled(loggerMock);
+        }
+
+        [Fact]
+        public async Task Xlsx_GenerateAsync_NullResourceKeys_HitsCatchAndLogsError()
+        {
+            var loggerMock = new Mock<ILogger<XlsxOutputGeneratorService>>();
+            var service = new XlsxOutputGeneratorService(loggerMock.Object);
+            var (langs, mods) = EmptyCollections();
+
+            var result = await service.GenerateAsync<ClosedXML.Excel.XLWorkbook>(langs, mods, null!, "en-US");
+
+            result.Should().BeNull();
+            VerifyLogErrorCalled(loggerMock);
+        }
+
+        [Fact]
+        public async Task Xlf_GenerateAsync_NullLanguageSettings_HitsCatchAndLogsError()
+        {
+            var loggerMock = new Mock<ILogger<XlfOutputGeneratorService>>();
+            var service = new XlfOutputGeneratorService(loggerMock.Object);
+
+            var result = await service.GenerateAsync<MemoryStream>(
+                null!, new List<BlocksLanguageModule>(), new List<BlocksLanguageKey>(), "en-US");
+
+            result.Should().BeNull();
+            VerifyLogErrorCalled(loggerMock);
+        }
+
+        [Fact]
+        public async Task Xlf_GenerateAsync_AbstractBaseOverload_DelegatesToDerived()
+        {
+            // Covers the base OutputGenerator.GenerateAsync (5-arg virtual) default path
+            // via a concrete generator that does NOT override the 5-arg version (Json).
+            var loggerMock = new Mock<ILogger<XlsxOutputGeneratorService>>();
+            OutputGenerator service = new JsonOutputGeneratorService(loggerMock.Object);
+
+            var languages = new List<BlocksLanguage>
+            {
+                new BlocksLanguage { LanguageCode = "en-US", LanguageName = "English" }
+            };
+            var modules = new List<BlocksLanguageModule>
+            {
+                new BlocksLanguageModule { ItemId = "m1", ModuleName = "auth" }
+            };
+            var keys = new List<BlocksLanguageKey>
+            {
+                new BlocksLanguageKey
+                {
+                    ItemId = "k1", KeyName = "hi", ModuleId = "m1",
+                    Resources = new[] { new Resource { Culture = "en-US", Value = "Hi" } }
+                }
+            };
+
+            // The 5-arg virtual base implementation should delegate to the abstract 4-arg
+            var result = await service.GenerateAsync<string>(
+                languages, modules, keys, "en-US",
+                new Dictionary<string, Dictionary<string, string>>());
+
+            result.Should().NotBeNull();
+            result.Should().Contain("\"KeyName\": \"hi\"");
+        }
+    }
+
     public class XlsxOutputGeneratorAdditionalTests
     {
         [Fact]
