@@ -587,7 +587,8 @@ namespace DomainService.Services
                 DestinationLanguage = languageName,
                 CurrentLanguage = languageSetting?.FirstOrDefault(x => x.LanguageCode == request.DefaultLanguage).LanguageName,
                 GlossaryIds = resourceKey.GlossaryIds,
-                DestinationLanguageCode = missingResource.Culture
+                DestinationLanguageCode = missingResource.Culture,
+                ModuleId = resourceKey.ModuleId
             };
         }
 
