@@ -51,6 +51,8 @@ namespace Api.Controllers
                     Errors = new Dictionary<string, string> { { "ItemId", "Invalid or missing ItemId" } }
                 });
 
+            _changeControllerContext.ChangeContext(new GetGlossariesRequest { ProjectKey = projectKey });
+
             var glossary = await _glossaryManagementService.GetGlossaryByIdAsync(itemId);
 
             if (glossary == null)
