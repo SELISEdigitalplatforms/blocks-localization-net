@@ -1,4 +1,5 @@
-﻿using DomainService.Repositories;
+﻿using Blocks.Genesis;
+using DomainService.Repositories;
 using DomainService.Shared.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -40,12 +41,32 @@ namespace DomainService.Services
 
         public async Task<string> SuggestTranslation(SuggestLanguageRequest query)
         {
-            string glossaryContext = null;
-            if (query.GlossaryIds != null && query.GlossaryIds.Any())
-            {
-                var glossaries = await _glossaryRepository.GetByIdsAsync(query.GlossaryIds);
-                glossaryContext = BuildGlossaryContext(glossaries, query.DestinationLanguage);
-            }
+            var projectKey = query.ProjectKey ?? BlocksContext.GetContext()?.TenantId ?? "";
+
+            // Tier 1: global glossaries
+            var globalGlossaries = await _glossaryRepository.GetGlobalAsync(projectKey);
+
+            // Tier 2: module-specific glossaries
+            var moduleGlossaries = !string.IsNullOrWhiteSpace(query.ModuleId)
+                ? await _glossaryRepository.GetByModuleIdAsync(projectKey, query.ModuleId)
+                : new List<Glossary>();
+
+            // Tier 3: key-specific glossaries
+            var keyGlossaries = query.GlossaryIds != null && query.GlossaryIds.Any()
+                ? await _glossaryRepository.GetByIdsAsync(query.GlossaryIds)
+                : new List<Glossary>();
+
+            // Merge and deduplicate by ItemId
+            var allGlossaries = globalGlossaries
+                .Concat(moduleGlossaries)
+                .Concat(keyGlossaries)
+                .GroupBy(g => g.ItemId)
+                .Select(g => g.First())
+                .ToList();
+
+            string glossaryContext = allGlossaries.Any()
+                ? BuildGlossaryContext(allGlossaries, query.DestinationLanguage)
+                : null;
 
             var context = GenerateSuggestTranslationContext(query, glossaryContext);
 
