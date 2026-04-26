@@ -21,6 +21,7 @@ namespace XUnitTest
         private readonly HttpClient _httpClient;
         private readonly AssistantService _assistantService;
         private readonly Mock<HttpMessageHandler> _handlerMock;
+        private readonly Mock<IGlossaryRepository> _glossaryRepositoryMock;
 
 
         public AssistantServiceTests()
@@ -37,6 +38,14 @@ namespace XUnitTest
             _localizationSecretMock.SetupGet(x => x.ChatGptEncryptionKey).Returns("dummy-encryption-key");
             _localizationSecretMock.SetupGet(x => x.ChatGptEncryptedSecret)
                 .Returns("dummy-encrypted-secret");
+
+            _glossaryRepositoryMock = new Mock<IGlossaryRepository>();
+            _glossaryRepositoryMock.Setup(r => r.GetGlobalAsync(It.IsAny<string>()))
+                .ReturnsAsync(new List<Glossary>());
+            _glossaryRepositoryMock.Setup(r => r.GetByModuleIdAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(new List<Glossary>());
+            _glossaryRepositoryMock.Setup(r => r.GetByIdsAsync(It.IsAny<List<string>>()))
+                .ReturnsAsync(new List<Glossary>());
 
             // Use a stubbed HttpMessageHandler so no real HTTP is performed.
             _handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
@@ -58,7 +67,7 @@ namespace XUnitTest
                 _configurationMock.Object,
                 _httpClient,
                 _localizationSecretMock.Object,
-                Mock.Of<IGlossaryRepository>()
+                _glossaryRepositoryMock.Object
             );
         }
 
@@ -985,6 +994,122 @@ namespace XUnitTest
 
             result.Should().Contain("Custom context for button");
             result.Should().Contain(glossaryContext);
+        }
+
+        #endregion
+
+        #region SuggestTranslation 3-Tier Glossary Tests
+
+        [Fact]
+        public async Task SuggestTranslation_Always_CallsGetGlobalAsync()
+        {
+            // Arrange
+            var repoMock = new Mock<IGlossaryRepository>();
+            repoMock.Setup(r => r.GetGlobalAsync(It.IsAny<string>())).ReturnsAsync(new List<Glossary>());
+            repoMock.Setup(r => r.GetByModuleIdAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new List<Glossary>());
+            repoMock.Setup(r => r.GetByIdsAsync(It.IsAny<List<string>>())).ReturnsAsync(new List<Glossary>());
+
+            var service = new AssistantService(
+                _loggerMock.Object,
+                _configurationMock.Object,
+                _httpClient,
+                _localizationSecretMock.Object,
+                repoMock.Object
+            );
+
+            var request = new SuggestLanguageRequest
+            {
+                SourceText = "Hello",
+                CurrentLanguage = "en",
+                DestinationLanguage = "es",
+                ProjectKey = "test-project"
+            };
+
+            // Act
+            await service.SuggestTranslation(request);
+
+            // Assert — global tier always called
+            repoMock.Verify(r => r.GetGlobalAsync("test-project"), Times.Once);
+            repoMock.Verify(r => r.GetByModuleIdAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            repoMock.Verify(r => r.GetByIdsAsync(It.IsAny<List<string>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task SuggestTranslation_WithModuleId_CallsGetByModuleIdAsync()
+        {
+            // Arrange
+            var repoMock = new Mock<IGlossaryRepository>();
+            repoMock.Setup(r => r.GetGlobalAsync(It.IsAny<string>())).ReturnsAsync(new List<Glossary>());
+            repoMock.Setup(r => r.GetByModuleIdAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new List<Glossary>());
+            repoMock.Setup(r => r.GetByIdsAsync(It.IsAny<List<string>>())).ReturnsAsync(new List<Glossary>());
+
+            var service = new AssistantService(
+                _loggerMock.Object,
+                _configurationMock.Object,
+                _httpClient,
+                _localizationSecretMock.Object,
+                repoMock.Object
+            );
+
+            var request = new SuggestLanguageRequest
+            {
+                SourceText = "Submit",
+                CurrentLanguage = "en",
+                DestinationLanguage = "fr",
+                ProjectKey = "proj-1",
+                ModuleId = "module-A"
+            };
+
+            // Act
+            await service.SuggestTranslation(request);
+
+            // Assert — global + module tiers both called
+            repoMock.Verify(r => r.GetGlobalAsync("proj-1"), Times.Once);
+            repoMock.Verify(r => r.GetByModuleIdAsync("proj-1", "module-A"), Times.Once);
+        }
+
+        [Fact]
+        public async Task SuggestTranslation_WithGlossaryIds_DeduplicatesAcrossTiers()
+        {
+            // Arrange
+            var sharedGlossary = new Glossary { ItemId = "g-1", Name = "Shared", Type = "Term" };
+            var globalOnly = new Glossary { ItemId = "g-2", Name = "GlobalOnly", Type = "Acronym" };
+            var keyOnly = new Glossary { ItemId = "g-3", Name = "KeyOnly", Type = "Phrase" };
+
+            var repoMock = new Mock<IGlossaryRepository>();
+            // Global returns g-1 and g-2
+            repoMock.Setup(r => r.GetGlobalAsync(It.IsAny<string>()))
+                .ReturnsAsync(new List<Glossary> { sharedGlossary, globalOnly });
+            repoMock.Setup(r => r.GetByModuleIdAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(new List<Glossary>());
+            // Key-specific also returns g-1 (duplicate) and g-3
+            repoMock.Setup(r => r.GetByIdsAsync(It.IsAny<List<string>>()))
+                .ReturnsAsync(new List<Glossary> { sharedGlossary, keyOnly });
+
+            // Use the class-level handlerMock and configure it to return valid response
+            var service = new AssistantService(
+                _loggerMock.Object,
+                _configurationMock.Object,
+                _httpClient,
+                _localizationSecretMock.Object,
+                repoMock.Object
+            );
+
+            var request = new SuggestLanguageRequest
+            {
+                SourceText = "Save",
+                CurrentLanguage = "en",
+                DestinationLanguage = "de",
+                ProjectKey = "proj-dedup",
+                GlossaryIds = new List<string> { "g-1", "g-3" }
+            };
+
+            // Act
+            await service.SuggestTranslation(request);
+
+            // Assert — both tiers called, deduplication verified by repository calls
+            repoMock.Verify(r => r.GetGlobalAsync("proj-dedup"), Times.Once);
+            repoMock.Verify(r => r.GetByIdsAsync(It.Is<List<string>>(ids => ids.Contains("g-1") && ids.Contains("g-3"))), Times.Once);
         }
 
         #endregion

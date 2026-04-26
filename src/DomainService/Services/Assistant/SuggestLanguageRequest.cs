@@ -13,6 +13,7 @@ namespace DomainService.Services
         public string DestinationLanguage { get; set; }
         public string CurrentLanguage { get; set; }
         public List<string>? GlossaryIds { get; set; }
+        public string? ModuleId { get; set; }
         public string? DestinationLanguageCode { get; set; }
         public string? ProjectKey { get; set; }
     }
