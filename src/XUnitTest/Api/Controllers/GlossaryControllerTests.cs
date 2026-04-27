@@ -233,5 +233,54 @@ namespace XUnitTest
         }
 
         #endregion
+
+        #region Get Tests
+
+        [Fact]
+        public async Task Get_WithValidItemId_ReturnsOk()
+        {
+            // Arrange
+            var glossary = new Glossary { ItemId = "glossary-1", Name = "API", ProjectKey = "project-1" };
+
+            _glossaryManagementServiceMock
+                .Setup(x => x.GetGlossaryByIdAsync("glossary-1"))
+                .ReturnsAsync(glossary);
+
+            // Act
+            var result = await _controller.Get("glossary-1", "project-1");
+
+            // Assert
+            result.Should().BeOfType<OkObjectResult>();
+            var ok = (OkObjectResult)result;
+            ok.Value.Should().BeEquivalentTo(glossary);
+        }
+
+        [Fact]
+        public async Task Get_WithEmptyItemId_ReturnsBadRequest()
+        {
+            // Act
+            var result = await _controller.Get("", "project-1");
+
+            // Assert
+            result.Should().BeOfType<BadRequestObjectResult>();
+            _glossaryManagementServiceMock.Verify(x => x.GetGlossaryByIdAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Get_WithNonExistingItemId_ReturnsNotFound()
+        {
+            // Arrange
+            _glossaryManagementServiceMock
+                .Setup(x => x.GetGlossaryByIdAsync("unknown-id"))
+                .ReturnsAsync((Glossary)null);
+
+            // Act
+            var result = await _controller.Get("unknown-id", "project-1");
+
+            // Assert
+            result.Should().BeOfType<NotFoundObjectResult>();
+        }
+
+        #endregion
     }
 }

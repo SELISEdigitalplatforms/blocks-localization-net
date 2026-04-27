@@ -253,5 +253,112 @@ namespace XUnitTest
         }
 
         #endregion
+
+        #region GetGlossaryByIdAsync Tests
+
+        [Fact]
+        public async Task GetGlossaryByIdAsync_ExistingId_ReturnsGlossary()
+        {
+            // Arrange
+            var itemId = "glossary-abc";
+            var expectedGlossary = new GlossaryModel { ItemId = itemId, Name = "API" };
+            _glossaryRepositoryMock.Setup(r => r.GetByIdAsync(itemId))
+                .ReturnsAsync(expectedGlossary);
+
+            // Act
+            var result = await _service.GetGlossaryByIdAsync(itemId);
+
+            // Assert
+            result.Should().NotBeNull();
+            result!.ItemId.Should().Be(itemId);
+            result.Name.Should().Be("API");
+        }
+
+        [Fact]
+        public async Task GetGlossaryByIdAsync_NonExistingId_ReturnsNull()
+        {
+            // Arrange
+            _glossaryRepositoryMock.Setup(r => r.GetByIdAsync("unknown"))
+                .ReturnsAsync((GlossaryModel)null);
+
+            // Act
+            var result = await _service.GetGlossaryByIdAsync("unknown");
+
+            // Assert
+            result.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task SaveGlossaryAsync_WithIsGlobalFalseAndModuleIds_MapsFieldsCorrectly()
+        {
+            // Arrange
+            var glossary = new GlossaryModel
+            {
+                Name = "API",
+                Language = "en-US",
+                Type = "Acronym",
+                ProjectKey = "test-project",
+                IsGlobal = false,
+                ModuleIds = new List<string> { "module-1", "module-2" }
+            };
+
+            var validationResult = new FluentValidation.Results.ValidationResult();
+            _validatorMock.Setup(v => v.ValidateAsync(glossary, default))
+                .ReturnsAsync(validationResult);
+
+            _glossaryRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<string>()))
+                .ReturnsAsync((GlossaryModel)null);
+
+            BlocksGlossary? savedEntity = null;
+            _glossaryRepositoryMock.Setup(r => r.SaveAsync(It.IsAny<BlocksGlossary>()))
+                .Callback<BlocksGlossary>(g => savedEntity = g)
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _service.SaveGlossaryAsync(glossary);
+
+            // Assert
+            result.Success.Should().BeTrue();
+            savedEntity.Should().NotBeNull();
+            savedEntity!.IsGlobal.Should().BeFalse();
+            savedEntity.ModuleIds.Should().BeEquivalentTo(new List<string> { "module-1", "module-2" });
+        }
+
+        [Fact]
+        public async Task SaveGlossaryAsync_WithIsGlobalTrue_MapsIsGlobalCorrectly()
+        {
+            // Arrange
+            var glossary = new GlossaryModel
+            {
+                Name = "Global Term",
+                Language = "en-US",
+                ProjectKey = "test-project",
+                IsGlobal = true,
+                ModuleIds = null
+            };
+
+            var validationResult = new FluentValidation.Results.ValidationResult();
+            _validatorMock.Setup(v => v.ValidateAsync(glossary, default))
+                .ReturnsAsync(validationResult);
+
+            _glossaryRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<string>()))
+                .ReturnsAsync((GlossaryModel)null);
+
+            BlocksGlossary? savedEntity = null;
+            _glossaryRepositoryMock.Setup(r => r.SaveAsync(It.IsAny<BlocksGlossary>()))
+                .Callback<BlocksGlossary>(g => savedEntity = g)
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _service.SaveGlossaryAsync(glossary);
+
+            // Assert
+            result.Success.Should().BeTrue();
+            savedEntity.Should().NotBeNull();
+            savedEntity!.IsGlobal.Should().BeTrue();
+            savedEntity.ModuleIds.Should().BeNull();
+        }
+
+        #endregion
     }
 }

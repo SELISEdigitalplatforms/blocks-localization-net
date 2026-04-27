@@ -71,6 +71,24 @@ namespace DomainService.Repositories
             return await collection.Find(filter).ToListAsync();
         }
 
+        public async Task<List<Glossary>> GetGlobalAsync(string projectKey)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(projectKey);
+            var collection = dataBase.GetCollection<Glossary>(_collectionName);
+            var filter = Builders<Glossary>.Filter.Eq(g => g.IsGlobal, true);
+
+            return await collection.Find(filter).ToListAsync();
+        }
+
+        public async Task<List<Glossary>> GetByModuleIdAsync(string projectKey, string moduleId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(projectKey);
+            var collection = dataBase.GetCollection<Glossary>(_collectionName);
+            var filter = Builders<Glossary>.Filter.AnyEq(g => g.ModuleIds, moduleId);
+
+            return await collection.Find(filter).ToListAsync();
+        }
+
         public async Task SaveAsync(BlocksGlossary glossary)
         {
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
