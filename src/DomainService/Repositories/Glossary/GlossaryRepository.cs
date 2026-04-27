@@ -75,7 +75,7 @@ namespace DomainService.Repositories
         {
             var dataBase = _dbContextProvider.GetDatabase(projectKey);
             var collection = dataBase.GetCollection<Glossary>(_collectionName);
-            var filter = Builders<Glossary>.Filter.Eq(g => g.Scope, "Global");
+            var filter = Builders<Glossary>.Filter.Eq(g => g.IsGlobal, true);
 
             return await collection.Find(filter).ToListAsync();
         }
@@ -84,10 +84,7 @@ namespace DomainService.Repositories
         {
             var dataBase = _dbContextProvider.GetDatabase(projectKey);
             var collection = dataBase.GetCollection<Glossary>(_collectionName);
-            var filter = Builders<Glossary>.Filter.And(
-                Builders<Glossary>.Filter.Eq(g => g.Scope, "Module"),
-                Builders<Glossary>.Filter.AnyEq(g => g.ModuleIds, moduleId)
-            );
+            var filter = Builders<Glossary>.Filter.AnyEq(g => g.ModuleIds, moduleId);
 
             return await collection.Find(filter).ToListAsync();
         }

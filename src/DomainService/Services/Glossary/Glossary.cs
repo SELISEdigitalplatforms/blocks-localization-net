@@ -13,7 +13,7 @@ namespace DomainService.Services
         public string? Type { get; set; }
         public string? Context { get; set; }
         public string? AdditionalNote { get; set; }
-        public string? Scope { get; set; }
+        public bool IsGlobal { get; set; }
         public List<string>? ModuleIds { get; set; }
         public DateTime CreateDate { get; set; }
         public DateTime LastUpdateDate { get; set; }

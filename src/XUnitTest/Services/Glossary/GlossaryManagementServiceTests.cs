@@ -289,7 +289,7 @@ namespace XUnitTest
         }
 
         [Fact]
-        public async Task SaveGlossaryAsync_WithScopeAndModuleIds_MapsFieldsCorrectly()
+        public async Task SaveGlossaryAsync_WithIsGlobalFalseAndModuleIds_MapsFieldsCorrectly()
         {
             // Arrange
             var glossary = new GlossaryModel
@@ -298,7 +298,7 @@ namespace XUnitTest
                 Language = "en-US",
                 Type = "Acronym",
                 ProjectKey = "test-project",
-                Scope = "Module",
+                IsGlobal = false,
                 ModuleIds = new List<string> { "module-1", "module-2" }
             };
 
@@ -320,8 +320,43 @@ namespace XUnitTest
             // Assert
             result.Success.Should().BeTrue();
             savedEntity.Should().NotBeNull();
-            savedEntity!.Scope.Should().Be("Module");
+            savedEntity!.IsGlobal.Should().BeFalse();
             savedEntity.ModuleIds.Should().BeEquivalentTo(new List<string> { "module-1", "module-2" });
+        }
+
+        [Fact]
+        public async Task SaveGlossaryAsync_WithIsGlobalTrue_MapsIsGlobalCorrectly()
+        {
+            // Arrange
+            var glossary = new GlossaryModel
+            {
+                Name = "Global Term",
+                Language = "en-US",
+                ProjectKey = "test-project",
+                IsGlobal = true,
+                ModuleIds = null
+            };
+
+            var validationResult = new FluentValidation.Results.ValidationResult();
+            _validatorMock.Setup(v => v.ValidateAsync(glossary, default))
+                .ReturnsAsync(validationResult);
+
+            _glossaryRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<string>()))
+                .ReturnsAsync((GlossaryModel)null);
+
+            BlocksGlossary? savedEntity = null;
+            _glossaryRepositoryMock.Setup(r => r.SaveAsync(It.IsAny<BlocksGlossary>()))
+                .Callback<BlocksGlossary>(g => savedEntity = g)
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _service.SaveGlossaryAsync(glossary);
+
+            // Assert
+            result.Success.Should().BeTrue();
+            savedEntity.Should().NotBeNull();
+            savedEntity!.IsGlobal.Should().BeTrue();
+            savedEntity.ModuleIds.Should().BeNull();
         }
 
         #endregion
