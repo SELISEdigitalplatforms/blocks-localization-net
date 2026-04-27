@@ -146,6 +146,12 @@ namespace DomainService.Repositories
                     matchFilters.Add(filterBuilder.And(dateFilters));
                 }
             }
+
+            if (!string.IsNullOrWhiteSpace(query.GlossaryId))
+            {
+                matchFilters.Add(filterBuilder.AnyEq(x => x.GlossaryIds, query.GlossaryId));
+            }
+
             return matchFilters.Count > 0 ? filterBuilder.And(matchFilters) : filterBuilder.Empty;
         }
 
