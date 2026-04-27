@@ -192,6 +192,63 @@ namespace XUnitTest.Repositories
 
         #endregion
 
+        #region GetGlobalAsync
+
+        [Fact]
+        public async Task GetGlobalAsync_ReturnsGlobalGlossaries()
+        {
+            var items = new List<Glossary>
+            {
+                new Glossary { ItemId = "g1", Name = "API", IsGlobal = true }
+            };
+            MockCursorHelper.SetupFindAsync(_glossaryCollection, items);
+
+            var result = await _repo.GetGlobalAsync("proj-1");
+
+            result.Should().HaveCount(1);
+            result[0].IsGlobal.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task GetGlobalAsync_ReturnsEmptyWhenNoGlobalGlossaries()
+        {
+            MockCursorHelper.SetupFindAsyncEmpty(_glossaryCollection);
+
+            var result = await _repo.GetGlobalAsync("proj-1");
+
+            result.Should().BeEmpty();
+        }
+
+        #endregion
+
+        #region GetByModuleIdAsync
+
+        [Fact]
+        public async Task GetByModuleIdAsync_ReturnsGlossariesWithMatchingModule()
+        {
+            var items = new List<Glossary>
+            {
+                new Glossary { ItemId = "g1", Name = "API", ModuleIds = new List<string> { "mod-1" } }
+            };
+            MockCursorHelper.SetupFindAsync(_glossaryCollection, items);
+
+            var result = await _repo.GetByModuleIdAsync("proj-1", "mod-1");
+
+            result.Should().HaveCount(1);
+        }
+
+        [Fact]
+        public async Task GetByModuleIdAsync_ReturnsEmptyWhenNoMatch()
+        {
+            MockCursorHelper.SetupFindAsyncEmpty(_glossaryCollection);
+
+            var result = await _repo.GetByModuleIdAsync("proj-1", "non-existing");
+
+            result.Should().BeEmpty();
+        }
+
+        #endregion
+
         #region DeleteAsync
 
         [Fact]

@@ -121,7 +121,7 @@ namespace DomainService.Services
             repoGlossary.Type = glossary.Type;
             repoGlossary.Context = glossary.Context;
             repoGlossary.AdditionalNote = glossary.AdditionalNote;
-            repoGlossary.Scope = glossary.Scope;
+            repoGlossary.IsGlobal = glossary.IsGlobal;
             repoGlossary.ModuleIds = glossary.ModuleIds;
 
             return repoGlossary;
