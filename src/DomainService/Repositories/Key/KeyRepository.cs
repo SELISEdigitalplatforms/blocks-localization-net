@@ -101,6 +101,22 @@ namespace DomainService.Repositories
                 matchFilters.Add(searchKeyFilter);
             }
 
+            if (query.MissingLanguages != null && query.MissingLanguages.Count > 0)
+            {
+                var partiallyTranslatedFilter = filterBuilder.ElemMatch(x => x.Resources,
+                    Builders<Resource>.Filter.Or(
+                        Builders<Resource>.Filter.And(
+                            Builders<Resource>.Filter.In(r => r.Culture, query.MissingLanguages),
+                            Builders<Resource>.Filter.Or(
+                                Builders<Resource>.Filter.Eq(r => r.Value, null),
+                                Builders<Resource>.Filter.Eq(r => r.Value, "")
+                            )
+                        ),
+                        Builders<Resource>.Filter.Nin(r => r.Culture, query.MissingLanguages)
+                    ));
+                matchFilters.Add(partiallyTranslatedFilter);
+            }
+
             if (query.ResourceSearchFilters != null && query.ResourceSearchFilters.Length > 0)
             {
                 foreach (var resourceFilter in query.ResourceSearchFilters)
