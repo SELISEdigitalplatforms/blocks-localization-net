@@ -54,7 +54,7 @@ jobs:
           fi
 
           echo "Final PR_NUMBER=$PR_NUMBER"
-          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "pr_number=28" >> "$GITHUB_OUTPUT"
 
   test-job:
     if: ${{ needs.initialization.outputs.envvalue1 == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push') }}
