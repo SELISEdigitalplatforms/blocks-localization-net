@@ -458,6 +458,47 @@ namespace XUnitTest.Repositories
             result.Should().NotBeNull();
         }
 
+        [Fact]
+        public async Task GetAllKeysAsync_WithGlossaryId_FiltersKeysByGlossaryId()
+        {
+            var keys = new List<Key>
+            {
+                new Key { ItemId = "k1", KeyName = "key1", ModuleId = "m1", GlossaryIds = new List<string> { "g1" } }
+            };
+            MockCursorHelper.SetupFindAsync(_keyCollection, keys);
+            MockCursorHelper.SetupCountDocuments(_keyCollection, 1);
+
+            var request = new GetKeysRequest
+            {
+                PageNumber = 0,
+                PageSize = 10,
+                GlossaryId = "g1"
+            };
+
+            var result = await _repo.GetAllKeysAsync(request);
+
+            result.Should().NotBeNull();
+            result.Keys.Should().HaveCount(1);
+            result.Keys[0].GlossaryIds.Should().Contain("g1");
+        }
+
+        [Fact]
+        public async Task GetAllKeysAsync_WithNullOrWhitespaceGlossaryId_SkipsGlossaryIdFilter()
+        {
+            MockCursorHelper.SetupFindAsync(_keyCollection, new List<Key>());
+            MockCursorHelper.SetupCountDocuments(_keyCollection, 0);
+
+            var request = new GetKeysRequest
+            {
+                PageNumber = 0,
+                PageSize = 10,
+                GlossaryId = "   "
+            };
+
+            var result = await _repo.GetAllKeysAsync(request);
+            result.Should().NotBeNull();
+        }
+
         #endregion
 
         #region GetKeyByNameAsync
