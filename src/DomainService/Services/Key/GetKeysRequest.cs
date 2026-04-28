@@ -16,6 +16,7 @@ namespace DomainService.Services
         public string? ProjectKey { get; set; }
         public ResourceSearchFilter[]? ResourceSearchFilters { get; set; }
         public DateRange? LastUpdateDateRange { get; set; }
+        public string? GlossaryId { get; set; }
     }
 
     public class ResourceSearchFilter
