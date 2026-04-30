@@ -249,6 +249,112 @@ namespace XUnitTest.Repositories
 
         #endregion
 
+        #region GetAllAsync — IsGlobal and ModuleId filters
+
+        [Fact]
+        public async Task GetAllAsync_WithIsGlobalTrue_AppliesIsGlobalFilter()
+        {
+            var items = new List<Glossary>
+            {
+                new Glossary { ItemId = "g1", Name = "API", IsGlobal = true }
+            };
+            MockCursorHelper.SetupFindAsync(_glossaryCollection, items);
+            MockCursorHelper.SetupCountDocuments(_glossaryCollection, 1);
+
+            var result = await _repo.GetAllAsync(new GetGlossariesRequest
+            {
+                PageNumber = 0,
+                PageSize = 10,
+                IsGlobal = true
+            });
+
+            result.Items.Should().HaveCount(1);
+            result.TotalCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task GetAllAsync_WithIsGlobalFalse_AppliesIsGlobalFilter()
+        {
+            var items = new List<Glossary>
+            {
+                new Glossary { ItemId = "g2", Name = "SDK", IsGlobal = false }
+            };
+            MockCursorHelper.SetupFindAsync(_glossaryCollection, items);
+            MockCursorHelper.SetupCountDocuments(_glossaryCollection, 1);
+
+            var result = await _repo.GetAllAsync(new GetGlossariesRequest
+            {
+                PageNumber = 0,
+                PageSize = 10,
+                IsGlobal = false
+            });
+
+            result.Items.Should().HaveCount(1);
+            result.TotalCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task GetAllAsync_WithModuleId_AppliesModuleIdFilter()
+        {
+            var items = new List<Glossary>
+            {
+                new Glossary { ItemId = "g1", Name = "API", ModuleIds = new List<string> { "mod-1" } }
+            };
+            MockCursorHelper.SetupFindAsync(_glossaryCollection, items);
+            MockCursorHelper.SetupCountDocuments(_glossaryCollection, 1);
+
+            var result = await _repo.GetAllAsync(new GetGlossariesRequest
+            {
+                PageNumber = 0,
+                PageSize = 10,
+                ModuleId = "mod-1"
+            });
+
+            result.Items.Should().HaveCount(1);
+            result.TotalCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task GetAllAsync_WithWhitespaceModuleId_SkipsModuleIdFilter()
+        {
+            MockCursorHelper.SetupFindAsync(_glossaryCollection, new List<Glossary>());
+            MockCursorHelper.SetupCountDocuments(_glossaryCollection, 0);
+
+            var result = await _repo.GetAllAsync(new GetGlossariesRequest
+            {
+                PageNumber = 0,
+                PageSize = 10,
+                ModuleId = "   "
+            });
+
+            result.Should().NotBeNull();
+            result.Items.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task GetAllAsync_WithIsGlobalAndModuleId_AppliesBothFilters()
+        {
+            var items = new List<Glossary>
+            {
+                new Glossary { ItemId = "g1", Name = "API", IsGlobal = true, ModuleIds = new List<string> { "mod-1" } }
+            };
+            MockCursorHelper.SetupFindAsync(_glossaryCollection, items);
+            MockCursorHelper.SetupCountDocuments(_glossaryCollection, 1);
+
+            var result = await _repo.GetAllAsync(new GetGlossariesRequest
+            {
+                PageNumber = 0,
+                PageSize = 10,
+                IsGlobal = true,
+                ModuleId = "mod-1"
+            });
+
+            result.Items.Should().HaveCount(1);
+            result.TotalCount.Should().Be(1);
+        }
+
+        #endregion
+
         #region DeleteAsync
 
         [Fact]
