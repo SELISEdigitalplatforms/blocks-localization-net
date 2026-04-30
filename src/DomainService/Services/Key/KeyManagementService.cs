@@ -781,7 +781,7 @@ namespace DomainService.Services
             {
                 Resource resource = reosurceKey.Resources.FirstOrDefault(reosurce => reosurce.Culture == language.LanguageCode);
 
-                string resourceValue = resource == null ? "[ KEY MISSING ]" : resource.Value;
+                string resourceValue = resource == null ? string.Empty : resource.Value;
 
                 dictionary[reosurceKey.KeyName] = resourceValue;
             });
