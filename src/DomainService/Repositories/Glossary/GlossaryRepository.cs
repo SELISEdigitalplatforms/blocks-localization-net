@@ -30,6 +30,16 @@ namespace DomainService.Repositories
                 filter = filterBuilder.And(filter, nameFilter);
             }
 
+            if (request.IsGlobal.HasValue)
+            {
+                filter = filterBuilder.And(filter, filterBuilder.Eq(g => g.IsGlobal, request.IsGlobal.Value));
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.ModuleId))
+            {
+                filter = filterBuilder.And(filter, filterBuilder.AnyEq(g => g.ModuleIds, request.ModuleId));
+            }
+
             var sort = Builders<Glossary>.Sort.Descending(g => g.CreateDate);
 
             var findTask = collection
