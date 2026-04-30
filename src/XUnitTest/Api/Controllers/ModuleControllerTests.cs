@@ -163,6 +163,128 @@ namespace XUnitTest
         {
             await Assert.ThrowsAsync<NullReferenceException>(() => _controller.Gets(null));
         }
+
+        #region Delete Tests
+
+        [Fact]
+        public async Task Delete_WithCascadeOption_ReturnsSuccess()
+        {
+            // Arrange
+            var request = new DeleteModuleRequest
+            {
+                ItemId = "module-id",
+                ProjectKey = "project-1"
+            };
+            var expectedResponse = new BaseMutationResponse { IsSuccess = true };
+
+            _moduleManagementServiceMock
+                .Setup(x => x.DeleteModuleAsync(request))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Delete(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeTrue();
+            _moduleManagementServiceMock.Verify(x => x.DeleteModuleAsync(request), Times.Once);
+        }
+
+        [Fact]
+        public async Task Delete_WithMoveOption_ReturnsSuccess()
+        {
+            // Arrange
+            var request = new DeleteModuleRequest
+            {
+                ItemId = "module-id",
+                TargetModuleId = "other-module-id",
+                ProjectKey = "project-1"
+            };
+            var expectedResponse = new BaseMutationResponse { IsSuccess = true };
+
+            _moduleManagementServiceMock
+                .Setup(x => x.DeleteModuleAsync(request))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.Delete(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task Delete_WhenServiceFails_ReturnsFailure()
+        {
+            // Arrange
+            var request = new DeleteModuleRequest { ItemId = "module-id", ProjectKey = "project-1" };
+            var failureResponse = new BaseMutationResponse { IsSuccess = false };
+
+            _moduleManagementServiceMock
+                .Setup(x => x.DeleteModuleAsync(request))
+                .ReturnsAsync(failureResponse);
+
+            // Act
+            var result = await _controller.Delete(request);
+
+            // Assert
+            result.IsSuccess.Should().BeFalse();
+        }
+
+        #endregion
+
+        #region TagGlossary Tests
+
+        [Fact]
+        public async Task TagGlossary_WithValidRequest_ReturnsSuccess()
+        {
+            // Arrange
+            var request = new TagGlossaryRequest
+            {
+                ModuleId = "module-id",
+                GlossaryIds = new List<string> { "g1", "g2" },
+                ProjectKey = "project-1"
+            };
+            var expectedResponse = new BaseMutationResponse { IsSuccess = true };
+
+            _moduleManagementServiceMock
+                .Setup(x => x.TagGlossaryAsync(request))
+                .ReturnsAsync(expectedResponse);
+
+            // Act
+            var result = await _controller.TagGlossary(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.IsSuccess.Should().BeTrue();
+            _moduleManagementServiceMock.Verify(x => x.TagGlossaryAsync(request), Times.Once);
+        }
+
+        [Fact]
+        public async Task TagGlossary_WhenServiceFails_ReturnsFailure()
+        {
+            // Arrange
+            var request = new TagGlossaryRequest
+            {
+                ModuleId = "module-id",
+                GlossaryIds = new List<string>(),
+                ProjectKey = "project-1"
+            };
+            var failureResponse = new BaseMutationResponse { IsSuccess = false };
+
+            _moduleManagementServiceMock
+                .Setup(x => x.TagGlossaryAsync(request))
+                .ReturnsAsync(failureResponse);
+
+            // Act
+            var result = await _controller.TagGlossary(request);
+
+            // Assert
+            result.IsSuccess.Should().BeFalse();
+        }
+
+        #endregion
     }
 }
 

@@ -44,6 +44,8 @@ namespace Worker
             services.AddSingleton<StorageHelper>();
 
             services.AddSingleton<IKeyManagementService, KeyManagementService>();
+            services.AddSingleton<Lazy<IKeyBulkOperationsService>>(sp =>
+                new Lazy<IKeyBulkOperationsService>(() => (IKeyBulkOperationsService)sp.GetRequiredService<IKeyManagementService>()));
             services.AddSingleton<IKeyRepository, KeyRepository>();
             services.AddSingleton<IKeyTimelineRepository, KeyTimelineRepository>();
             services.AddSingleton<ILanguageFileGenerationHistoryRepository, LanguageFileGenerationHistoryRepository>();

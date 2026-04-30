@@ -38,5 +38,7 @@ namespace DomainService.Services
         Task<GetLanguageFileGenerationHistoryResponse> GetLanguageFileGenerationHistoryAsync(GetLanguageFileGenerationHistoryRequest request);
         Task<GetLocalizationTimelineResponse> GetLocalizationTimelineAsync(GetLocalizationTimelineRequest query);
         Task<GetKeyTimelineQueryResponse> GetTimelineByOperationIdAsync(GetTimelineByOperationIdRequest query);
+        Task BulkMoveByModuleAsync(string fromModuleId, string toModuleId, string projectKey);
+        Task BulkDeleteByModuleAsync(string moduleId, string projectKey);
     }
 }

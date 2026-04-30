@@ -7,5 +7,6 @@ namespace DomainService.Repositories
         Task<BlocksLanguageModule> GetByNameAsync(string name);
         Task<BlocksLanguageModule> GetByIdAsync(string id);
         Task<List<BlocksLanguageModule>> GetAllAsync();
+        Task DeleteAsync(string itemId);
     }
 }
