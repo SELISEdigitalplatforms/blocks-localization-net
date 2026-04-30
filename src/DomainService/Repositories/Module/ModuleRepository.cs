@@ -46,14 +46,21 @@ namespace DomainService.Repositories
             var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
             var collection = dataBase.GetCollection<BlocksLanguageModule>(_collectionName);
 
-            var filter = Builders<BlocksLanguageModule>.Filter.Eq(mc => mc.ModuleName, module.ModuleName);
+            var filter = Builders<BlocksLanguageModule>.Filter.Eq(mc => mc.ItemId, module.ItemId);
 
             await collection.ReplaceOneAsync(
                 filter,
                 module,
                 new ReplaceOptions { IsUpsert = true }
             );
+        }
 
+        public async Task DeleteAsync(string itemId)
+        {
+            var dataBase = _dbContextProvider.GetDatabase(BlocksContext.GetContext()?.TenantId ?? "");
+            var collection = dataBase.GetCollection<BlocksLanguageModule>(_collectionName);
+            var filter = Builders<BlocksLanguageModule>.Filter.Eq(mc => mc.ItemId, itemId);
+            await collection.DeleteOneAsync(filter);
         }
     }
 }

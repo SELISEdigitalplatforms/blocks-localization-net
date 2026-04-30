@@ -21,7 +21,7 @@ using System.Xml.Linq;
 
 namespace DomainService.Services
 {
-    public class KeyManagementService : IKeyManagementService
+    public class KeyManagementService : IKeyManagementService, IKeyBulkOperationsService
     {
         private readonly IKeyRepository _keyRepository;
         private readonly IKeyTimelineRepository _keyTimelineRepository;
@@ -2737,6 +2737,56 @@ namespace DomainService.Services
         public async Task<GetLanguageFileGenerationHistoryResponse> GetLanguageFileGenerationHistoryAsync(GetLanguageFileGenerationHistoryRequest request)
         {
             return await _languageFileGenerationHistoryRepository.GetPaginatedAsync(request);
+        }
+
+        public async Task BulkMoveByModuleAsync(string fromModuleId, string toModuleId, string projectKey)
+        {
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? "";
+            var keys = await _keyRepository.GetUilmResourceKeys(k => k.ModuleId == fromModuleId, tenantId);
+
+            if (!keys.Any()) return;
+
+            var previousKeys = keys.Select(k => new BlocksLanguageKey
+            {
+                ItemId = k.ItemId,
+                KeyName = k.KeyName,
+                ModuleId = k.ModuleId,
+                Resources = k.Resources,
+                Routes = k.Routes,
+                GlossaryIds = k.GlossaryIds,
+                Context = k.Context,
+                IsPartiallyTranslated = k.IsPartiallyTranslated,
+                CreateDate = k.CreateDate,
+                LastUpdateDate = k.LastUpdateDate,
+                TenantId = k.TenantId,
+                CreatedBy = k.CreatedBy,
+                LastUpdatedBy = k.LastUpdatedBy,
+                Value = k.Value
+            }).ToList();
+
+            foreach (var key in keys)
+            {
+                key.ModuleId = toModuleId;
+                key.LastUpdateDate = DateTime.UtcNow;
+                await _keyRepository.SaveKeyAsync(key);
+            }
+
+            await CreateBulkKeyTimelineEntriesAsync(keys, previousKeys, LogFromConstants.ModuleBulkMove, projectKey);
+        }
+
+        public async Task BulkDeleteByModuleAsync(string moduleId, string projectKey)
+        {
+            var tenantId = BlocksContext.GetContext()?.TenantId ?? "";
+            var keys = await _keyRepository.GetUilmResourceKeys(k => k.ModuleId == moduleId, tenantId);
+
+            if (!keys.Any()) return;
+
+            foreach (var key in keys)
+            {
+                await _keyRepository.DeleteAsync(key.ItemId);
+            }
+
+            await CreateBulkKeyTimelineEntriesAsync(keys, LogFromConstants.ModuleBulkDelete, projectKey);
         }
     }
 }

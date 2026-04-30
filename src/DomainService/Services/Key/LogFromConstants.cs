@@ -15,5 +15,7 @@ namespace DomainService.Services
         public const string Published = "Published";
         public const string PublishFailed = "PublishFailed";
         public const string EnvironmentDataMigration = "EnvironmentDataMigration";
+        public const string ModuleBulkMove = "Module.BulkMove";
+        public const string ModuleBulkDelete = "Module.BulkDelete";
     }
 }

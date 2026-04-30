@@ -62,5 +62,23 @@ namespace Api.Controllers
             _changeControllerContext.ChangeContext(query);
             return await _moduleManagementService.GetModulesAsync();
         }
+
+        [HttpDelete]
+        [ProtectedEndPoint]
+        public async Task<BaseMutationResponse> Delete([FromQuery] DeleteModuleRequest request)
+        {
+            if (request == null) return new BaseMutationResponse { IsSuccess = false };
+            _changeControllerContext.ChangeContext(request);
+            return await _moduleManagementService.DeleteModuleAsync(request);
+        }
+
+        [HttpPost]
+        [ProtectedEndPoint]
+        public async Task<BaseMutationResponse> TagGlossary([FromBody] TagGlossaryRequest request)
+        {
+            if (request == null) return new BaseMutationResponse { IsSuccess = false };
+            _changeControllerContext.ChangeContext(request);
+            return await _moduleManagementService.TagGlossaryAsync(request);
+        }
     }
 }

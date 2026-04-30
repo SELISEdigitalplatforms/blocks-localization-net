@@ -138,5 +138,27 @@ namespace XUnitTest.Repositories
         }
 
         #endregion
+
+        #region DeleteAsync
+
+        [Fact]
+        public async Task DeleteAsync_DeletesModule()
+        {
+            // Arrange
+            _collection.Setup(x => x.DeleteOneAsync(
+                It.IsAny<FilterDefinition<BlocksLanguageModule>>(),
+                It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Mock.Of<DeleteResult>());
+
+            // Act
+            await _repo.DeleteAsync("m1");
+
+            // Assert
+            _collection.Verify(x => x.DeleteOneAsync(
+                It.IsAny<FilterDefinition<BlocksLanguageModule>>(),
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        #endregion
     }
 }
