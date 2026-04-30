@@ -157,5 +157,99 @@ namespace XUnitTest
 
             result.Should().BeFalse();
         }
+
+        [Fact]
+        public async Task GetWebhookAsync_WhenWebhookExists_ReturnsWebhook()
+        {
+            // Arrange
+            var webhook = new BlocksWebhook
+            {
+                Url = "https://callback.test/webhook",
+                ContentType = "application/json",
+                BlocksWebhookSecret = new BlocksWebhookSecret { HeaderKey = "X-Signature", Secret = "secret" },
+                IsDisabled = false,
+                ProjectKey = "proj"
+            };
+            _blocksWebhookRepository.Setup(r => r.GetAsync()).ReturnsAsync(webhook);
+
+            // Act
+            var result = await _service.GetWebhookAsync();
+
+            // Assert
+            result.Should().NotBeNull();
+            result!.Url.Should().Be(webhook.Url);
+            _blocksWebhookRepository.Verify(r => r.GetAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetWebhookAsync_WhenNotConfigured_ReturnsNull()
+        {
+            // Arrange
+            _blocksWebhookRepository.Setup(r => r.GetAsync()).ReturnsAsync((BlocksWebhook?)null);
+
+            // Act
+            var result = await _service.GetWebhookAsync();
+
+            // Assert
+            result.Should().BeNull();
+            _blocksWebhookRepository.Verify(r => r.GetAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task SaveWebhookAsync_WhenExistingDocumentFound_ReusesItemId()
+        {
+            // Arrange
+            var existingId = "existing-doc-id";
+            var existing = new BlocksWebhook
+            {
+                ItemId = existingId,
+                Url = "https://old.example.com/hook",
+                ContentType = "application/json",
+                BlocksWebhookSecret = new BlocksWebhookSecret { HeaderKey = "X-Old", Secret = "old-secret" },
+                ProjectKey = "proj"
+            };
+
+            var newWebhook = new BlocksWebhook
+            {
+                Url = "https://new.example.com/hook",
+                ContentType = "application/json",
+                BlocksWebhookSecret = new BlocksWebhookSecret { HeaderKey = "X-New", Secret = "new-secret" },
+                ProjectKey = "proj"
+            };
+
+            _blocksWebhookRepository.Setup(r => r.GetAsync()).ReturnsAsync(existing);
+            _blocksWebhookRepository.Setup(r => r.SaveAsync(It.IsAny<BlocksWebhook>())).Returns(Task.CompletedTask);
+
+            // Act
+            var response = await _service.SaveWebhookAsync(newWebhook);
+
+            // Assert
+            response.Success.Should().BeTrue();
+            _blocksWebhookRepository.Verify(r => r.SaveAsync(It.Is<BlocksWebhook>(w => w.ItemId == existingId)), Times.Once);
+        }
+
+        [Fact]
+        public async Task SaveWebhookAsync_WhenNoExistingDocument_UsesNewItemId()
+        {
+            // Arrange
+            var newWebhook = new BlocksWebhook
+            {
+                Url = "https://new.example.com/hook",
+                ContentType = "application/json",
+                BlocksWebhookSecret = new BlocksWebhookSecret { HeaderKey = "X-New", Secret = "new-secret" },
+                ProjectKey = "proj"
+            };
+            var originalId = newWebhook.ItemId;
+
+            _blocksWebhookRepository.Setup(r => r.GetAsync()).ReturnsAsync((BlocksWebhook?)null);
+            _blocksWebhookRepository.Setup(r => r.SaveAsync(It.IsAny<BlocksWebhook>())).Returns(Task.CompletedTask);
+
+            // Act
+            var response = await _service.SaveWebhookAsync(newWebhook);
+
+            // Assert
+            response.Success.Should().BeTrue();
+            _blocksWebhookRepository.Verify(r => r.SaveAsync(It.Is<BlocksWebhook>(w => w.ItemId == originalId)), Times.Once);
+        }
     }
 }
