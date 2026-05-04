@@ -26,10 +26,19 @@ namespace DomainService.Services.HelperService
             return await _httpHelperServices.MakeHttpRequestForWebhook(payload, webhook);
         }
 
+        public async Task<BlocksWebhook?> GetWebhookAsync()
+        {
+            return await _blocksWebhookRepository.GetAsync();
+        }
+
         public async Task<ApiResponse> SaveWebhookAsync(BlocksWebhook webhook)
         {
             try
             {
+                var existing = await _blocksWebhookRepository.GetAsync();
+                if (existing != null)
+                    webhook.ItemId = existing.ItemId;
+
                 await _blocksWebhookRepository.SaveAsync(webhook);
             }
             catch (Exception ex)

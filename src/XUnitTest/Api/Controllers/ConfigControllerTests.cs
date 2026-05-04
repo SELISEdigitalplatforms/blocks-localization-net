@@ -168,5 +168,66 @@ namespace XUnitTest
         {
             await Assert.ThrowsAsync<NullReferenceException>(() => _controller.SaveWebHook(null));
         }
+
+        [Fact]
+        public async Task GetWebHook_WhenWebhookExists_ReturnsWebhook()
+        {
+            // Arrange
+            var webhook = new BlocksWebhook
+            {
+                Url = "https://example.com/webhook",
+                ContentType = "application/json",
+                ProjectKey = "project-1",
+                BlocksWebhookSecret = new BlocksWebhookSecret
+                {
+                    Secret = "secret-123",
+                    HeaderKey = "X-Webhook-Secret"
+                }
+            };
+
+            _webHookServiceMock
+                .Setup(x => x.GetWebhookAsync())
+                .ReturnsAsync(webhook);
+
+            var request = new GetWebhookRequest { ProjectKey = "project-1" };
+
+            // Act
+            var result = await _controller.GetWebHook(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            result!.Url.Should().Be(webhook.Url);
+            result.ContentType.Should().Be(webhook.ContentType);
+            _webHookServiceMock.Verify(x => x.GetWebhookAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetWebHook_WhenNoWebhookConfigured_ReturnsNull()
+        {
+            // Arrange
+            _webHookServiceMock
+                .Setup(x => x.GetWebhookAsync())
+                .ReturnsAsync((BlocksWebhook?)null);
+
+            var request = new GetWebhookRequest { ProjectKey = "project-1" };
+
+            // Act
+            var result = await _controller.GetWebHook(request);
+
+            // Assert
+            result.Should().BeNull();
+            _webHookServiceMock.Verify(x => x.GetWebhookAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetWebHook_WithNullRequest_ReturnsNull()
+        {
+            // Act
+            var result = await _controller.GetWebHook(null!);
+
+            // Assert
+            result.Should().BeNull();
+            _webHookServiceMock.Verify(x => x.GetWebhookAsync(), Times.Never);
+        }
     }
 }

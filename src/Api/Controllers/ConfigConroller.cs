@@ -25,6 +25,14 @@ namespace Api.Controllers
             _webHookService = webHookService;
         }
 
+        [HttpGet]
+        public async Task<BlocksWebhook?> GetWebHook([FromQuery] GetWebhookRequest request)
+        {
+            if (request == null) return null;
+            _changeControllerContext.ChangeContext(request);
+            return await _webHookService.GetWebhookAsync();
+        }
+
         [HttpPost]
         [ProtectedEndPoint]
         //[ApiExplorerSettings(IgnoreApi = true)]

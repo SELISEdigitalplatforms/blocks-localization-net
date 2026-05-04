@@ -10,6 +10,7 @@ namespace DomainService.Services
         public string? SearchKey { get; set; }
         public string[]? ModuleIds { get; set; }
         public bool IsPartiallyTranslated { get; set; }
+        public List<string>? MissingLanguages { get; set; }
         public DateRange? CreateDateRange { get; set; }
         public string? SortProperty { get; set; }
         public bool IsDescending { get; set; }
