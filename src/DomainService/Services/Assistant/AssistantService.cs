@@ -133,17 +133,21 @@ namespace DomainService.Services
                 return string.Empty;
             }
 
-            string output = null;
+            var trimmedAiText = aiText.Replace("\"", "").Replace("'", "");
 
-            var trimmedAiText = aiText?.Replace("\"", "").Replace("'", "");
-            if (!string.IsNullOrEmpty(trimmedAiText) && trimmedAiText.Contains(":"))
+            string output = trimmedAiText;
+
+            // Only strip a leading label prefix (e.g. "Bengali: ..." or "Translation: ...")
+            // A prefix is considered a label only if it contains no spaces and is followed by a space after the colon.
+            var colonIndex = trimmedAiText.IndexOf(':');
+            if (colonIndex > 0)
             {
-                string[] parts = trimmedAiText.Split(':');
-                output = parts.Length > 1 ? parts[1] : trimmedAiText;
-            }
-            else
-            {
-                output = trimmedAiText;
+                var prefix = trimmedAiText.Substring(0, colonIndex);
+                var afterColon = trimmedAiText.Substring(colonIndex + 1);
+                if (!prefix.Contains(' ') && afterColon.StartsWith(" "))
+                {
+                    output = afterColon;
+                }
             }
 
             char[] charsToTrim = { ' ', '\t', '\n' };

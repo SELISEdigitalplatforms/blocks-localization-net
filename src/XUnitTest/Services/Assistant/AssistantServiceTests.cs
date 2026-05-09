@@ -222,7 +222,7 @@ namespace XUnitTest
 
             var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
-            result.Should().Be("Hello");
+            result.Should().Be("Hello: World");
         }
 
         [Fact]
@@ -232,7 +232,7 @@ namespace XUnitTest
 
             var result = AssistantService.FormatAiTextForSuggestTranslation(aiText);
 
-            result.Should().BeEmpty();
+            result.Should().Be("Translation:");
         }
 
         [Fact]
