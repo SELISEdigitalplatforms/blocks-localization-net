@@ -1074,7 +1074,10 @@ namespace DomainService.Services
                             var resource = new Resource();
                             resource.Culture = culture.Key;
                             resource.Value = csv.GetField<string>(culture.Key);
-                            resource.CharacterLength = string.IsNullOrEmpty(culture.Value) ? 0 : csv.GetField<int>(culture.Value);
+                            if (!string.IsNullOrEmpty(culture.Value) && csv.TryGetField<int>(culture.Value, out int charLength))
+                                resource.CharacterLength = charLength;
+                            else
+                                resource.CharacterLength = 0;
 
                             resources.Add(resource);
                         }
