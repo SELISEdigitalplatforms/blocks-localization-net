@@ -288,6 +288,24 @@ namespace XUnitTest
             // Assert
             result.IsValid.Should().BeTrue();
         }
+
+        [Fact]
+        public async Task Validate_ExtendedRegionLanguageCode_ReturnsSuccess()
+        {
+            // Arrange
+            var language = new Language
+            {
+                LanguageName = "Caveman (English)",
+                LanguageCode = "en-CAVE",
+                ProjectKey = "test-project"
+            };
+
+            // Act
+            var result = await _validator.ValidateAsync(language);
+
+            // Assert
+            result.IsValid.Should().BeTrue();
+        }
     }
 
     public class ModuleValidatorTests
